@@ -47,7 +47,7 @@
 #include <telepathy-glib/run.h>
 #include <telepathy-glib/debug.h>
 
-#include "psyduck-connection-manager.h"
+#include "haze-connection-manager.h"
 
 /**
  * The following eventloop functions are used in both pidgin and purple-text. If your
@@ -240,7 +240,7 @@ static TpBaseConnectionManager *
 construct_cm (void)
 {
   return (TpBaseConnectionManager *)g_object_new (
-      PSYDUCK_TYPE_CONNECTION_MANAGER, NULL);
+      HAZE_TYPE_CONNECTION_MANAGER, NULL);
 }
 
 int main(int argc, char **argv)
