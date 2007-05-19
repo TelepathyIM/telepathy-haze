@@ -30,13 +30,13 @@ struct _HazeParams {
 static const TpCMParamSpec params[] = {
   { "account", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
-    G_STRUCT_OFFSET(HazeParams, account) },
+    G_STRUCT_OFFSET(HazeParams, account), NULL, NULL },
   { "password", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
-    G_STRUCT_OFFSET(HazeParams, password) },
+    G_STRUCT_OFFSET(HazeParams, password), NULL, NULL },
   { "server", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL,
-    G_STRUCT_OFFSET(HazeParams, server) },
-  { NULL, NULL, 0, 0, NULL, 0 }
+    G_STRUCT_OFFSET(HazeParams, server), NULL, NULL },
+  { NULL, NULL, 0, 0, NULL, 0, NULL, NULL }
 };
 
 static void *
