@@ -247,6 +247,7 @@ int main(int argc, char **argv)
 {
 	init_libpurple();
 
+        g_set_prgname(UI_ID);
         g_debug("libpurple initialized.");
 
         tp_debug_set_all_flags();
