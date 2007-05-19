@@ -5,5 +5,6 @@ PKG_CHECK_MODULES([PURPLE],[purple],[],[AC_MSG_ERROR([
 * purple is needed to build haze.])])
 PKG_CHECK_MODULES([TP_GLIB],[telepathy-glib],[],[AC_MSG_ERROR([
 * telepathy-glib is needed to build haze.])])
-AC_OUTPUT([src/Makefile
+AC_OUTPUT([Makefile
+           src/Makefile
            ])
