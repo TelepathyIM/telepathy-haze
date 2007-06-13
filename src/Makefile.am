@@ -1,9 +1,9 @@
 bin_PROGRAMS = haze
 
-haze_SOURCES = haze.c \
-               haze-connection-manager.c \
+haze_SOURCES = main.c \
+               connection-manager.c \
                defines.h \
-               haze-connection-manager.h
+               connection-manager.h
 
 AM_CPPFLAGS = $(PURPLE_CFLAGS) $(TP_GLIB_CFLAGS)
 

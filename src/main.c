@@ -47,7 +47,7 @@
 #include <telepathy-glib/run.h>
 #include <telepathy-glib/debug.h>
 
-#include "haze-connection-manager.h"
+#include "connection-manager.h"
 
 /**
  * The following eventloop functions are used in both pidgin and purple-text. If your

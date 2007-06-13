@@ -3,7 +3,7 @@
 
 #include <prpl.h>
 
-#include "haze-connection-manager.h"
+#include "connection-manager.h"
 
 G_DEFINE_TYPE(HazeConnectionManager,
     haze_connection_manager,
