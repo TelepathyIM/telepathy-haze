@@ -4,33 +4,24 @@
 #include <prpl.h>
 
 #include "connection-manager.h"
+#include "connection.h"
 
 G_DEFINE_TYPE(HazeConnectionManager,
     haze_connection_manager,
     TP_TYPE_BASE_CONNECTION_MANAGER)
 
-static TpBaseConnection *
-_haze_connection_manager_new_connection (TpBaseConnectionManager *self,
-                                            const gchar *proto,
-                                            TpIntSet *params_present,
-                                            void *parsed_params,
-                                            GError **error)
-{
-    return NULL;
-}
-
 typedef struct _HazeParams HazeParams;
 
 struct _HazeParams {
-    gchar *account;
+    gchar *username;
     gchar *password;
     gchar *server;
 };
 
 static const TpCMParamSpec params[] = {
-  { "account", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
+  { "username", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
-    G_STRUCT_OFFSET(HazeParams, account), NULL, NULL },
+    G_STRUCT_OFFSET(HazeParams, username), NULL, NULL },
   { "password", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
     G_STRUCT_OFFSET(HazeParams, password), NULL, NULL },
@@ -49,7 +40,7 @@ static void
 free_params (void *p)
 {
     HazeParams *params = (HazeParams *)p;
-    g_free (params->account);
+    g_free (params->username);
     g_free (params->password);
     g_free (params->server);
 
@@ -81,6 +72,23 @@ get_protocols() {
         }
     }
     return protocols;
+}
+
+static TpBaseConnection *
+_haze_connection_manager_new_connection (TpBaseConnectionManager *self,
+                                         const gchar *proto,
+                                         TpIntSet *params_present,
+                                         void *parsed_params,
+                                         GError **error)
+{
+    HazeParams *params = (HazeParams *)parsed_params;
+    HazeConnection *conn = g_object_new (HAZE_TYPE_CONNECTION,
+                                         "protocol",    proto,
+                                         "username",    params->username,
+                                         "password",    params->password,
+                                         "server",      params->server,
+                                         NULL);
+    return (TpBaseConnection *) conn;
 }
 
 static void
