@@ -1,5 +1,10 @@
-#include "connection.h"
+#include <savedstatuses.h>
+
 #include <telepathy-glib/handle-repo-dynamic.h>
+#include <telepathy-glib/errors.h>
+
+#include "defines.h"
+#include "connection.h"
 
 enum
 {
@@ -14,11 +19,63 @@ G_DEFINE_TYPE(HazeConnection,
     haze_connection,
     TP_TYPE_BASE_CONNECTION);
 
-gboolean
-start_connecting (TpBaseConnection *self,
-                  GError **error)
+static void
+signed_on(PurpleConnection *gc, HazeConnection *conn)
 {
-    return FALSE;
+    /* XXX enormously broken second argument */
+    PurpleAccount *account = purple_connection_get_account(gc);
+    printf("Account connected: %s %s\n", account->username, account->protocol_id);
+    tp_base_connection_change_status(TP_BASE_CONNECTION(conn),
+                                     TP_CONNECTION_STATUS_CONNECTED,
+                                     TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
+}
+
+static gboolean
+_haze_connection_start_connecting (TpBaseConnection *base,
+                                   GError **error)
+{
+    HazeConnection *self = HAZE_CONNECTION(base);
+    char *protocol, *password, *prpl, *id;
+    TpHandleRepoIface *contact_handles =
+        tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+
+    g_object_get(G_OBJECT(self),
+                 "protocol", &protocol,
+                 "password", &password,
+                 NULL);
+
+    id = g_strdup_printf("%s:%s", protocol, self->username);
+    base->self_handle = tp_handle_ensure(contact_handles, id, NULL, error);
+    g_free(id);
+
+    prpl = g_strconcat("prpl-", protocol, NULL);
+    self->account = purple_account_new(self->username, prpl);
+    g_free(prpl);
+
+    purple_account_set_password(self->account, password);
+    purple_account_set_enabled(self->account, UI_ID, TRUE);
+
+    PurpleSavedStatus *status = purple_savedstatus_new(NULL, PURPLE_STATUS_AVAILABLE);
+    purple_savedstatus_activate(status);
+
+    tp_base_connection_change_status(base, TP_CONNECTION_STATUS_CONNECTING,
+                                     TP_CONNECTION_STATUS_REASON_REQUESTED);
+
+    static int handle;
+    purple_signal_connect(purple_connections_get_handle(), "signed-on", &handle,
+				PURPLE_CALLBACK(signed_on), self);
+    return TRUE;
+}
+
+static void
+_haze_connection_shut_down (TpBaseConnection *base)
+{
+    HazeConnection *self = HAZE_CONNECTION(base);
+
+    purple_account_set_enabled(self->account, UI_ID, FALSE);
+    // XXX actually wait till account has disconnected.
+    // XXX also we're leaking ->account.
+    tp_base_connection_finish_shutdown(base);
 }
 
 static void
@@ -102,6 +159,7 @@ haze_connection_constructor (GType type,
                 type, n_construct_properties, construct_params));
 
     g_debug("Post-construction: (HazeConnection *)%p", self);
+
     return (GObject *)self;
 }
 
@@ -121,7 +179,8 @@ haze_connection_class_init (HazeConnectionClass *klass)
     base_class->create_handle_repos = _haze_connection_create_handle_repos;
     base_class->create_channel_factories =
         _haze_connection_create_channel_factories;
-    base_class->start_connecting = start_connecting;
+    base_class->start_connecting = _haze_connection_start_connecting;
+    base_class->shut_down = _haze_connection_shut_down;
 
     param_spec = g_param_spec_string ("username", "Account username",
                                       "The username used when authenticating.",
