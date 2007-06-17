@@ -7,6 +7,6 @@ haze_SOURCES = main.c \
                connection-manager.h \
                connection.h
 
-AM_CPPFLAGS = $(PURPLE_CFLAGS) $(TP_GLIB_CFLAGS)
+AM_CFLAGS = $(PURPLE_CFLAGS) $(TP_GLIB_CFLAGS) -Wall -Werror
 
 haze_LDADD = $(PURPLE_LIBS) $(TP_GLIB_LIBS)

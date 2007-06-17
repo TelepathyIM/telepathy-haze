@@ -121,6 +121,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
     base_class->create_handle_repos = _haze_connection_create_handle_repos;
     base_class->create_channel_factories =
         _haze_connection_create_channel_factories;
+    base_class->start_connecting = start_connecting;
 
     param_spec = g_param_spec_string ("username", "Account username",
                                       "The username used when authenticating.",

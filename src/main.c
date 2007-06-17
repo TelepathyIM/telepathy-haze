@@ -221,6 +221,7 @@ init_libpurple()
 	purple_pounces_load();
 }
 
+/*
 static void
 signed_on(PurpleConnection *gc, gpointer null)
 {
@@ -235,6 +236,7 @@ connect_to_signals_for_demonstration_purposes_only()
 	purple_signal_connect(purple_connections_get_handle(), "signed-on", &handle,
 				PURPLE_CALLBACK(signed_on), NULL);
 }
+*/
 
 static TpBaseConnectionManager *
 construct_cm (void)
