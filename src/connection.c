@@ -102,6 +102,7 @@ haze_connection_constructor (GType type,
                 type, n_construct_properties, construct_params));
 
     g_debug("Post-construction: (HazeConnection *)%p", self);
+    return (GObject *)self;
 }
 
 static void
