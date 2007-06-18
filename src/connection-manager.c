@@ -74,13 +74,46 @@ get_protocols() {
     return protocols;
 }
 
+static void
+signed_on_cb (PurpleConnection *gc, HazeConnectionManager *self)
+{
+    HazeConnection *hc;
+    GList *l = self->connections;
+
+    while (l != NULL) {
+        hc = l->data;
+        if(purple_account_get_connection(hc->account) == gc) {
+            haze_connection_signed_on_cb(hc);
+            break;
+        }
+    }
+}
+
+static void
+connect_to_purple_signals (HazeConnectionManager *self)
+{
+    static int handle;
+    purple_signal_connect(purple_connections_get_handle(), "signed-on", &handle,
+			  PURPLE_CALLBACK(signed_on_cb), self);
+}
+
+static void
+connection_shutdown_finished_cb (TpBaseConnection *conn,
+                                 gpointer data)
+{
+    HazeConnectionManager *self = HAZE_CONNECTION_MANAGER (data);
+
+    self->connections = g_list_remove(self->connections, conn);
+}
+
 static TpBaseConnection *
-_haze_connection_manager_new_connection (TpBaseConnectionManager *self,
+_haze_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          const gchar *proto,
                                          TpIntSet *params_present,
                                          void *parsed_params,
                                          GError **error)
 {
+    HazeConnectionManager *self = HAZE_CONNECTION_MANAGER(base);
     HazeParams *params = (HazeParams *)parsed_params;
     HazeConnection *conn = g_object_new (HAZE_TYPE_CONNECTION,
                                          "protocol",    proto,
@@ -88,6 +121,12 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *self,
                                          "password",    params->password,
                                          "server",      params->server,
                                          NULL);
+
+    self->connections = g_list_prepend(self->connections, conn);
+    g_signal_connect (conn, "shutdown-finished",
+                      G_CALLBACK (connection_shutdown_finished_cb),
+                      self);
+
     return (TpBaseConnection *) conn;
 }
 
@@ -105,4 +144,6 @@ haze_connection_manager_class_init (HazeConnectionManagerClass *klass)
 static void
 haze_connection_manager_init (HazeConnectionManager *self)
 {
+    g_debug("Initializing (HazeConnectionManager *)%p", self);
+    connect_to_purple_signals(self);
 }

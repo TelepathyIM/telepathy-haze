@@ -19,15 +19,15 @@ G_DEFINE_TYPE(HazeConnection,
     haze_connection,
     TP_TYPE_BASE_CONNECTION);
 
-static void
-signed_on(PurpleConnection *gc, HazeConnection *conn)
+void
+haze_connection_signed_on_cb(HazeConnection *conn)
 {
-    /* XXX enormously broken second argument */
-    PurpleAccount *account = purple_connection_get_account(gc);
+    PurpleAccount *account = conn->account;
     printf("Account connected: %s %s\n", account->username, account->protocol_id);
-    tp_base_connection_change_status(TP_BASE_CONNECTION(conn),
-                                     TP_CONNECTION_STATUS_CONNECTED,
-                                     TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
+
+    tp_base_connection_change_status(
+        TP_BASE_CONNECTION(conn), TP_CONNECTION_STATUS_CONNECTED,
+        TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
 }
 
 static gboolean
@@ -61,9 +61,6 @@ _haze_connection_start_connecting (TpBaseConnection *base,
     tp_base_connection_change_status(base, TP_CONNECTION_STATUS_CONNECTING,
                                      TP_CONNECTION_STATUS_REASON_REQUESTED);
 
-    static int handle;
-    purple_signal_connect(purple_connections_get_handle(), "signed-on", &handle,
-				PURPLE_CALLBACK(signed_on), self);
     return TRUE;
 }
 

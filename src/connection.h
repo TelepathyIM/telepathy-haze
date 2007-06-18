@@ -42,6 +42,8 @@ GType haze_connection_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), HAZE_TYPE_CONNECTION, \
                               HazeConnectionClass))
 
+void haze_connection_signed_on_cb(HazeConnection *conn);
+
 G_END_DECLS
 
 #endif /* #ifndef __HAZE_CONNECTION_H__*/
