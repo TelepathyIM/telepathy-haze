@@ -74,19 +74,29 @@ get_protocols() {
     return protocols;
 }
 
-static void
-signed_on_cb (PurpleConnection *gc, HazeConnectionManager *self)
+static HazeConnection *
+purple_connection_to_haze_connection (HazeConnectionManager *self,
+                                      PurpleConnection *pc)
 {
     HazeConnection *hc;
     GList *l = self->connections;
 
     while (l != NULL) {
         hc = l->data;
-        if(purple_account_get_connection(hc->account) == gc) {
-            haze_connection_signed_on_cb(hc);
-            break;
+        if(purple_account_get_connection(hc->account) == pc) {
+            return hc;
         }
     }
+
+    return NULL;
+}
+
+static void
+signed_on_cb (PurpleConnection *pc,
+              HazeConnectionManager *self)
+{
+    HazeConnection *hc = purple_connection_to_haze_connection(self, pc);
+    haze_connection_signed_on_cb(hc);
 }
 
 static void
