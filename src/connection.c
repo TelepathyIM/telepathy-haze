@@ -100,6 +100,20 @@ _haze_connection_create_channel_factories (TpBaseConnection *conn)
     return g_ptr_array_new ();
 }
 
+gchar *
+haze_connection_get_unique_connection_name(TpBaseConnection *base)
+{
+    HazeConnection *conn = HAZE_CONNECTION(base);
+    gchar *protocol, *conn_name;
+
+    g_object_get(G_OBJECT(conn),
+                 "protocol", &protocol,
+                 NULL);
+
+    conn_name = g_strdup_printf("%s/%s", protocol, conn->username);
+    return conn_name;
+}
+
 static void
 haze_connection_get_property (GObject    *object,
                               guint       property_id,
@@ -208,6 +222,8 @@ haze_connection_class_init (HazeConnectionClass *klass)
     base_class->create_handle_repos = _haze_connection_create_handle_repos;
     base_class->create_channel_factories =
         _haze_connection_create_channel_factories;
+    base_class->get_unique_connection_name =
+        haze_connection_get_unique_connection_name;
     base_class->start_connecting = _haze_connection_start_connecting;
     base_class->shut_down = _haze_connection_shut_down;
 
