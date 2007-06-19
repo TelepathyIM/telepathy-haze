@@ -23,6 +23,7 @@ void
 haze_connection_signed_on_cb (HazeConnection *conn)
 {
     PurpleAccount *account = conn->account;
+    g_debug("signed-on");
     printf("Account connected: %s %s\n", account->username, account->protocol_id);
 
     tp_base_connection_change_status(
@@ -33,9 +34,20 @@ haze_connection_signed_on_cb (HazeConnection *conn)
 void
 haze_connection_signing_off_cb (HazeConnection *conn)
 {
-    tp_base_connection_change_status(
-        TP_BASE_CONNECTION(conn), TP_CONNECTION_STATUS_DISCONNECTED,
-        TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
+    g_debug("signing-off");
+    /* XXX Notify with the reason! */
+    if(TP_BASE_CONNECTION(conn)->status != TP_CONNECTION_STATUS_DISCONNECTED) {
+        tp_base_connection_change_status(
+            TP_BASE_CONNECTION(conn), TP_CONNECTION_STATUS_DISCONNECTED,
+            TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
+    }
+}
+
+void
+haze_connection_signed_off_cb (HazeConnection *conn)
+{
+    g_debug("signed-off");
+    tp_base_connection_finish_shutdown(TP_BASE_CONNECTION(conn));
 }
 
 static gboolean
@@ -62,9 +74,7 @@ _haze_connection_start_connecting (TpBaseConnection *base,
 
     purple_account_set_password(self->account, password);
     purple_account_set_enabled(self->account, UI_ID, TRUE);
-
-    PurpleSavedStatus *status = purple_savedstatus_new(NULL, PURPLE_STATUS_AVAILABLE);
-    purple_savedstatus_activate(status);
+    purple_account_connect(self->account);
 
     tp_base_connection_change_status(base, TP_CONNECTION_STATUS_CONNECTING,
                                      TP_CONNECTION_STATUS_REASON_REQUESTED);
@@ -76,8 +86,7 @@ static void
 _haze_connection_shut_down (TpBaseConnection *base)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
-
-    purple_account_set_enabled(self->account, UI_ID, FALSE);
+    purple_account_disconnect(self->account);
 }
 
 static void
@@ -185,7 +194,7 @@ haze_connection_dispose (GObject *object)
     HazeConnection *self = HAZE_CONNECTION(object);
 
     if(self->account != NULL) {
-        purple_account_destroy(self->account);
+        purple_accounts_delete(self->account);
         self->account = NULL;
     }
 

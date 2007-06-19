@@ -112,7 +112,7 @@ signed_off_cb (PurpleConnection *pc,
                HazeConnectionManager *self)
 {
     HazeConnection *hc = purple_connection_to_haze_connection(self, pc);
-    tp_base_connection_finish_shutdown(TP_BASE_CONNECTION(hc));
+    haze_connection_signed_off_cb(hc);
 }
 
 static void
@@ -121,9 +121,9 @@ connect_to_purple_signals (HazeConnectionManager *self)
     static int handle;
     purple_signal_connect(purple_connections_get_handle(), "signed-on",
                           &handle, PURPLE_CALLBACK(signed_on_cb), self);
-    purple_signal_connect(purple_connections_get_handle(), "signing-on",
+    purple_signal_connect(purple_connections_get_handle(), "signing-off",
                           &handle, PURPLE_CALLBACK(signing_off_cb), self);
-    purple_signal_connect(purple_connections_get_handle(), "signed-on",
+    purple_signal_connect(purple_connections_get_handle(), "signed-off",
                           &handle, PURPLE_CALLBACK(signed_off_cb), self);
 }
 
