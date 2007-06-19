@@ -20,13 +20,21 @@ G_DEFINE_TYPE(HazeConnection,
     TP_TYPE_BASE_CONNECTION);
 
 void
-haze_connection_signed_on_cb(HazeConnection *conn)
+haze_connection_signed_on_cb (HazeConnection *conn)
 {
     PurpleAccount *account = conn->account;
     printf("Account connected: %s %s\n", account->username, account->protocol_id);
 
     tp_base_connection_change_status(
         TP_BASE_CONNECTION(conn), TP_CONNECTION_STATUS_CONNECTED,
+        TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
+}
+
+void
+haze_connection_signing_off_cb (HazeConnection *conn)
+{
+    tp_base_connection_change_status(
+        TP_BASE_CONNECTION(conn), TP_CONNECTION_STATUS_DISCONNECTED,
         TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
 }
 
@@ -70,9 +78,7 @@ _haze_connection_shut_down (TpBaseConnection *base)
     HazeConnection *self = HAZE_CONNECTION(base);
 
     purple_account_set_enabled(self->account, UI_ID, FALSE);
-    // XXX actually wait till account has disconnected.
-    // XXX also we're leaking ->account.
-    tp_base_connection_finish_shutdown(base);
+    // XXX we're leaking ->account.
 }
 
 static void

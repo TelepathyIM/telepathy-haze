@@ -43,6 +43,7 @@ GType haze_connection_get_type (void);
                               HazeConnectionClass))
 
 void haze_connection_signed_on_cb(HazeConnection *conn);
+void haze_connection_signing_off_cb (HazeConnection *conn);
 
 G_END_DECLS
 
