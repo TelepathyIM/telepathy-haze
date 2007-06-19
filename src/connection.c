@@ -78,7 +78,6 @@ _haze_connection_shut_down (TpBaseConnection *base)
     HazeConnection *self = HAZE_CONNECTION(base);
 
     purple_account_set_enabled(self->account, UI_ID, FALSE);
-    // XXX we're leaking ->account.
 }
 
 static void
@@ -167,6 +166,31 @@ haze_connection_constructor (GType type,
 }
 
 static void
+haze_connection_dispose (GObject *object)
+{
+    HazeConnection *self = HAZE_CONNECTION(object);
+
+    if(self->account != NULL) {
+        purple_account_destroy(self->account);
+        self->account = NULL;
+    }
+
+    G_OBJECT_CLASS (haze_connection_parent_class)->dispose (object);
+}
+
+static void
+haze_connection_finalize (GObject *object)
+{
+    HazeConnection *self = HAZE_CONNECTION (object);
+
+    g_free (self->username);
+    g_free (self->password);
+    g_free (self->server);
+
+    G_OBJECT_CLASS (haze_connection_parent_class)->finalize (object);
+}
+
+static void
 haze_connection_class_init (HazeConnectionClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
@@ -178,6 +202,8 @@ haze_connection_class_init (HazeConnectionClass *klass)
     object_class->get_property = haze_connection_get_property;
     object_class->set_property = haze_connection_set_property;
     object_class->constructor = haze_connection_constructor;
+    object_class->dispose = haze_connection_dispose;
+    object_class->finalize = haze_connection_finalize;
 
     base_class->create_handle_repos = _haze_connection_create_handle_repos;
     base_class->create_channel_factories =
