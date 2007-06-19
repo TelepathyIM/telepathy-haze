@@ -110,7 +110,7 @@ haze_connection_get_unique_connection_name(TpBaseConnection *base)
                  "protocol", &protocol,
                  NULL);
 
-    conn_name = g_strdup_printf("%s/%s", protocol, conn->username);
+    conn_name = g_strdup(conn->username);
     return conn_name;
 }
 
