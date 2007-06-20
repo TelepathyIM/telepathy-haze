@@ -55,7 +55,7 @@ _haze_connection_start_connecting (TpBaseConnection *base,
                                    GError **error)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
-    char *protocol, *password, *prpl, *id;
+    char *protocol, *password, *prpl;
     TpHandleRepoIface *contact_handles =
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
 
@@ -64,9 +64,8 @@ _haze_connection_start_connecting (TpBaseConnection *base,
                  "password", &password,
                  NULL);
 
-    id = g_strdup_printf("%s:%s", protocol, self->username);
-    base->self_handle = tp_handle_ensure(contact_handles, id, NULL, error);
-    g_free(id);
+    base->self_handle = tp_handle_ensure(contact_handles, self->username,
+                                         NULL, error);
 
     prpl = g_strconcat("prpl-", protocol, NULL);
     self->account = purple_account_new(self->username, prpl);
