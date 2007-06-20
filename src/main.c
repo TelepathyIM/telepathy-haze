@@ -140,33 +140,78 @@ null_write_conv(PurpleConversation *conv, const char *who, const char *alias,
 			name, message);
 }
 
-static PurpleConversationUiOps null_conv_uiops = 
+static PurpleConversationUiOps haze_conv_uiops = 
 {
 	.write_conv = null_write_conv
 };
 
 static void
-null_ui_init()
+haze_ui_init ()
 {
 	/**
 	 * This should initialize the UI components for all the modules. Here we
 	 * just initialize the UI for conversations.
 	 */
-	purple_conversations_set_ui_ops(&null_conv_uiops);
+	purple_conversations_set_ui_ops(&haze_conv_uiops);
+}
+
+static char *debug_level_names[] =
+{
+    "all",
+    "misc",
+    "info",
+    "warning",
+    "error",
+    "fatal"
+};
+
+static void
+haze_debug_print (PurpleDebugLevel level,
+                  const char *category,
+                  const char *arg_s)
+{
+    char *argh = g_strdup(arg_s);
+    g_debug("[%s] %s: %s", debug_level_names[level], category,
+            g_strchomp(argh));
+    g_free(argh);
+}
+
+static gboolean
+haze_debug_is_enabled (PurpleDebugLevel level,
+                       const char *category)
+{
+    return TRUE;
+}
+
+static PurpleDebugUiOps haze_debug_uiops =
+{
+    haze_debug_print,
+    haze_debug_is_enabled,
+    /* padding */
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+};
+
+static void
+haze_debug_init()
+{
+    purple_debug_set_ui_ops(&haze_debug_uiops);
 }
 
 static PurpleCoreUiOps null_core_uiops = 
 {
-	NULL,
-	NULL,
-	null_ui_init,
-	NULL,
+    NULL,
+    haze_debug_init,
+    haze_ui_init,
+    NULL,
 
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
+    /* padding */
+    NULL,
+    NULL,
+    NULL,
+    NULL
 };
 
 static void
@@ -248,9 +293,10 @@ construct_cm (void)
 int main(int argc, char **argv)
 {
     int ret = 0;
-    init_libpurple();
 
     g_set_prgname(UI_ID);
+
+    init_libpurple();
     g_debug("libpurple initialized.");
 
     tp_debug_set_all_flags();
