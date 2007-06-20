@@ -247,30 +247,16 @@ construct_cm (void)
 
 int main(int argc, char **argv)
 {
-	init_libpurple();
+    int ret = 0;
+    init_libpurple();
 
-        g_set_prgname(UI_ID);
-        g_debug("libpurple initialized.");
+    g_set_prgname(UI_ID);
+    g_debug("libpurple initialized.");
 
-        tp_debug_set_all_flags();
-        return tp_run_connection_manager(UI_ID, "0.0.1", construct_cm, argc, argv);
-#if 0
-	/* Create the account */
-	PurpleAccount *account = purple_account_new(name, prpl);
+    tp_debug_set_all_flags();
+    ret = tp_run_connection_manager(UI_ID, "0.0.1", construct_cm, argc, argv);
 
-	/* Get the password for the account */
-	purple_account_set_password(account, password);
-
-	/* It's necessary to enable the account first. */
-	purple_account_set_enabled(account, UI_ID, TRUE);
-
-	/* Now, to connect the account(s), create a status and activate it. */
-	PurpleSavedStatus *status = purple_savedstatus_new(NULL, PURPLE_STATUS_AVAILABLE);
-	purple_savedstatus_activate(status);
-
-	connect_to_signals_for_demonstration_purposes_only();
-
-	g_main_loop_run(loop);
-#endif
+    purple_core_quit();
+    return ret;
 }
 
