@@ -86,7 +86,8 @@ static void
 _haze_connection_shut_down (TpBaseConnection *base)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
-    purple_account_disconnect(self->account);
+    if(purple_account_is_connected(self->account))
+        purple_account_disconnect(self->account);
 }
 
 static void
