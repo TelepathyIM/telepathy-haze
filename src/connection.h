@@ -18,9 +18,7 @@ struct _HazeConnectionClass {
 struct _HazeConnection {
     TpBaseConnection parent;
     PurpleAccount *account;
-    char *username;
-    char *password;
-    char *server;
+    gpointer priv;
 };
 
 GType haze_connection_get_type (void);
