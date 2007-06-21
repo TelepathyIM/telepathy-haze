@@ -1,11 +1,13 @@
 bin_PROGRAMS = haze
 
 haze_SOURCES = main.c \
-               connection-manager.c \
-               connection.c \
-               defines.h \
-               connection-manager.h \
-               connection.h
+	       defines.h \
+	       connection-manager.c \
+	       connection-manager.h \
+	       connection.c \
+	       connection.h \
+	       im-channel-factory.c \
+	       im-channel-factory.h
 
 AM_CFLAGS = $(PURPLE_CFLAGS) $(TP_GLIB_CFLAGS) -Wall -Werror
 
