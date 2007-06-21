@@ -20,23 +20,20 @@ G_DEFINE_TYPE(HazeConnection,
     TP_TYPE_BASE_CONNECTION);
 
 void
-haze_connection_signed_on_cb (HazeConnection *conn)
+haze_connection_signed_on_cb (HazeConnection *self)
 {
-    PurpleAccount *account = conn->account;
-    printf("Account connected: %s %s\n", account->username, account->protocol_id);
-
     tp_base_connection_change_status(
-        TP_BASE_CONNECTION(conn), TP_CONNECTION_STATUS_CONNECTED,
+        TP_BASE_CONNECTION(self), TP_CONNECTION_STATUS_CONNECTED,
         TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
 }
 
 void
-haze_connection_signing_off_cb (HazeConnection *conn)
+haze_connection_signing_off_cb (HazeConnection *self)
 {
     /* XXX Notify with the reason! */
-    if(TP_BASE_CONNECTION(conn)->status != TP_CONNECTION_STATUS_DISCONNECTED) {
+    if(TP_BASE_CONNECTION(self)->status != TP_CONNECTION_STATUS_DISCONNECTED) {
         tp_base_connection_change_status(
-            TP_BASE_CONNECTION(conn), TP_CONNECTION_STATUS_DISCONNECTED,
+            TP_BASE_CONNECTION(self), TP_CONNECTION_STATUS_DISCONNECTED,
             TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
     }
 }
@@ -50,9 +47,9 @@ idle_finish_shutdown_cb(gpointer data)
 }
 
 void
-haze_connection_signed_off_cb (HazeConnection *conn)
+haze_connection_signed_off_cb (HazeConnection *self)
 {
-    g_idle_add(idle_finish_shutdown_cb, conn);
+    g_idle_add(idle_finish_shutdown_cb, self);
 }
 
 static gboolean
@@ -95,7 +92,7 @@ _haze_connection_shut_down (TpBaseConnection *base)
 }
 
 static void
-_haze_connection_create_handle_repos (TpBaseConnection *conn,
+_haze_connection_create_handle_repos (TpBaseConnection *base,
         TpHandleRepoIface *repos[NUM_TP_HANDLE_TYPES])
 {
     /* FIXME: Should probably normalize... */
@@ -109,7 +106,7 @@ _haze_connection_create_handle_repos (TpBaseConnection *conn,
 }
 
 static GPtrArray *
-_haze_connection_create_channel_factories (TpBaseConnection *conn)
+_haze_connection_create_channel_factories (TpBaseConnection *base)
 {
     return g_ptr_array_new ();
 }
@@ -117,15 +114,9 @@ _haze_connection_create_channel_factories (TpBaseConnection *conn)
 gchar *
 haze_connection_get_unique_connection_name(TpBaseConnection *base)
 {
-    HazeConnection *conn = HAZE_CONNECTION(base);
-    gchar *protocol, *conn_name;
+    HazeConnection *self = HAZE_CONNECTION(base);
 
-    g_object_get(G_OBJECT(conn),
-                 "protocol", &protocol,
-                 NULL);
-
-    conn_name = g_strdup(conn->username);
-    return conn_name;
+    return g_strdup(self->username);
 }
 
 static void
