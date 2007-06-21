@@ -180,7 +180,7 @@ static gboolean
 haze_debug_is_enabled (PurpleDebugLevel level,
                        const char *category)
 {
-    return TRUE;
+    return level != PURPLE_DEBUG_MISC;
 }
 
 static PurpleDebugUiOps haze_debug_uiops =
