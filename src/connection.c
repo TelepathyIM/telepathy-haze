@@ -23,7 +23,6 @@ void
 haze_connection_signed_on_cb (HazeConnection *conn)
 {
     PurpleAccount *account = conn->account;
-    g_debug("signed-on");
     printf("Account connected: %s %s\n", account->username, account->protocol_id);
 
     tp_base_connection_change_status(
@@ -34,7 +33,6 @@ haze_connection_signed_on_cb (HazeConnection *conn)
 void
 haze_connection_signing_off_cb (HazeConnection *conn)
 {
-    g_debug("signing-off");
     /* XXX Notify with the reason! */
     if(TP_BASE_CONNECTION(conn)->status != TP_CONNECTION_STATUS_DISCONNECTED) {
         tp_base_connection_change_status(
@@ -43,11 +41,18 @@ haze_connection_signing_off_cb (HazeConnection *conn)
     }
 }
 
+static gboolean
+idle_finish_shutdown_cb(gpointer data)
+{
+    TpBaseConnection *base = TP_BASE_CONNECTION(data);
+    tp_base_connection_finish_shutdown(base);
+    return FALSE;
+}
+
 void
 haze_connection_signed_off_cb (HazeConnection *conn)
 {
-    g_debug("signed-off");
-    tp_base_connection_finish_shutdown(TP_BASE_CONNECTION(conn));
+    g_idle_add(idle_finish_shutdown_cb, conn);
 }
 
 static gboolean
@@ -192,6 +197,8 @@ static void
 haze_connection_dispose (GObject *object)
 {
     HazeConnection *self = HAZE_CONNECTION(object);
+
+    g_debug("disposing of (HazeConnection *)%p", self);
 
     if(self->account != NULL) {
         purple_accounts_delete(self->account);
