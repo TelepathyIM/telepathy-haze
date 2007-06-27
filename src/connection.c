@@ -5,6 +5,7 @@
 
 #include "defines.h"
 #include "connection.h"
+#include "im-channel-factory.h"
 
 enum
 {
@@ -119,7 +120,15 @@ _haze_connection_create_handle_repos (TpBaseConnection *base,
 static GPtrArray *
 _haze_connection_create_channel_factories (TpBaseConnection *base)
 {
-    return g_ptr_array_new ();
+    HazeConnection *self = HAZE_CONNECTION(base);
+    GPtrArray *channel_factories = g_ptr_array_new ();
+
+    g_ptr_array_add (channel_factories,
+                     g_object_new (HAZE_TYPE_IM_CHANNEL_FACTORY,
+                                   "connection", self,
+                                   NULL));
+
+    return channel_factories;
 }
 
 gchar *
@@ -222,6 +231,7 @@ haze_connection_finalize (GObject *object)
     g_free (priv->username);
     g_free (priv->password);
     g_free (priv->server);
+    self->priv = NULL;
 
     G_OBJECT_CLASS (haze_connection_parent_class)->finalize (object);
 }
