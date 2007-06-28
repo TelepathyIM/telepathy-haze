@@ -15,7 +15,6 @@ struct _HazeConnectionManagerClass {
 
 struct _HazeConnectionManager {
     TpBaseConnectionManager parent;
-    GList *connections;
 };
 
 GType haze_connection_manager_get_type (void);

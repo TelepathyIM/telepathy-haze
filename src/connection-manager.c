@@ -74,68 +74,6 @@ get_protocols() {
     return protocols;
 }
 
-static HazeConnection *
-purple_connection_to_haze_connection (HazeConnectionManager *self,
-                                      PurpleConnection *pc)
-{
-    HazeConnection *hc;
-    GList *l = self->connections;
-
-    while (l != NULL) {
-        hc = l->data;
-        if(purple_account_get_connection(hc->account) == pc) {
-            return hc;
-        }
-    }
-
-    return NULL;
-}
-
-static void
-signed_on_cb (PurpleConnection *pc,
-              HazeConnectionManager *self)
-{
-    HazeConnection *hc = purple_connection_to_haze_connection(self, pc);
-    haze_connection_signed_on_cb(hc);
-}
-
-static void
-signing_off_cb (PurpleConnection *pc,
-               HazeConnectionManager *self)
-{
-    HazeConnection *hc = purple_connection_to_haze_connection(self, pc);
-    haze_connection_signing_off_cb(hc);
-}
-
-static void
-signed_off_cb (PurpleConnection *pc,
-               HazeConnectionManager *self)
-{
-    HazeConnection *hc = purple_connection_to_haze_connection(self, pc);
-    haze_connection_signed_off_cb(hc);
-}
-
-static void
-connect_to_purple_signals (HazeConnectionManager *self)
-{
-    static int handle;
-    purple_signal_connect(purple_connections_get_handle(), "signed-on",
-                          &handle, PURPLE_CALLBACK(signed_on_cb), self);
-    purple_signal_connect(purple_connections_get_handle(), "signing-off",
-                          &handle, PURPLE_CALLBACK(signing_off_cb), self);
-    purple_signal_connect(purple_connections_get_handle(), "signed-off",
-                          &handle, PURPLE_CALLBACK(signed_off_cb), self);
-}
-
-static void
-connection_shutdown_finished_cb (TpBaseConnection *conn,
-                                 gpointer data)
-{
-    HazeConnectionManager *self = HAZE_CONNECTION_MANAGER (data);
-
-    self->connections = g_list_remove(self->connections, conn);
-}
-
 static TpBaseConnection *
 _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          const gchar *proto,
@@ -143,7 +81,6 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          void *parsed_params,
                                          GError **error)
 {
-    HazeConnectionManager *self = HAZE_CONNECTION_MANAGER(base);
     HazeParams *params = (HazeParams *)parsed_params;
     HazeConnection *conn = g_object_new (HAZE_TYPE_CONNECTION,
                                          "protocol",    proto,
@@ -152,28 +89,22 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          "server",      params->server,
                                          NULL);
 
-    self->connections = g_list_prepend(self->connections, conn);
-    g_signal_connect (conn, "shutdown-finished",
-                      G_CALLBACK (connection_shutdown_finished_cb),
-                      self);
-
     return (TpBaseConnection *) conn;
 }
 
 static void
 haze_connection_manager_class_init (HazeConnectionManagerClass *klass)
 {
-  TpBaseConnectionManagerClass *base_class =
-    (TpBaseConnectionManagerClass *)klass;
+    TpBaseConnectionManagerClass *base_class =
+        (TpBaseConnectionManagerClass *)klass;
 
-  base_class->new_connection = _haze_connection_manager_new_connection;
-  base_class->cm_dbus_name = "haze";
-  base_class->protocol_params = get_protocols();
+    base_class->new_connection = _haze_connection_manager_new_connection;
+    base_class->cm_dbus_name = "haze";
+    base_class->protocol_params = get_protocols();
 }
 
 static void
 haze_connection_manager_init (HazeConnectionManager *self)
 {
     g_debug("Initializing (HazeConnectionManager *)%p", self);
-    connect_to_purple_signals(self);
 }

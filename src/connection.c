@@ -1,5 +1,3 @@
-#include <savedstatuses.h>
-
 #include <telepathy-glib/handle-repo-dynamic.h>
 #include <telepathy-glib/errors.h>
 
@@ -31,16 +29,22 @@ typedef struct _HazeConnectionPrivate
   ((HazeConnectionPrivate *)o->priv)
 
 void
-haze_connection_signed_on_cb (HazeConnection *self)
+signed_on_cb (PurpleConnection *pc, HazeConnection *self)
 {
+    if (self->account != purple_connection_get_account (pc))
+        return;
+
     tp_base_connection_change_status(
         TP_BASE_CONNECTION(self), TP_CONNECTION_STATUS_CONNECTED,
         TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
 }
 
 void
-haze_connection_signing_off_cb (HazeConnection *self)
+signing_off_cb (PurpleConnection *pc, HazeConnection *self)
 {
+    if (self->account != purple_connection_get_account (pc))
+        return;
+
     /* XXX Notify with the reason! */
     if(TP_BASE_CONNECTION(self)->status != TP_CONNECTION_STATUS_DISCONNECTED) {
         tp_base_connection_change_status(
@@ -58,8 +62,11 @@ idle_finish_shutdown_cb(gpointer data)
 }
 
 void
-haze_connection_signed_off_cb (HazeConnection *self)
+signed_off_cb (PurpleConnection *pc, HazeConnection *self)
 {
+    if (self->account != purple_connection_get_account (pc))
+        return;
+
     g_idle_add(idle_finish_shutdown_cb, self);
 }
 
@@ -203,6 +210,13 @@ haze_connection_constructor (GType type,
                 type, n_construct_properties, construct_params));
 
     g_debug("Post-construction: (HazeConnection *)%p", self);
+    purple_signal_connect(purple_connections_get_handle(), "signed-on",
+                          self, PURPLE_CALLBACK(signed_on_cb), self);
+    purple_signal_connect(purple_connections_get_handle(), "signing-off",
+                          self, PURPLE_CALLBACK(signing_off_cb), self);
+    purple_signal_connect(purple_connections_get_handle(), "signed-off",
+                          self, PURPLE_CALLBACK(signed_off_cb), self);
+
 
     return (GObject *)self;
 }
@@ -217,6 +231,8 @@ haze_connection_dispose (GObject *object)
     if(self->account != NULL) {
         purple_accounts_delete(self->account);
         self->account = NULL;
+
+        purple_signals_disconnect_by_handle(self);
     }
 
     G_OBJECT_CLASS (haze_connection_parent_class)->dispose (object);
