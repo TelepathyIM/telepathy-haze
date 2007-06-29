@@ -43,7 +43,7 @@ HazeConnectionManager *haze_connection_manager_get (void);
 
 HazeConnection *
 haze_connection_manager_get_haze_connection (HazeConnectionManager *self,
-                                             PurpleConnection *pc);
+                                             PurpleAccount *account);
 
 G_END_DECLS
 

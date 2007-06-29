@@ -75,14 +75,14 @@ get_protocols() {
 
 HazeConnection *
 haze_connection_manager_get_haze_connection (HazeConnectionManager *self,
-                                             PurpleConnection *pc)
+                                             PurpleAccount *account)
 {
     HazeConnection *hc;
     GList *l = self->connections;
 
     while (l != NULL) {
         hc = l->data;
-        if(purple_account_get_connection(hc->account) == pc) {
+        if(hc->account == account) {
             return hc;
         }
     }
