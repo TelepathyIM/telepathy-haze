@@ -196,6 +196,7 @@ received_message_cb(PurpleAccount *account,
     TpHandleRepoIface *contact_repo =
         tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
     TpHandle handle;
+    TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
     HazeIMChannel *chan = NULL;
 
     if(priv->conn->account != account)
@@ -213,11 +214,17 @@ received_message_cb(PurpleAccount *account,
         chan = new_im_channel (self, handle);
     }
     g_assert (chan != NULL);
-    
+
     tp_handle_unref (contact_repo, handle); /* reffed by chan */
 
-    tp_text_mixin_receive (G_OBJECT (chan),
-                           TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL, handle,
+    if (flags & PURPLE_MESSAGE_AUTO_RESP) {
+        type = TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY;
+    }
+    else if (purple_message_meify(message, -1)) {
+        type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
+    }
+
+    tp_text_mixin_receive (G_OBJECT (chan), type, handle,
                            time (NULL), message); // XXX timestamp!
 }
 

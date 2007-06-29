@@ -112,27 +112,38 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
     HazeIMChannel *self = HAZE_IM_CHANNEL (channel);
     HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (self);
     GError *error = NULL;
+    PurpleMessageFlags flags = 0;
+    char *message;
 
-    switch (type) {
-        case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
-        case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
-        case TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE:
-        case TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY:
-            purple_conv_im_send (PURPLE_CONV_IM (priv->conv), text);
-            tp_svc_channel_type_text_return_from_send (context);
+    if (type >= NUM_TP_CHANNEL_TEXT_MESSAGE_TYPES) {
+        g_debug ("invalid message type %u", type);
+        g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                "invalid message type: %u", type);
+        dbus_g_method_return_error (context, error);
+        g_error_free (error);
 
-            break;
-
-        default:
-            
-            g_debug ("invalid message type %u", type);
-            g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-                    "invalid message type: %u", type);
-            dbus_g_method_return_error (context, error);
-            g_error_free (error);
-
-            return;
+        return;
     }
+
+    if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION) {
+        /* XXX this is not good enough for prpl-irc, which has a slash-command
+         *     for actions and doesn't do special stuff to messages which happen
+         *     to start with "/me ".
+         */
+        message = g_strconcat ("/me ", text, NULL);
+    } else {
+        message = g_strdup (text);
+    }
+    if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY) {
+        flags |= PURPLE_MESSAGE_AUTO_RESP;
+    }
+
+    purple_conv_im_send_with_flags (PURPLE_CONV_IM (priv->conv), message,
+                                    flags);
+
+    g_free (message);
+
+    tp_svc_channel_type_text_return_from_send (context);
 }
 
 static void
