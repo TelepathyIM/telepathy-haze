@@ -74,6 +74,32 @@ get_protocols() {
     return protocols;
 }
 
+static HazeConnection *
+purple_connection_to_haze_connection (HazeConnectionManager *self,
+                                      PurpleConnection *pc)
+{
+    HazeConnection *hc;
+    GList *l = self->connections;
+
+    while (l != NULL) {
+        hc = l->data;
+        if(purple_account_get_connection(hc->account) == pc) {
+            return hc;
+        }
+    }
+
+    return NULL;
+}
+
+static void
+connection_shutdown_finished_cb (TpBaseConnection *conn,
+                                 gpointer data)
+{
+    HazeConnectionManager *self = HAZE_CONNECTION_MANAGER (data);
+
+    self->connections = g_list_remove(self->connections, conn);
+}
+
 static TpBaseConnection *
 _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          const gchar *proto,
@@ -81,6 +107,7 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          void *parsed_params,
                                          GError **error)
 {
+    HazeConnectionManager *self = HAZE_CONNECTION_MANAGER(base);
     HazeParams *params = (HazeParams *)parsed_params;
     HazeConnection *conn = g_object_new (HAZE_TYPE_CONNECTION,
                                          "protocol",    proto,
@@ -88,6 +115,11 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          "password",    params->password,
                                          "server",      params->server,
                                          NULL);
+
+    self->connections = g_list_prepend(self->connections, conn);
+    g_signal_connect (conn, "shutdown-finished",
+                      G_CALLBACK (connection_shutdown_finished_cb),
+                      self);
 
     return (TpBaseConnection *) conn;
 }
