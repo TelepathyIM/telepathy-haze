@@ -4,6 +4,8 @@
 #include <glib-object.h>
 #include <telepathy-glib/base-connection-manager.h>
 
+#include "connection.h"
+
 G_BEGIN_DECLS
 
 typedef struct _HazeConnectionManager HazeConnectionManager;
@@ -36,6 +38,12 @@ GType haze_connection_manager_get_type (void);
 #define HAZE_CONNECTION_MANAGER_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), HAZE_TYPE_CONNECTION_MANAGER, \
                               HazeConnectionManagerClass))
+
+HazeConnectionManager *haze_connection_manager_get (void);
+
+HazeConnection *
+haze_connection_manager_get_haze_connection (HazeConnectionManager *self,
+                                             PurpleConnection *pc);
 
 G_END_DECLS
 

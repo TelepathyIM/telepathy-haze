@@ -267,10 +267,9 @@ init_libpurple()
 }
 
 static TpBaseConnectionManager *
-construct_cm (void)
+get_cm (void)
 {
-  return (TpBaseConnectionManager *)g_object_new (
-      HAZE_TYPE_CONNECTION_MANAGER, NULL);
+    return (TpBaseConnectionManager *) haze_connection_manager_get ();
 }
 
 int main(int argc, char **argv)
@@ -283,7 +282,7 @@ int main(int argc, char **argv)
     g_debug("libpurple initialized.");
 
     tp_debug_set_all_flags();
-    ret = tp_run_connection_manager(UI_ID, "0.0.1", construct_cm, argc, argv);
+    ret = tp_run_connection_manager(UI_ID, "0.0.1", get_cm, argc, argv);
 
     purple_core_quit();
     return ret;

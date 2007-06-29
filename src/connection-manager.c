@@ -4,7 +4,6 @@
 #include <prpl.h>
 
 #include "connection-manager.h"
-#include "connection.h"
 
 G_DEFINE_TYPE(HazeConnectionManager,
     haze_connection_manager,
@@ -74,9 +73,9 @@ get_protocols() {
     return protocols;
 }
 
-static HazeConnection *
-purple_connection_to_haze_connection (HazeConnectionManager *self,
-                                      PurpleConnection *pc)
+HazeConnection *
+haze_connection_manager_get_haze_connection (HazeConnectionManager *self,
+                                             PurpleConnection *pc)
 {
     HazeConnection *hc;
     GList *l = self->connections;
@@ -139,4 +138,14 @@ static void
 haze_connection_manager_init (HazeConnectionManager *self)
 {
     g_debug("Initializing (HazeConnectionManager *)%p", self);
+}
+
+HazeConnectionManager *
+haze_connection_manager_get (void) {
+    static HazeConnectionManager *manager = NULL;
+    if (G_UNLIKELY(manager == NULL)) {
+        manager = g_object_new (HAZE_TYPE_CONNECTION_MANAGER, NULL);
+    }
+    g_assert (manager != NULL);
+    return manager;
 }
