@@ -171,7 +171,63 @@ new_im_channel (HazeImChannelFactory *self,
 static void
 haze_im_channel_factory_iface_close_all (TpChannelFactoryIface *iface)
 {
+    HazeImChannelFactory *fac = HAZE_IM_CHANNEL_FACTORY (iface);
+    HazeImChannelFactoryPrivate *priv =
+        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (fac);
+
     // XXX do things!
+    g_warning ("yaaaaaaaaaargh leaking priv->channels in close_all(%p)!",
+               fac);
+
+    priv->channels = NULL;
+}
+
+static void
+received_message_cb(PurpleAccount *account,
+                    const char *sender,
+                    char *message,
+                    PurpleConversation *conv,
+                    PurpleMessageFlags flags,
+                    HazeImChannelFactory *self)
+{
+    HazeImChannelFactoryPrivate *priv =
+        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (self);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+    TpHandleRepoIface *contact_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+    TpHandle handle;
+    HazeIMChannel *chan = NULL;
+
+    if(priv->conn->account != account)
+        return;
+    
+    handle = tp_handle_ensure (contact_repo, sender, NULL, NULL);
+    if (handle == 0) {
+        g_debug ("got a 0 handle, ignoring message");
+        return;
+    }
+
+    chan = g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle));
+    if (chan == NULL) {
+        g_debug ("creating a new channel...");
+        chan = new_im_channel (self, handle);
+    }
+    g_assert (chan != NULL);
+    
+    tp_handle_unref (contact_repo, handle); /* reffed by chan */
+
+    tp_text_mixin_receive (G_OBJECT (chan),
+                           TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL, handle,
+                           time (NULL), message); // XXX timestamp!
+}
+
+static void
+haze_im_channel_factory_iface_connecting (TpChannelFactoryIface *iface)
+{
+    HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface);
+    void *conv_handle = purple_conversations_get_handle();
+    purple_signal_connect(conv_handle, "received-im-msg", self,
+                          PURPLE_CALLBACK(received_message_cb), self);
 }
 
 struct _ForeachData
@@ -255,7 +311,7 @@ haze_im_channel_factory_iface_init (gpointer g_iface,
     TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *) g_iface;
 
     klass->close_all = haze_im_channel_factory_iface_close_all;
-    klass->connecting = NULL; //haze_im_channel_factory_iface_connecting;
+    klass->connecting = haze_im_channel_factory_iface_connecting;
     klass->connected = NULL; //haze_im_channel_factory_iface_connected;
     klass->disconnected = NULL; //haze_im_channel_factory_iface_disconnected;
     klass->foreach = haze_im_channel_factory_iface_foreach;
