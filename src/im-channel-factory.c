@@ -230,6 +230,13 @@ haze_im_channel_factory_iface_connecting (TpChannelFactoryIface *iface)
                           PURPLE_CALLBACK(received_message_cb), self);
 }
 
+static void
+haze_im_channel_factory_iface_disconnected (TpChannelFactoryIface *iface)
+{
+    HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface);
+    purple_signals_disconnect_by_handle (self);
+}
+
 struct _ForeachData
 {
     TpChannelFunc foreach;
@@ -313,7 +320,7 @@ haze_im_channel_factory_iface_init (gpointer g_iface,
     klass->close_all = haze_im_channel_factory_iface_close_all;
     klass->connecting = haze_im_channel_factory_iface_connecting;
     klass->connected = NULL; //haze_im_channel_factory_iface_connected;
-    klass->disconnected = NULL; //haze_im_channel_factory_iface_disconnected;
+    klass->disconnected = haze_im_channel_factory_iface_disconnected;
     klass->foreach = haze_im_channel_factory_iface_foreach;
     klass->request = haze_im_channel_factory_iface_request;
 }
