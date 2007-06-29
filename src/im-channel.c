@@ -1,5 +1,6 @@
-#include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/channel-iface.h>
+#include <telepathy-glib/dbus.h>
+#include <telepathy-glib/interfaces.h>
 
 #include "im-channel.h"
 #include "connection.h"
@@ -119,6 +120,9 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
         case TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY:
             purple_conv_im_send (PURPLE_CONV_IM (priv->conv), text);
             tp_svc_channel_type_text_return_from_send (context);
+
+            break;
+
         default:
             
             g_debug ("invalid message type %u", type);
@@ -215,6 +219,7 @@ haze_im_channel_constructor (GType type, guint n_props,
     TpBaseConnection *conn;
     HazeIMChannelPrivate *priv;
     const char *recipient;
+    DBusGConnection *bus;
 
     obj = G_OBJECT_CLASS (haze_im_channel_parent_class)->
         constructor (type, n_props, props);
@@ -226,6 +231,9 @@ haze_im_channel_constructor (GType type, guint n_props,
     tp_handle_ref (contact_handles, priv->handle);
     tp_text_mixin_init (obj, G_STRUCT_OFFSET (HazeIMChannel, text),
                         contact_handles);
+
+    bus = tp_get_bus ();
+    dbus_g_connection_register_g_object (bus, priv->object_path, obj);
 
     recipient = tp_handle_inspect(contact_handles, priv->handle);
     priv->conv = purple_conversation_new (PURPLE_CONV_TYPE_IM,
