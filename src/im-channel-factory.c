@@ -119,7 +119,7 @@ haze_im_channel_factory_class_init (HazeImChannelFactoryClass *klass)
     object_class->set_property = haze_im_channel_factory_set_property;
 
     param_spec = g_param_spec_object ("connection", "HazeConnection object",
-                                      "Hazee connection object that owns this "
+                                      "Haze connection object that owns this "
                                       "IM channel factory object.",
                                       HAZE_TYPE_CONNECTION,
                                       G_PARAM_CONSTRUCT_ONLY |
@@ -130,6 +130,24 @@ haze_im_channel_factory_class_init (HazeImChannelFactoryClass *klass)
 
     g_type_class_add_private (object_class,
                               sizeof(HazeImChannelFactoryPrivate));
+}
+
+static void
+im_channel_closed_cb (HazeIMChannel *chan, gpointer user_data)
+{
+    HazeImChannelFactory *fac = HAZE_IM_CHANNEL_FACTORY (user_data);
+    HazeImChannelFactoryPrivate *priv =
+        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (fac);
+    TpHandle contact_handle;
+
+    if (priv->channels)
+    {
+        g_object_get (chan, "handle", &contact_handle, NULL);
+
+        g_debug ("removing channel with handle %d", contact_handle);
+
+        g_hash_table_remove (priv->channels, GINT_TO_POINTER (contact_handle));
+    }
 }
 
 static HazeIMChannel *
@@ -155,8 +173,8 @@ new_im_channel (HazeImChannelFactory *self,
                          NULL);
 
     g_debug ("object path %s", object_path);
-// XXX
-//    g_signal_connect (chan, "closed", (GCallback) im_channel_closed_cb, self);
+
+    g_signal_connect (chan, "closed", G_CALLBACK (im_channel_closed_cb), self);
 
     g_hash_table_insert (priv->channels, GINT_TO_POINTER (handle), chan);
 
@@ -175,11 +193,13 @@ haze_im_channel_factory_iface_close_all (TpChannelFactoryIface *iface)
     HazeImChannelFactoryPrivate *priv =
         HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (fac);
 
-    // XXX do things!
-    g_warning ("yaaaaaaaaaargh leaking priv->channels in close_all(%p)!",
-               fac);
+    g_debug ("closing channels");
 
-    priv->channels = NULL;
+    if (priv->channels)
+    {
+        g_hash_table_destroy (priv->channels);
+        priv->channels = NULL;
+    }
 }
 
 static void
@@ -188,6 +208,7 @@ received_message_cb(PurpleAccount *account,
                     char *message,
                     PurpleConversation *conv,
                     PurpleMessageFlags flags,
+                    time_t mtime,
                     HazeImChannelFactory *self)
 {
     HazeImChannelFactoryPrivate *priv =
@@ -225,7 +246,7 @@ received_message_cb(PurpleAccount *account,
     }
 
     tp_text_mixin_receive (G_OBJECT (chan), type, handle,
-                           time (NULL), message); // XXX timestamp!
+                           mtime, message);
 }
 
 static void
@@ -233,7 +254,7 @@ haze_im_channel_factory_iface_connecting (TpChannelFactoryIface *iface)
 {
     HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface);
     void *conv_handle = purple_conversations_get_handle();
-    purple_signal_connect(conv_handle, "received-im-msg", self,
+    purple_signal_connect(conv_handle, "received-im-msg-with-timestamp", self,
                           PURPLE_CALLBACK(received_message_cb), self);
 }
 
