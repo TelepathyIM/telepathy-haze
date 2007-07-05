@@ -1,9 +1,11 @@
 #include <telepathy-glib/handle-repo-dynamic.h>
+#include <telepathy-glib/handle-repo-static.h>
 #include <telepathy-glib/errors.h>
 
 #include "defines.h"
 #include "connection.h"
 #include "im-channel-factory.h"
+#include "contact-list.h"
 
 enum
 {
@@ -110,18 +112,42 @@ _haze_connection_shut_down (TpBaseConnection *base)
         purple_account_disconnect(self->account);
 }
 
+/* Must be in the same order as HazeListHandle in connection.h */
+static const char *list_handle_strings[] =
+{
+    "subscribe",    /* HAZE_LIST_HANDLE_SUBSCRIBE */
+#if 0
+    "publish",      /* HAZE_LIST_HANDLE_PUBLISH */
+    "known",        /* HAZE_LIST_HANDLE_KNOWN */
+    "deny",         /* HAZE_LIST_HANDLE_DENY */
+#endif
+    NULL
+};
+
+static gchar*
+_contact_normalize (TpHandleRepoIface *repo,
+                    const gchar *id,
+                    gpointer context,
+                    GError **error)
+{
+    HazeConnection *conn = HAZE_CONNECTION (context);
+    PurpleAccount *account = conn->account;
+    return g_strdup (purple_normalize (account, id));
+}
+
 static void
 _haze_connection_create_handle_repos (TpBaseConnection *base,
         TpHandleRepoIface *repos[NUM_TP_HANDLE_TYPES])
 {
-    /* FIXME: Should probably normalize... */
     repos[TP_HANDLE_TYPE_CONTACT] =
-        tp_dynamic_handle_repo_new (TP_HANDLE_TYPE_CONTACT, NULL, NULL);
+        tp_dynamic_handle_repo_new (TP_HANDLE_TYPE_CONTACT, _contact_normalize,
+                                    base);
     /* FIXME:
     repos[TP_HANDLE_TYPE_ROOM]
     repos[TP_HANDLE_TYPE_GROUP]
-    repos[TP_HANDLE_TYPE_LIST]
     */
+    repos[TP_HANDLE_TYPE_LIST] =
+        tp_static_handle_repo_new (TP_HANDLE_TYPE_LIST, list_handle_strings);
 }
 
 static GPtrArray *
@@ -132,6 +158,11 @@ _haze_connection_create_channel_factories (TpBaseConnection *base)
 
     g_ptr_array_add (channel_factories,
                      g_object_new (HAZE_TYPE_IM_CHANNEL_FACTORY,
+                                   "connection", self,
+                                   NULL));
+
+    g_ptr_array_add (channel_factories,
+                     g_object_new (HAZE_TYPE_CONTACT_LIST,
                                    "connection", self,
                                    NULL));
 
