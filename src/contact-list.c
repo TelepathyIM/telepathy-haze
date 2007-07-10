@@ -80,8 +80,6 @@ haze_contact_list_dispose (GObject *object)
 
     priv->dispose_has_run = TRUE;
 
-    purple_signals_disconnect_by_handle(self);
-
     tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
     g_assert (priv->list_channels == NULL);
     g_assert (priv->group_channels == NULL);
@@ -218,7 +216,7 @@ _haze_contact_list_create_channel (HazeContactList *contact_list,
                                                (TpChannelIface *)chan, NULL);
     g_free (object_path);
 
-  return chan;
+    return chan;
 }
 
 static void
