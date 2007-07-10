@@ -30,10 +30,6 @@ G_DEFINE_TYPE_WITH_CODE (HazeContactListChannel,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
       tp_group_mixin_iface_init);
     )
-/* XXX  dance around implementing all this crap then rig it up for "subscribe"
- *       - connect to the buddy-{added,removed} badgers
- *       - is this where status happens?
-*/
 
 /* properties: */
 enum {
@@ -52,7 +48,23 @@ _haze_contact_list_channel_add_member_cb (GObject *obj,
                                           const gchar *message,
                                           GError **error)
 {
-    return FALSE;
+    HazeContactListChannel *chan = HAZE_CONTACT_LIST_CHANNEL (obj);
+    HazeContactListChannelPrivate *priv =
+        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (chan);
+    TpBaseConnection *conn = TP_BASE_CONNECTION (priv->conn);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (conn, TP_HANDLE_TYPE_CONTACT);
+    const gchar *name = tp_handle_inspect (handle_repo, handle);
+    PurpleBuddy *b = purple_buddy_new (priv->conn->account, name, NULL);
+
+    /* XXX This emits buddy-added at once, so a buddy will never be on the
+     *     pending list.  It doesn't look like libpurple even has the concept
+     *     of a pending buddy.  Sigh.
+     */
+    purple_blist_add_buddy(b, NULL, NULL, NULL);
+    purple_account_add_buddy(b->account, b);
+
+    return TRUE; /* XXX How am I meant to know if it failed? */
 }
 
 gboolean
@@ -61,7 +73,27 @@ _haze_contact_list_channel_remove_member_cb (GObject *obj,
                                              const gchar *message,
                                              GError **error)
 {
-    return FALSE;
+    HazeContactListChannel *chan = HAZE_CONTACT_LIST_CHANNEL (obj);
+    HazeContactListChannelPrivate *priv =
+        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (chan);
+    TpBaseConnection *conn = TP_BASE_CONNECTION (priv->conn);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (conn, TP_HANDLE_TYPE_CONTACT);
+    const gchar *name = tp_handle_inspect (handle_repo, handle);
+    /* XXX store the buddy as qdata on the handle? */
+    PurpleBuddy *buddy = purple_find_buddy (priv->conn->account, name);
+
+    if (!buddy) {
+        g_warning("'%s' is in the group mixin for '%s' but not on the "
+                  "libpurple blist", name, priv->conn->account->username);
+        return FALSE;
+    }
+
+    purple_blist_remove_buddy(buddy);
+    purple_account_remove_buddy(buddy->account, buddy,
+        purple_buddy_get_group(buddy));
+
+    return TRUE; /* XXX */
 }
 
 static void

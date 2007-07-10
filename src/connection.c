@@ -142,10 +142,9 @@ _haze_connection_create_handle_repos (TpBaseConnection *base,
     repos[TP_HANDLE_TYPE_CONTACT] =
         tp_dynamic_handle_repo_new (TP_HANDLE_TYPE_CONTACT, _contact_normalize,
                                     base);
-    /* FIXME:
-    repos[TP_HANDLE_TYPE_ROOM]
-    repos[TP_HANDLE_TYPE_GROUP]
-    */
+    /* repos[TP_HANDLE_TYPE_ROOM] = XXX MUC */
+    repos[TP_HANDLE_TYPE_GROUP] =
+        tp_dynamic_handle_repo_new (TP_HANDLE_TYPE_GROUP, NULL, NULL);
     repos[TP_HANDLE_TYPE_LIST] =
         tp_static_handle_repo_new (TP_HANDLE_TYPE_LIST, list_handle_strings);
 }
