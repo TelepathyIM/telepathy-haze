@@ -13,6 +13,8 @@ struct _HazeContactListChannelPrivate {
     TpHandle handle;
     guint handle_type;
 
+    PurpleGroup *group;
+
     gboolean dispose_has_run;
 };
 
@@ -54,17 +56,51 @@ _haze_contact_list_channel_add_member_cb (GObject *obj,
     TpBaseConnection *conn = TP_BASE_CONNECTION (priv->conn);
     TpHandleRepoIface *handle_repo =
         tp_base_connection_get_handles (conn, TP_HANDLE_TYPE_CONTACT);
-    const gchar *name = tp_handle_inspect (handle_repo, handle);
-    PurpleBuddy *b = purple_buddy_new (priv->conn->account, name, NULL);
+    const gchar *bname = tp_handle_inspect (handle_repo, handle);
+    PurpleBuddy *buddy;
 
-    /* XXX This emits buddy-added at once, so a buddy will never be on the
-     *     pending list.  It doesn't look like libpurple even has the concept
-     *     of a pending buddy.  Sigh.
-     */
-    purple_blist_add_buddy(b, NULL, NULL, NULL);
-    purple_account_add_buddy(b->account, b);
+    switch (priv->handle_type)
+    {
+        case TP_HANDLE_TYPE_LIST:
+            /* FIXME: Other list types exist. */
+            g_assert (priv->handle == HAZE_LIST_HANDLE_SUBSCRIBE);
 
-    return TRUE; /* XXX How am I meant to know if it failed? */
+            /* If the buddy already exists, then it should already be on the
+             * subscribe list.
+             */
+            g_assert (purple_find_buddy (priv->conn->account, bname) == NULL);
+
+            buddy = purple_buddy_new (priv->conn->account, bname, NULL);
+
+            /* FIXME: This emits buddy-added at once, so a buddy will never be
+             * on the pending list.  It doesn't look like libpurple even has
+             * the concept of a pending buddy.  Sigh.
+             */
+            purple_blist_add_buddy(buddy, NULL, NULL, NULL);
+            purple_account_add_buddy(buddy->account, buddy);
+
+            return TRUE; /* FIXME: How am I meant to know if it failed? */
+        case TP_HANDLE_TYPE_GROUP:
+            /* If the buddy is already in this group then this callback should
+             * never have been called.
+             */
+            g_assert (purple_find_buddy_in_group (priv->conn->account, bname,
+                priv->group) == NULL);
+
+            buddy = purple_buddy_new (priv->conn->account, bname, NULL);
+
+            /* FIXME: This causes it to be added to 'subscribed' too. */
+            purple_blist_add_buddy (buddy, NULL, priv->group, NULL);
+            /* FIXME: Surely there's a better way to save this group on the
+             * server than this?
+             */
+            purple_account_add_buddy(buddy->account, buddy);
+                
+            return TRUE;
+        default:
+            g_assert_not_reached ();
+            return FALSE;
+    }
 }
 
 gboolean
@@ -79,21 +115,65 @@ _haze_contact_list_channel_remove_member_cb (GObject *obj,
     TpBaseConnection *conn = TP_BASE_CONNECTION (priv->conn);
     TpHandleRepoIface *handle_repo =
         tp_base_connection_get_handles (conn, TP_HANDLE_TYPE_CONTACT);
-    const gchar *name = tp_handle_inspect (handle_repo, handle);
-    /* XXX store the buddy as qdata on the handle? */
-    PurpleBuddy *buddy = purple_find_buddy (priv->conn->account, name);
+    const gchar *bname = tp_handle_inspect (handle_repo, handle);
+    PurpleBuddy *buddy;
+    GSList *buddies, *l;
 
-    if (!buddy) {
-        g_warning("'%s' is in the group mixin for '%s' but not on the "
-                  "libpurple blist", name, priv->conn->account->username);
-        return FALSE;
+    switch (priv->handle_type)
+    {
+        case TP_HANDLE_TYPE_LIST:
+            buddies = purple_find_buddies (priv->conn->account, bname);
+            if (!buddies)
+            {
+                g_warning("'%s' is in the group mixin for '%s' but not on the "
+                    "libpurple blist", bname, priv->conn->account->username);
+                /* This occurring is a bug in haze or libpurple, but I figure
+                 * it's better not to explode
+                 */
+                return TRUE;
+            }
+
+            for (l = buddies; l != NULL; l = l->next)
+            {
+                buddy = (PurpleBuddy *) l->data;
+                /* FIXME: randomly removing buddy from all groups! */
+                purple_blist_remove_buddy(buddy);
+                purple_account_remove_buddy(buddy->account, buddy,
+                    purple_buddy_get_group(buddy));
+            }
+            
+            g_slist_free (buddies);
+
+            return TRUE;
+        case TP_HANDLE_TYPE_GROUP:
+            buddy = purple_find_buddy_in_group (priv->conn->account, bname,
+                priv->group);
+
+            /* FIXME: check if the buddy is in another group; if not, move it
+             * to the default group to avoid it falling off the subscribe list.
+             */
+            purple_blist_remove_buddy(buddy);
+            purple_account_remove_buddy(buddy->account, buddy,
+                purple_buddy_get_group(buddy));
+
+            buddy = purple_find_buddy_in_group (priv->conn->account, bname,
+                priv->group);
+            while (buddy)
+            {
+                g_warning("'%s' was in group '%s' more than once! purging!",
+                          bname, priv->group->name);
+                purple_blist_remove_buddy(buddy);
+                purple_account_remove_buddy(buddy->account, buddy,
+                    purple_buddy_get_group(buddy));
+                buddy = purple_find_buddy_in_group (priv->conn->account, bname,
+                    priv->group);
+            }
+
+            return TRUE;
+        default:
+            g_assert_not_reached ();
+            return FALSE;
     }
-
-    purple_blist_remove_buddy(buddy);
-    purple_account_remove_buddy(buddy->account, buddy,
-        purple_buddy_get_group(buddy));
-
-    return TRUE; /* XXX */
 }
 
 static void
@@ -150,6 +230,9 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
                     TP_CHANNEL_GROUP_FLAG_CAN_REMOVE |
                     TP_CHANNEL_GROUP_FLAG_ONLY_ONE_GROUP,
                     0);
+
+            priv->group = purple_group_new (tp_handle_inspect (handle_repo,
+                                                               priv->handle));
             break;
         case TP_HANDLE_TYPE_LIST:
             switch (priv->handle) {
@@ -157,10 +240,7 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
                     tp_group_mixin_change_flags (obj,
                             TP_CHANNEL_GROUP_FLAG_CAN_ADD |
                             TP_CHANNEL_GROUP_FLAG_CAN_REMOVE |
-                            TP_CHANNEL_GROUP_FLAG_CAN_RESCIND |
-                            TP_CHANNEL_GROUP_FLAG_MESSAGE_ADD |
-                            TP_CHANNEL_GROUP_FLAG_MESSAGE_REMOVE |
-                            TP_CHANNEL_GROUP_FLAG_MESSAGE_RESCIND,
+                            TP_CHANNEL_GROUP_FLAG_CAN_RESCIND,
                             0);
                     break;
                 /* XXX More magic lists go here */

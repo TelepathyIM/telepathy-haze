@@ -182,7 +182,7 @@ _haze_contact_list_create_channel (HazeContactList *contact_list,
     char *object_path;
     GHashTable *channels = (handle_type == TP_HANDLE_TYPE_LIST
                            ? priv->list_channels
-                           : NULL); // XXX priv->group_channels);
+                           : priv->group_channels);
 
     /* if this assertion succeeds, we know we have the right handle repo */
     g_assert (handle_type == TP_HANDLE_TYPE_LIST ||
@@ -219,6 +219,65 @@ _haze_contact_list_create_channel (HazeContactList *contact_list,
     return chan;
 }
 
+static HazeContactListChannel *
+_haze_contact_list_get_channel (HazeContactList *contact_list,
+                                guint handle_type,
+                                TpHandle handle,
+                                gboolean *created)
+{
+    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE(contact_list);
+    TpBaseConnection *conn = TP_BASE_CONNECTION (priv->conn);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (conn, handle_type);
+    GHashTable *channels = (handle_type == TP_HANDLE_TYPE_LIST
+                           ? priv->list_channels
+                           : priv->group_channels);
+    HazeContactListChannel *chan;
+
+    g_assert (handle_type == TP_HANDLE_TYPE_LIST ||
+              handle_type == TP_HANDLE_TYPE_GROUP);
+    g_assert (tp_handle_is_valid (handle_repo, handle, NULL));
+
+    g_debug ("looking up channel %u:%u '%s'", handle_type, handle,
+        tp_handle_inspect (handle_repo, handle));
+    chan = g_hash_table_lookup (channels, GINT_TO_POINTER (handle));
+
+    if (chan) {
+        if (created)
+            *created = FALSE;
+    }
+    else
+    {
+        chan = _haze_contact_list_create_channel (contact_list, handle_type,
+            handle);
+        if (created)
+            *created = TRUE;
+    }
+
+    return chan;
+}
+
+static HazeContactListChannel *
+_haze_contact_list_get_group (HazeContactList *contact_list,
+                              const char *group_name,
+                              gboolean *created)
+{
+    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (contact_list);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+    TpHandleRepoIface *group_repo = tp_base_connection_get_handles (base_conn,
+        TP_HANDLE_TYPE_GROUP);
+    TpHandle group_handle = tp_handle_ensure (group_repo, group_name, NULL,
+        NULL);
+    HazeContactListChannel *group;
+
+    group = _haze_contact_list_get_channel (contact_list, TP_HANDLE_TYPE_GROUP,
+        group_handle, created);
+
+    tp_handle_unref (group_repo, group_handle);
+
+    return group;
+}
+
 static void
 haze_contact_list_factory_iface_close_all (TpChannelFactoryIface *iface)
 {
@@ -240,38 +299,7 @@ haze_contact_list_factory_iface_close_all (TpChannelFactoryIface *iface)
 static void
 haze_contact_list_factory_iface_connecting (TpChannelFactoryIface *iface)
 {
-    /* XXX */
-}
-
-typedef struct _HandleContext {
-    TpHandleRepoIface *contact_repo;
-    TpHandleSet *set;
-} HandleContext;
-
-static void
-_add_buddy_to_handle_set (PurpleBuddy *buddy,
-                          HandleContext *context)
-{
-    const gchar *name = purple_buddy_get_name (buddy);
-    TpHandle handle = tp_handle_ensure (context->contact_repo, name,
-        NULL, NULL);
-    tp_handle_set_add (context->set, handle);
-    tp_handle_unref (context->contact_repo, handle); /* reffed by set */
-}
-
-static TpHandleSet *
-_handle_my_buddies (HazeConnection *conn,
-                    GSList *buddies)
-{
-    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
-    TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
-        TP_HANDLE_TYPE_CONTACT);
-    TpHandleSet *handles = tp_handle_set_new (contact_repo);
-    HandleContext context = { contact_repo, handles };
-
-    g_slist_foreach (buddies, (GFunc) _add_buddy_to_handle_set, &context);
-
-    return handles;
+    /* TODO: Is there anything that should be done here?*/
 }
 
 static TpHandleSet *
@@ -297,8 +325,9 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer data)
 {
     HazeContactList *contact_list = HAZE_CONTACT_LIST (data);
     HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (contact_list);
-    HazeContactListChannel *subscribe;
+    HazeContactListChannel *subscribe, *group;
     TpHandleSet *add_handles;
+    const char *group_name;
 
     if (buddy->account != priv->conn->account)
         return;
@@ -313,6 +342,12 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer data)
     tp_group_mixin_change_members (G_OBJECT (subscribe), "",
         tp_handle_set_peek (add_handles), NULL, NULL, NULL, 0, 0);
 
+    group_name = purple_group_get_name (purple_buddy_get_group (buddy));
+    group = _haze_contact_list_get_group (contact_list, group_name, NULL);
+
+    tp_group_mixin_change_members (G_OBJECT (group), "",
+        tp_handle_set_peek (add_handles), NULL, NULL, NULL, 0, 0);
+
     tp_handle_set_destroy (add_handles);
 }
 
@@ -321,37 +356,126 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer data)
 {
     HazeContactList *contact_list = HAZE_CONTACT_LIST (data);
     HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (contact_list);
-    HazeContactListChannel *subscribe;
+    HazeContactListChannel *subscribe, *group;
     TpHandleSet *rem_handles;
+    const char *group_name, *buddy_name;
+    GSList *buddies, *l;
+    gboolean last_instance = TRUE;
 
     if (buddy->account != priv->conn->account)
         return;
 
-    g_debug ("buddy_removed_cb (%s)", purple_buddy_get_name (buddy));
+    buddy_name = purple_buddy_get_name (buddy);
+    g_debug ("buddy_removed_cb (%s)", buddy_name);
 
     rem_handles = _handle_a_buddy (priv->conn, buddy);
 
-    subscribe = g_hash_table_lookup (priv->list_channels,
-        GINT_TO_POINTER (HAZE_LIST_HANDLE_SUBSCRIBE));
+    buddies = purple_find_buddies (priv->conn->account, buddy_name);
+    for (l = buddies; l != NULL; l = l->next)
+    {
+        if (l->data != buddy)
+        {
+            last_instance = FALSE;
+            break;
+        }
+    }
+    g_slist_free (buddies);
 
-    tp_group_mixin_change_members (G_OBJECT (subscribe), "",
+    if (last_instance)
+    {
+        subscribe = g_hash_table_lookup (priv->list_channels,
+            GINT_TO_POINTER (HAZE_LIST_HANDLE_SUBSCRIBE));
+
+        tp_group_mixin_change_members (G_OBJECT (subscribe), "",
+            NULL, tp_handle_set_peek (rem_handles), NULL, NULL, 0, 0);
+    }
+
+    group_name = purple_group_get_name (purple_buddy_get_group (buddy));
+    group = _haze_contact_list_get_group (contact_list, group_name, NULL);
+
+    tp_group_mixin_change_members (G_OBJECT (group), "",
         NULL, tp_handle_set_peek (rem_handles), NULL, NULL, 0, 0);
 
     tp_handle_set_destroy (rem_handles);
 }
 
+typedef struct _HandleContext {
+    TpHandleRepoIface *contact_repo;
+    TpHandleSet *add_handles;
+    GHashTable *group_handles;
+} HandleContext;
+
 static void
-haze_contact_list_factory_iface_connected (TpChannelFactoryIface *iface)
+_initial_buddies_foreach (PurpleBuddy *buddy,
+                          HandleContext *context)
 {
-    HazeContactList *self = HAZE_CONTACT_LIST (iface);
+    const gchar *name = purple_buddy_get_name (buddy);
+    PurpleGroup *group = purple_buddy_get_group (buddy);
+    gchar *group_name = group->name;
+    TpIntSet *group_set;
+    TpHandle handle;
+
+    g_debug ("look! '%s' is in group '%s'", name, group_name);
+
+    handle = tp_handle_ensure (context->contact_repo, name, NULL, NULL);
+    tp_handle_set_add (context->add_handles, handle);
+
+    group_set = g_hash_table_lookup (context->group_handles, group_name);
+
+    if (!group_set) {
+        group_set = tp_intset_new ();
+        g_hash_table_insert (context->group_handles, group_name, group_set);
+    }
+
+    tp_intset_add (group_set, handle);
+
+    tp_handle_unref (context->contact_repo, handle); /*reffed by add_handles*/
+
+}
+
+gboolean
+_create_initial_group(gchar *group_name,
+                      TpIntSet *handles,
+                      HazeContactList *contact_list)
+{
+    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE(contact_list);
+    TpBaseConnection *conn = TP_BASE_CONNECTION (priv->conn);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (conn, TP_HANDLE_TYPE_GROUP);
+    HazeContactListChannel *group;
+    TpHandle group_handle = tp_handle_ensure (handle_repo, group_name, NULL,
+        NULL);
+
+    group = _haze_contact_list_create_channel (contact_list,
+        TP_HANDLE_TYPE_GROUP, group_handle);
+
+    tp_group_mixin_change_members (G_OBJECT (group), "", handles, NULL,
+                                   NULL, NULL, 0, 0);
+
+    tp_handle_unref (handle_repo, group_handle); /* reffed by group */
+
+    return TRUE;
+}
+
+static void
+_add_initial_buddies (HazeContactList *self)
+{
     HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (self);
     HazeContactListChannel *subscribe;
-    TpHandleSet *add_handles;
 
     PurpleAccount *account = priv->conn->account;
 
     GSList *buddies = purple_find_buddies(account, NULL);
-    add_handles = _handle_my_buddies (priv->conn, buddies);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+    TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
+        TP_HANDLE_TYPE_CONTACT);
+    TpHandleSet *add_handles = tp_handle_set_new (contact_repo);
+    /* Map from group names (const char *) to (TpIntSet *)s of handles */
+    GHashTable *group_handles = g_hash_table_new_full (NULL, NULL, NULL,
+        (GDestroyNotify) tp_intset_destroy);
+    HandleContext context = { contact_repo, add_handles, group_handles };
+
+    g_slist_foreach (buddies, (GFunc) _initial_buddies_foreach, &context);
     g_slist_free (buddies);
     
     subscribe = _haze_contact_list_create_channel (self, TP_HANDLE_TYPE_LIST,
@@ -360,13 +484,23 @@ haze_contact_list_factory_iface_connected (TpChannelFactoryIface *iface)
     tp_group_mixin_change_members (G_OBJECT (subscribe), "",
         tp_handle_set_peek (add_handles), NULL, NULL, NULL, 0, 0);
 
+    g_hash_table_foreach_remove (group_handles, (GHRFunc) _create_initial_group,
+        self);
+
     tp_handle_set_destroy (add_handles);
+}
+
+static void
+haze_contact_list_factory_iface_connected (TpChannelFactoryIface *iface)
+{
+    HazeContactList *self = HAZE_CONTACT_LIST (iface);
+
+    _add_initial_buddies (self);
 
     purple_signal_connect (purple_blist_get_handle(), "buddy-added",
                            self, PURPLE_CALLBACK(buddy_added_cb), self);
     purple_signal_connect (purple_blist_get_handle(), "buddy-removed",
                            self, PURPLE_CALLBACK(buddy_removed_cb), self);
-    /* XXX */
 }
 
 static void
@@ -403,6 +537,7 @@ haze_contact_list_factory_iface_foreach (TpChannelFactoryIface *iface,
     data.foreach = foreach;
 
     g_hash_table_foreach (priv->list_channels, _foreach_slave, &data);
+    g_hash_table_foreach (priv->group_channels, _foreach_slave, &data);
 }
 
 static TpChannelFactoryRequestStatus
@@ -414,24 +549,49 @@ haze_contact_list_factory_iface_request (TpChannelFactoryIface *iface,
                                          TpChannelIface **ret,
                                          GError **error)
 {
-/*
     HazeContactList *self = HAZE_CONTACT_LIST (iface);
     HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (self);
-*/
+    TpBaseConnection *conn = TP_BASE_CONNECTION (priv->conn);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (conn, handle_type);
+    GHashTable *channels = (handle_type == TP_HANDLE_TYPE_LIST
+            ? priv->list_channels
+            : priv->group_channels);
+    HazeContactListChannel *chan;
 
     if (strcmp (chan_type, TP_IFACE_CHANNEL_TYPE_CONTACT_LIST))
         return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
 
-    if (handle_type != TP_HANDLE_TYPE_LIST
-/*        && handle_type != TP_HANDLE_TYPE_GROUP*/
-       )
+    if (handle_type != TP_HANDLE_TYPE_LIST &&
+        handle_type != TP_HANDLE_TYPE_GROUP)
+        return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
+
+    /* If the handle is valid, then they are not requesting an unimplemented
+     * list channel.
+     */
+    if (!tp_handle_is_valid (handle_repo, handle, NULL))
+        return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
+
+    /* FIXME: create the channel if it doesn't already exist. */
+    g_debug ("grabbing channel '%s'...",
+             tp_handle_inspect (handle_repo, handle));
+    chan = g_hash_table_lookup (channels, GINT_TO_POINTER (handle));
+
+    if (chan)
     {
+        *ret = TP_CHANNEL_IFACE (chan);
+        /* FIXME: when new groups can be made this will need to depend on
+         *        whether the channel was created for the request.
+         */
+        return TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
+    }
+    else
+    {
+        /* FIXME: Should never happen; if the handle is valid the channel
+         *        either exists or should be created.
+         */
         return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
     }
-    
-    /* XXX */
-
-    return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
 }
 
 static void
