@@ -224,6 +224,17 @@ init_libpurple()
 static TpBaseConnectionManager *
 get_cm (void)
 {
+    GLogLevelFlags fatal_mask;
+
+    /* libpurple throws critical errors all over the place because of
+     * g_return_val_if_fail().
+     * Particularly in MSN.
+     * I hate MSN.
+     */
+    fatal_mask = g_log_set_always_fatal (G_LOG_FATAL_MASK);
+    fatal_mask &= ~G_LOG_LEVEL_CRITICAL;
+    g_log_set_always_fatal (fatal_mask);
+
     return (TpBaseConnectionManager *) haze_connection_manager_get ();
 }
 
