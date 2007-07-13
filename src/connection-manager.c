@@ -18,7 +18,7 @@ struct _HazeParams {
 };
 
 static const TpCMParamSpec params[] = {
-  { "username", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
+  { "account", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
     G_STRUCT_OFFSET(HazeParams, username), NULL, NULL },
   { "password", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
