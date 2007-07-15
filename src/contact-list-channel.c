@@ -227,8 +227,7 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
         case TP_HANDLE_TYPE_GROUP:
             tp_group_mixin_change_flags (obj,
                     TP_CHANNEL_GROUP_FLAG_CAN_ADD |
-                    TP_CHANNEL_GROUP_FLAG_CAN_REMOVE |
-                    TP_CHANNEL_GROUP_FLAG_ONLY_ONE_GROUP,
+                    TP_CHANNEL_GROUP_FLAG_CAN_REMOVE,
                     0);
 
             priv->group = purple_group_new (tp_handle_inspect (handle_repo,
@@ -243,7 +242,7 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
                             TP_CHANNEL_GROUP_FLAG_CAN_RESCIND,
                             0);
                     break;
-                /* XXX More magic lists go here */
+                /* FIXME: More magic lists go here */
                 default:
                     g_assert_not_reached ();
             }
