@@ -1,10 +1,12 @@
 #ifndef __HAZE_CONNECTION_H__
 #define __HAZE_CONNECTION_H__
 
-
 #include <glib-object.h>
 #include <telepathy-glib/base-connection.h>
 #include <prpl.h>
+
+#include "contact-list.h"
+#include "im-channel-factory.h"
 
 G_BEGIN_DECLS
 
@@ -28,9 +30,17 @@ struct _HazeConnectionClass {
 
 struct _HazeConnection {
     TpBaseConnection parent;
+
     PurpleAccount *account;
+
+    HazeContactList *contact_list;
+    HazeImChannelFactory *im_factory;
+
     gpointer priv;
 };
+
+#define ACCOUNT_GET_HAZE_CONNECTION(account) \
+    (HAZE_CONNECTION ((account)->ui_data))
 
 GType haze_connection_get_type (void);
 

@@ -109,10 +109,21 @@ haze_im_channel_factory_set_property (GObject      *object,
 }
 
 static void
+received_message_cb(PurpleAccount *account,
+                    const char *sender,
+                    char *message,
+                    PurpleConversation *conv,
+                    PurpleMessageFlags flags,
+                    time_t mtime,
+                    gpointer unused);
+
+static void
 haze_im_channel_factory_class_init (HazeImChannelFactoryClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     GParamSpec *param_spec;
+
+    void *conv_handle = purple_conversations_get_handle();
 
     object_class->dispose = haze_im_channel_factory_dispose;
     object_class->get_property = haze_im_channel_factory_get_property;
@@ -130,6 +141,9 @@ haze_im_channel_factory_class_init (HazeImChannelFactoryClass *klass)
 
     g_type_class_add_private (object_class,
                               sizeof(HazeImChannelFactoryPrivate));
+
+    purple_signal_connect(conv_handle, "received-im-msg-with-timestamp", klass,
+                          PURPLE_CALLBACK(received_message_cb), NULL);
 }
 
 static void
@@ -209,8 +223,10 @@ received_message_cb(PurpleAccount *account,
                     PurpleConversation *conv,
                     PurpleMessageFlags flags,
                     time_t mtime,
-                    HazeImChannelFactory *self)
+                    gpointer unused)
 {
+    HazeImChannelFactory *self =
+        ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
     HazeImChannelFactoryPrivate *priv =
         HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (self);
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
@@ -220,9 +236,6 @@ received_message_cb(PurpleAccount *account,
     TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
     HazeIMChannel *chan = NULL;
 
-    if(priv->conn->account != account)
-        return;
-    
     handle = tp_handle_ensure (contact_repo, sender, NULL, NULL);
     if (handle == 0) {
         g_debug ("got a 0 handle, ignoring message");
@@ -252,17 +265,13 @@ received_message_cb(PurpleAccount *account,
 static void
 haze_im_channel_factory_iface_connecting (TpChannelFactoryIface *iface)
 {
-    HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface);
-    void *conv_handle = purple_conversations_get_handle();
-    purple_signal_connect(conv_handle, "received-im-msg-with-timestamp", self,
-                          PURPLE_CALLBACK(received_message_cb), self);
+    /* HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface); */
 }
 
 static void
 haze_im_channel_factory_iface_disconnected (TpChannelFactoryIface *iface)
 {
-    HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface);
-    purple_signals_disconnect_by_handle (self);
+    /* HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface); */
 }
 
 struct _ForeachData

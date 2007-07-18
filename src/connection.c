@@ -5,7 +5,6 @@
 #include "defines.h"
 #include "connection.h"
 #include "im-channel-factory.h"
-#include "contact-list.h"
 
 enum
 {
@@ -30,27 +29,31 @@ typedef struct _HazeConnectionPrivate
 #define HAZE_CONNECTION_GET_PRIVATE(o) \
   ((HazeConnectionPrivate *)o->priv)
 
-void
-signed_on_cb (PurpleConnection *pc, HazeConnection *self)
-{
-    if (self->account != purple_connection_get_account (pc))
-        return;
+#define PC_GET_BASE_CONN(pc) \
+    (TP_BASE_CONNECTION (purple_connection_get_account (pc)->ui_data))
 
-    tp_base_connection_change_status(
-        TP_BASE_CONNECTION(self), TP_CONNECTION_STATUS_CONNECTED,
+void
+signed_on_cb (PurpleConnection *pc, gpointer data)
+{
+    TpBaseConnection *base_conn = PC_GET_BASE_CONN (pc);
+
+    tp_base_connection_change_status (base_conn,
+        TP_CONNECTION_STATUS_CONNECTED,
         TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
 }
 
 void
-signing_off_cb (PurpleConnection *pc, HazeConnection *self)
+signing_off_cb (PurpleConnection *pc, gpointer data)
 {
-    if (self->account != purple_connection_get_account (pc))
-        return;
+    TpBaseConnection *base_conn = PC_GET_BASE_CONN (pc);
 
-    /* XXX Notify with the reason! */
-    if(TP_BASE_CONNECTION(self)->status != TP_CONNECTION_STATUS_DISCONNECTED) {
-        tp_base_connection_change_status(
-            TP_BASE_CONNECTION(self), TP_CONNECTION_STATUS_DISCONNECTED,
+    /* FIXME: reason for disconnection, via
+     *        PurpleConnectionUiOps.report_disconnect I guess
+     */
+    if(base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
+    {
+        tp_base_connection_change_status (base_conn,
+            TP_CONNECTION_STATUS_DISCONNECTED,
             TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
     }
 }
@@ -64,12 +67,9 @@ idle_finish_shutdown_cb(gpointer data)
 }
 
 void
-signed_off_cb (PurpleConnection *pc, HazeConnection *self)
+signed_off_cb (PurpleConnection *pc, gpointer data)
 {
-    if (self->account != purple_connection_get_account (pc))
-        return;
-
-    g_idle_add(idle_finish_shutdown_cb, self);
+    g_idle_add(idle_finish_shutdown_cb, PC_GET_BASE_CONN (pc));
 }
 
 static gboolean
@@ -94,6 +94,7 @@ _haze_connection_start_connecting (TpBaseConnection *base,
     self->account = purple_account_new(priv->username, prpl);
     g_free(prpl);
 
+    self->account->ui_data = self;
     purple_account_set_password(self->account, password);
     purple_account_set_enabled(self->account, UI_ID, TRUE);
     purple_account_connect(self->account);
@@ -155,15 +156,13 @@ _haze_connection_create_channel_factories (TpBaseConnection *base)
     HazeConnection *self = HAZE_CONNECTION(base);
     GPtrArray *channel_factories = g_ptr_array_new ();
 
-    g_ptr_array_add (channel_factories,
-                     g_object_new (HAZE_TYPE_IM_CHANNEL_FACTORY,
-                                   "connection", self,
-                                   NULL));
+    self->im_factory = HAZE_IM_CHANNEL_FACTORY (
+        g_object_new (HAZE_TYPE_IM_CHANNEL_FACTORY, "connection", self, NULL));
+    g_ptr_array_add (channel_factories, self->im_factory);
 
-    g_ptr_array_add (channel_factories,
-                     g_object_new (HAZE_TYPE_CONTACT_LIST,
-                                   "connection", self,
-                                   NULL));
+    self->contact_list = HAZE_CONTACT_LIST (
+        g_object_new (HAZE_TYPE_CONTACT_LIST, "connection", self, NULL));
+    g_ptr_array_add (channel_factories, self->contact_list);
 
     return channel_factories;
 }
@@ -240,12 +239,6 @@ haze_connection_constructor (GType type,
                 type, n_construct_properties, construct_params));
 
     g_debug("Post-construction: (HazeConnection *)%p", self);
-    purple_signal_connect(purple_connections_get_handle(), "signed-on",
-                          self, PURPLE_CALLBACK(signed_on_cb), self);
-    purple_signal_connect(purple_connections_get_handle(), "signing-off",
-                          self, PURPLE_CALLBACK(signing_off_cb), self);
-    purple_signal_connect(purple_connections_get_handle(), "signed-off",
-                          self, PURPLE_CALLBACK(signed_off_cb), self);
 
 
     return (GObject *)self;
@@ -261,8 +254,6 @@ haze_connection_dispose (GObject *object)
     if(self->account != NULL) {
         purple_accounts_delete(self->account);
         self->account = NULL;
-
-        purple_signals_disconnect_by_handle(self);
     }
 
     G_OBJECT_CLASS (haze_connection_parent_class)->dispose (object);
@@ -332,6 +323,13 @@ haze_connection_class_init (HazeConnectionClass *klass)
                                       G_PARAM_STATIC_NAME |
                                       G_PARAM_STATIC_BLURB);
     g_object_class_install_property (object_class, PROP_SERVER, param_spec);
+
+    purple_signal_connect(purple_connections_get_handle(), "signed-on",
+                          klass, PURPLE_CALLBACK(signed_on_cb), NULL);
+    purple_signal_connect(purple_connections_get_handle(), "signing-off",
+                          klass, PURPLE_CALLBACK(signing_off_cb), NULL);
+    purple_signal_connect(purple_connections_get_handle(), "signed-off",
+                          klass, PURPLE_CALLBACK(signed_off_cb), NULL);
 }
 
 static void

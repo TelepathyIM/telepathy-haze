@@ -138,6 +138,8 @@ haze_contact_list_set_property (GObject      *object,
             break;
     }
 }
+static void buddy_added_cb (PurpleBuddy *buddy, gpointer unused);
+static void buddy_removed_cb (PurpleBuddy *buddy, gpointer unused);
 
 static void
 haze_contact_list_class_init (HazeContactListClass *klass)
@@ -165,6 +167,11 @@ haze_contact_list_class_init (HazeContactListClass *klass)
 
     g_type_class_add_private (object_class,
                               sizeof(HazeContactListPrivate));
+
+    purple_signal_connect (purple_blist_get_handle(), "buddy-added",
+                           klass, PURPLE_CALLBACK(buddy_added_cb), NULL);
+    purple_signal_connect (purple_blist_get_handle(), "buddy-removed",
+                           klass, PURPLE_CALLBACK(buddy_removed_cb), NULL);
 }
 
 static HazeContactListChannel *
@@ -321,16 +328,14 @@ _handle_a_buddy (HazeConnection *conn,
 }
 
 static void
-buddy_added_cb (PurpleBuddy *buddy, gpointer data)
+buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
 {
-    HazeContactList *contact_list = HAZE_CONTACT_LIST (data);
+    HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (buddy->account);
+    HazeContactList *contact_list = conn->contact_list;
     HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (contact_list);
     HazeContactListChannel *subscribe, *group;
     TpHandleSet *add_handles;
     const char *group_name;
-
-    if (buddy->account != priv->conn->account)
-        return;
 
     g_debug ("buddy_added_cb (%s)", purple_buddy_get_name (buddy));
 
@@ -352,18 +357,16 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer data)
 }
 
 static void
-buddy_removed_cb (PurpleBuddy *buddy, gpointer data)
+buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
 {
-    HazeContactList *contact_list = HAZE_CONTACT_LIST (data);
+    HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (buddy->account);
+    HazeContactList *contact_list = conn->contact_list;
     HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (contact_list);
     HazeContactListChannel *subscribe, *group;
     TpHandleSet *rem_handles;
     const char *group_name, *buddy_name;
     GSList *buddies, *l;
     gboolean last_instance = TRUE;
-
-    if (buddy->account != priv->conn->account)
-        return;
 
     buddy_name = purple_buddy_get_name (buddy);
     g_debug ("buddy_removed_cb (%s)", buddy_name);
@@ -497,16 +500,11 @@ haze_contact_list_factory_iface_connected (TpChannelFactoryIface *iface)
 
     _add_initial_buddies (self);
 
-    purple_signal_connect (purple_blist_get_handle(), "buddy-added",
-                           self, PURPLE_CALLBACK(buddy_added_cb), self);
-    purple_signal_connect (purple_blist_get_handle(), "buddy-removed",
-                           self, PURPLE_CALLBACK(buddy_removed_cb), self);
 }
 
 static void
 haze_contact_list_factory_iface_disconnected (TpChannelFactoryIface *iface)
 {
-    purple_signals_disconnect_by_handle (iface);
 }
 
 struct _ForeachData
