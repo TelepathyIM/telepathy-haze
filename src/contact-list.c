@@ -552,10 +552,8 @@ haze_contact_list_factory_iface_request (TpChannelFactoryIface *iface,
     TpBaseConnection *conn = TP_BASE_CONNECTION (priv->conn);
     TpHandleRepoIface *handle_repo =
         tp_base_connection_get_handles (conn, handle_type);
-    GHashTable *channels = (handle_type == TP_HANDLE_TYPE_LIST
-            ? priv->list_channels
-            : priv->group_channels);
     HazeContactListChannel *chan;
+    gboolean created;
 
     if (strcmp (chan_type, TP_IFACE_CHANNEL_TYPE_CONTACT_LIST))
         return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
@@ -570,24 +568,26 @@ haze_contact_list_factory_iface_request (TpChannelFactoryIface *iface,
     if (!tp_handle_is_valid (handle_repo, handle, NULL))
         return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
 
-    /* FIXME: create the channel if it doesn't already exist. */
     g_debug ("grabbing channel '%s'...",
              tp_handle_inspect (handle_repo, handle));
-    chan = g_hash_table_lookup (channels, GINT_TO_POINTER (handle));
+    chan = _haze_contact_list_get_channel (self, handle_type, handle,
+        &created);
 
     if (chan)
     {
         *ret = TP_CHANNEL_IFACE (chan);
-        /* FIXME: when new groups can be made this will need to depend on
-         *        whether the channel was created for the request.
-         */
-        return TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
+        if (created)
+        {
+            return TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
+        }
+        else
+        {
+            return TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
+        }
     }
     else
     {
-        /* FIXME: Should never happen; if the handle is valid the channel
-         *        either exists or should be created.
-         */
+        g_assert_not_reached ();
         return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
     }
 }
