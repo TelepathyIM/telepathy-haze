@@ -219,7 +219,7 @@ haze_im_channel_factory_iface_close_all (TpChannelFactoryIface *iface)
 static void
 received_message_cb(PurpleAccount *account,
                     const char *sender,
-                    char *message,
+                    char *xhtml_message,
                     PurpleConversation *conv,
                     PurpleMessageFlags flags,
                     time_t mtime,
@@ -235,6 +235,7 @@ received_message_cb(PurpleAccount *account,
     TpHandle handle;
     TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
     HazeIMChannel *chan = NULL;
+    char *message = purple_markup_strip_html (xhtml_message);
 
     handle = tp_handle_ensure (contact_repo, sender, NULL, NULL);
     if (handle == 0) {
