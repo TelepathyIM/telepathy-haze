@@ -307,7 +307,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
     g_object_class_install_property (object_class, PROP_USERNAME, param_spec);
 
     param_spec = g_param_spec_string ("password", "Account password",
-                                      "The protocol to which to connect.",
+                                      "The password used when authenticating.",
                                       NULL,
                                       G_PARAM_CONSTRUCT_ONLY |
                                       G_PARAM_READWRITE |
