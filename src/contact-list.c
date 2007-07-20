@@ -341,8 +341,8 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
 
     add_handles = _handle_a_buddy (priv->conn, buddy);
 
-    subscribe = g_hash_table_lookup (priv->list_channels,
-        GINT_TO_POINTER (HAZE_LIST_HANDLE_SUBSCRIBE));
+    subscribe = _haze_contact_list_get_channel (contact_list,
+        TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_SUBSCRIBE, NULL);
 
     tp_group_mixin_change_members (G_OBJECT (subscribe), "",
         tp_handle_set_peek (add_handles), NULL, NULL, NULL, 0, 0);
@@ -386,8 +386,8 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
 
     if (last_instance)
     {
-        subscribe = g_hash_table_lookup (priv->list_channels,
-            GINT_TO_POINTER (HAZE_LIST_HANDLE_SUBSCRIBE));
+        subscribe = _haze_contact_list_get_channel (contact_list,
+            TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_SUBSCRIBE, NULL);
 
         tp_group_mixin_change_members (G_OBJECT (subscribe), "",
             NULL, tp_handle_set_peek (rem_handles), NULL, NULL, 0, 0);
@@ -448,9 +448,8 @@ _create_initial_group(gchar *group_name,
     HazeContactListChannel *group;
     TpHandle group_handle = tp_handle_ensure (handle_repo, group_name, NULL,
         NULL);
-
-    group = _haze_contact_list_create_channel (contact_list,
-        TP_HANDLE_TYPE_GROUP, group_handle);
+    group = _haze_contact_list_get_channel (contact_list, 
+        TP_HANDLE_TYPE_GROUP, group_handle, NULL /*created*/);
 
     tp_group_mixin_change_members (G_OBJECT (group), "", handles, NULL,
                                    NULL, NULL, 0, 0);
@@ -480,9 +479,9 @@ _add_initial_buddies (HazeContactList *self)
 
     g_slist_foreach (buddies, (GFunc) _initial_buddies_foreach, &context);
     g_slist_free (buddies);
-    
-    subscribe = _haze_contact_list_create_channel (self, TP_HANDLE_TYPE_LIST,
-                                                   HAZE_LIST_HANDLE_SUBSCRIBE);
+
+    subscribe = _haze_contact_list_get_channel (self, TP_HANDLE_TYPE_LIST,
+            HAZE_LIST_HANDLE_SUBSCRIBE, NULL /*created*/);
 
     tp_group_mixin_change_members (G_OBJECT (subscribe), "",
         tp_handle_set_peek (add_handles), NULL, NULL, NULL, 0, 0);
