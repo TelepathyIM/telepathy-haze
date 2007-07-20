@@ -207,7 +207,7 @@ haze_im_channel_factory_iface_close_all (TpChannelFactoryIface *iface)
     HazeImChannelFactoryPrivate *priv =
         HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (fac);
 
-    g_debug ("closing channels");
+    g_debug ("closing im channels");
 
     if (priv->channels)
     {
