@@ -51,10 +51,10 @@ get_protocols() {
     GList* iter;
     TpCMProtocolSpec *protocols, *protocol;
     guint n_protocols;
-    
+
     iter = purple_plugins_get_protocols();
     n_protocols = g_list_length(iter);
-    
+
     protocols = g_new0(TpCMProtocolSpec, n_protocols + 1);
 
     for (protocol = protocols; iter; iter = iter->next) {
