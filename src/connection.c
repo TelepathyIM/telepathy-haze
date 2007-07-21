@@ -278,6 +278,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     TpBaseConnectionClass *base_class = TP_BASE_CONNECTION_CLASS (klass);
     GParamSpec *param_spec;
+    void *connection_handle = purple_connections_get_handle ();
 
     g_debug("Initializing (HazeConnectionClass *)%p", klass);
 
@@ -323,11 +324,11 @@ haze_connection_class_init (HazeConnectionClass *klass)
                                       G_PARAM_STATIC_BLURB);
     g_object_class_install_property (object_class, PROP_SERVER, param_spec);
 
-    purple_signal_connect(purple_connections_get_handle(), "signed-on",
+    purple_signal_connect(connection_handle, "signed-on",
                           klass, PURPLE_CALLBACK(signed_on_cb), NULL);
-    purple_signal_connect(purple_connections_get_handle(), "signing-off",
+    purple_signal_connect(connection_handle, "signing-off",
                           klass, PURPLE_CALLBACK(signing_off_cb), NULL);
-    purple_signal_connect(purple_connections_get_handle(), "signed-off",
+    purple_signal_connect(connection_handle, "signed-off",
                           klass, PURPLE_CALLBACK(signed_off_cb), NULL);
 }
 
