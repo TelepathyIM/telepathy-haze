@@ -339,6 +339,12 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
 
     g_debug ("buddy_added_cb (%s)", purple_buddy_get_name (buddy));
 
+    if (TP_BASE_CONNECTION (conn)->status == TP_CONNECTION_STATUS_DISCONNECTED)
+    {
+        g_debug ("disconnected, ignoring");
+        return;
+    }
+
     add_handles = _handle_a_buddy (priv->conn, buddy);
 
     subscribe = _haze_contact_list_get_channel (contact_list,
@@ -370,6 +376,12 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
 
     buddy_name = purple_buddy_get_name (buddy);
     g_debug ("buddy_removed_cb (%s)", buddy_name);
+
+    if (TP_BASE_CONNECTION (conn)->status == TP_CONNECTION_STATUS_DISCONNECTED)
+    {
+        g_debug ("disconnected, ignoring");
+        return;
+    }
 
     rem_handles = _handle_a_buddy (priv->conn, buddy);
 

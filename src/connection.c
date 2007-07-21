@@ -59,17 +59,21 @@ signing_off_cb (PurpleConnection *pc, gpointer data)
 }
 
 static gboolean
-idle_finish_shutdown_cb(gpointer data)
+idle_signed_off_cb(gpointer data)
 {
-    TpBaseConnection *base = TP_BASE_CONNECTION(data);
-    tp_base_connection_finish_shutdown(base);
+    PurpleAccount *account = (PurpleAccount *) data;
+    HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
+    g_debug ("deleting account %s", account->username);
+    purple_accounts_delete (account);
+    tp_base_connection_finish_shutdown (TP_BASE_CONNECTION (conn));
     return FALSE;
 }
 
 void
 signed_off_cb (PurpleConnection *pc, gpointer data)
 {
-    g_idle_add(idle_finish_shutdown_cb, PC_GET_BASE_CONN (pc));
+    PurpleAccount *account = purple_connection_get_account (pc);
+    g_idle_add(idle_signed_off_cb, account);
 }
 
 static gboolean
@@ -250,11 +254,6 @@ haze_connection_dispose (GObject *object)
     HazeConnection *self = HAZE_CONNECTION(object);
 
     g_debug("disposing of (HazeConnection *)%p", self);
-
-    if(self->account != NULL) {
-        purple_accounts_delete(self->account);
-        self->account = NULL;
-    }
 
     G_OBJECT_CLASS (haze_connection_parent_class)->dispose (object);
 }
