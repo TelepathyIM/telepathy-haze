@@ -141,6 +141,14 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
     purple_conv_im_send_with_flags (PURPLE_CONV_IM (priv->conv), message,
                                     flags);
 
+    /* FIXME: - time (NULL) here is kind of not ideal, but it turns out that
+     *          libpurple just uses time (NULL) where sent-im-msg is emitted
+     *          anyway, so.
+     *        - probably shouldn't be called here, but it avoids having to
+     *          reconstruct type.
+     */
+    tp_svc_channel_type_text_emit_sent (channel, time (NULL), type, message);
+
     g_free (message);
 
     tp_svc_channel_type_text_return_from_send (context);
