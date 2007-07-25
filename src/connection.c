@@ -1,5 +1,6 @@
 #include <telepathy-glib/handle-repo-dynamic.h>
 #include <telepathy-glib/handle-repo-static.h>
+#include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/errors.h>
 
 #include "defines.h"
@@ -15,9 +16,12 @@ enum
     LAST_PROPERTY
 };
 
-G_DEFINE_TYPE(HazeConnection,
+G_DEFINE_TYPE_WITH_CODE(HazeConnection,
     haze_connection,
-    TP_TYPE_BASE_CONNECTION);
+    TP_TYPE_BASE_CONNECTION,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE,
+        tp_presence_mixin_iface_init);
+    );
 
 typedef struct _HazeConnectionPrivate
 {
@@ -269,7 +273,191 @@ haze_connection_finalize (GObject *object)
     g_free (priv->server);
     self->priv = NULL;
 
+    tp_presence_mixin_finalize (object);
+
     G_OBJECT_CLASS (haze_connection_parent_class)->finalize (object);
+}
+
+static const TpPresenceStatusSpec statuses[] = {
+    { "available", TP_CONNECTION_PRESENCE_TYPE_AVAILABLE, TRUE,
+        NULL, NULL, NULL },
+    { "busy", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE,
+        NULL, NULL, NULL },
+    { "away", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE,
+        NULL, NULL, NULL },
+    { "ext_away", TP_CONNECTION_PRESENCE_TYPE_EXTENDED_AWAY, TRUE,
+        NULL, NULL, NULL },
+    { "invisible", TP_CONNECTION_PRESENCE_TYPE_HIDDEN, TRUE, NULL, NULL, NULL },
+    { "offline", TP_CONNECTION_PRESENCE_TYPE_OFFLINE, FALSE, NULL, NULL, NULL },
+    { NULL, TP_CONNECTION_PRESENCE_TYPE_UNSET, FALSE, NULL, NULL, NULL }
+};
+
+static gboolean
+_status_available (GObject *obj,
+                   guint index)
+{
+    /* FIXME */
+    return FALSE;
+}
+
+static TpPresenceStatus *
+_get_tp_status (PurpleStatus *p_status)
+{
+    PurpleStatusType *type;
+    PurpleStatusPrimitive prim;
+    guint status_ix = -1;
+
+    g_assert (p_status != NULL);
+
+    type = purple_status_get_type (p_status);
+    prim = purple_status_type_get_primitive (type);
+
+    switch (prim) {
+        case PURPLE_STATUS_AVAILABLE:
+            status_ix = 0;
+            break;
+        case PURPLE_STATUS_UNAVAILABLE:
+            status_ix = 1;
+            break;
+        case PURPLE_STATUS_AWAY:
+            status_ix = 2;
+            break;
+        case PURPLE_STATUS_EXTENDED_AWAY:
+            status_ix = 3;
+            break;
+        case PURPLE_STATUS_INVISIBLE:
+            status_ix = 4;
+            break;
+        case PURPLE_STATUS_OFFLINE:
+            status_ix = 5;
+            break;
+        default:
+            g_critical ("What kind of Primitive is %u?", prim);
+    }
+
+    return (tp_presence_status_new (status_ix, NULL));
+}
+
+static GHashTable *
+_get_contact_statuses (GObject *obj,
+                       const GArray *contacts,
+                       GError **error)
+{
+    GHashTable *status_table = g_hash_table_new_full (g_direct_hash,
+        g_direct_equal, NULL, NULL);
+    HazeConnection *conn = HAZE_CONNECTION (obj);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (obj);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+    guint i;
+
+    for (i = 0; i < contacts->len; i++)
+    {
+        TpHandle handle = g_array_index (contacts, TpHandle, i);
+        const gchar *bname;
+        TpPresenceStatus *tp_status;
+        PurpleBuddy *buddy;
+        PurpleStatus *p_status;
+
+        g_assert (tp_handle_is_valid (handle_repo, handle, NULL));
+
+        if (handle == base_conn->self_handle)
+        {
+            g_debug ("[%s] getting own status", conn->account->username);
+
+            p_status = purple_account_get_active_status (conn->account);
+        }
+        else
+        {
+            bname = tp_handle_inspect (handle_repo, handle);
+            g_debug ("[%s] getting status for %s",
+                     conn->account->username, bname);
+            buddy = purple_find_buddy (conn->account, bname);
+
+            if (buddy)
+            {
+                PurplePresence *presence = purple_buddy_get_presence (buddy);
+                p_status = purple_presence_get_active_status (presence);
+            }
+            else
+            {
+                g_critical ("can't find %s", bname);
+                continue;
+            }
+        }
+
+        tp_status = _get_tp_status (p_status);
+
+        g_hash_table_insert (status_table, GINT_TO_POINTER (handle), tp_status);
+    }
+
+    return status_table;
+}
+
+static void
+update_status (PurpleBuddy *buddy,
+               PurpleStatus *status)
+{
+    PurpleAccount *account = purple_buddy_get_account (buddy);
+    HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+
+    const gchar *bname = purple_buddy_get_name (buddy);
+    TpHandle handle = tp_handle_ensure (handle_repo, bname, NULL, NULL);
+
+    TpPresenceStatus *tp_status;
+
+    g_debug ("%s changed to status %s", bname, purple_status_get_id (status));
+
+    tp_status = _get_tp_status (status);
+
+    g_debug ("tp_status index: %u", tp_status->index);
+
+    tp_presence_mixin_emit_one_presence_update (G_OBJECT (conn), handle,
+        tp_status);
+    tp_handle_unref (handle_repo, handle);
+}
+
+static void
+status_changed_cb (PurpleBuddy *buddy,
+                   PurpleStatus *old_status,
+                   PurpleStatus *new_status,
+                   gpointer unused)
+{
+    update_status (buddy, new_status);
+}
+
+static void
+signed_on_off_cb (PurpleBuddy *buddy,
+                  gpointer data)
+{
+    /*
+    gboolean signed_on = GPOINTER_TO_INT (data);
+    */
+    PurplePresence *presence = purple_buddy_get_presence (buddy);
+    update_status (buddy, purple_presence_get_active_status (presence));
+}
+
+static gboolean
+_set_own_status (GObject *obj,
+                 const TpPresenceStatus *status,
+                 GError **error)
+{
+    /* status can be null, signifying "set default".  does purple even have a
+     * default? */
+    /* FIXME */
+    g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED, "la la la");
+    return FALSE;
+}
+
+static void
+_init_presence (GObjectClass *object_class)
+{
+    tp_presence_mixin_class_init (object_class,
+        G_STRUCT_OFFSET (HazeConnectionClass, presence_class),
+        _status_available, _get_contact_statuses, _set_own_status, statuses);
 }
 
 static void
@@ -278,7 +466,11 @@ haze_connection_class_init (HazeConnectionClass *klass)
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     TpBaseConnectionClass *base_class = TP_BASE_CONNECTION_CLASS (klass);
     GParamSpec *param_spec;
+    static const gchar *interfaces_always_present[] = {
+        TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
+        NULL };
     void *connection_handle = purple_connections_get_handle ();
+    void *blist_handle = purple_blist_get_handle ();
 
     g_debug("Initializing (HazeConnectionClass *)%p", klass);
 
@@ -296,6 +488,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
         haze_connection_get_unique_connection_name;
     base_class->start_connecting = _haze_connection_start_connecting;
     base_class->shut_down = _haze_connection_shut_down;
+    base_class->interfaces_always_present = interfaces_always_present;
 
     param_spec = g_param_spec_string ("username", "Account username",
                                       "The username used when authenticating.",
@@ -330,6 +523,15 @@ haze_connection_class_init (HazeConnectionClass *klass)
                           klass, PURPLE_CALLBACK(signing_off_cb), NULL);
     purple_signal_connect(connection_handle, "signed-off",
                           klass, PURPLE_CALLBACK(signed_off_cb), NULL);
+
+    purple_signal_connect (blist_handle, "buddy-status-changed", klass,
+        PURPLE_CALLBACK (status_changed_cb), NULL);
+    purple_signal_connect (blist_handle, "buddy-signed-on", klass,
+        PURPLE_CALLBACK (signed_on_off_cb), GINT_TO_POINTER (TRUE));
+    purple_signal_connect (blist_handle, "buddy-signed-off", klass,
+        PURPLE_CALLBACK (signed_on_off_cb), GINT_TO_POINTER (FALSE));
+
+    _init_presence (object_class);
 }
 
 static void
@@ -338,4 +540,7 @@ haze_connection_init (HazeConnection *self)
     g_debug("Initializing (HazeConnection *)%p", self);
     self->priv = G_TYPE_INSTANCE_GET_PRIVATE (self, HAZE_TYPE_CONNECTION,
                                               HazeConnectionPrivate);
+
+    tp_presence_mixin_init (G_OBJECT (self), G_STRUCT_OFFSET (HazeConnection,
+        presence));
 }

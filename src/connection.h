@@ -3,6 +3,8 @@
 
 #include <glib-object.h>
 #include <telepathy-glib/base-connection.h>
+#include <telepathy-glib/presence-mixin.h>
+
 #include <prpl.h>
 
 #include "contact-list.h"
@@ -26,6 +28,7 @@ typedef struct _HazeConnectionClass HazeConnectionClass;
 
 struct _HazeConnectionClass {
     TpBaseConnectionClass parent_class;
+    TpPresenceMixinClass presence_class;
 };
 
 struct _HazeConnection {
@@ -35,6 +38,8 @@ struct _HazeConnection {
 
     HazeContactList *contact_list;
     HazeImChannelFactory *im_factory;
+
+    TpPresenceMixin presence;
 
     gpointer priv;
 };
