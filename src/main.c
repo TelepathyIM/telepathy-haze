@@ -20,34 +20,25 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-#include "account.h"
-#include "conversation.h"
-#include "core.h"
-#include "debug.h"
-#include "eventloop.h"
-#include "ft.h"
-#include "log.h"
-#include "notify.h"
-#include "prefs.h"
-#include "prpl.h"
-#include "pounce.h"
-#include "savedstatuses.h"
-#include "sound.h"
-#include "status.h"
-#include "util.h"
-#include "whiteboard.h"
+
+#include <string.h>
+#include <errno.h>
 
 #include <glib.h>
 
-#include <string.h>
-#include <unistd.h>
-#include <errno.h>
+#include <account.h>
 
-#include "defines.h"
+#include <core.h>
+#include <blist.h>
+#include <debug.h>
+#include <eventloop.h>
+#include <prefs.h>
+#include <util.h>
 
 #include <telepathy-glib/run.h>
 #include <telepathy-glib/debug.h>
 
+#include "defines.h"
 #include "connection-manager.h"
 
 /* Copied verbatim from nullclient.  */
