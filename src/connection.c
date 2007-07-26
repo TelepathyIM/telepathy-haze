@@ -278,26 +278,65 @@ haze_connection_finalize (GObject *object)
     G_OBJECT_CLASS (haze_connection_parent_class)->finalize (object);
 }
 
+static const TpPresenceStatusOptionalArgumentSpec arg_specs[] = {
+    { "message", "s" },
+    { NULL, NULL }
+};
+
+typedef enum {
+    HAZE_STATUS_AVAILABLE = 0,
+    HAZE_STATUS_BUSY,
+    HAZE_STATUS_AWAY,
+    HAZE_STATUS_EXT_AWAY,
+    HAZE_STATUS_INVISIBLE,
+    HAZE_STATUS_OFFLINE,
+
+    HAZE_NUM_STATUSES
+} HazeStatusIndex;
+
 static const TpPresenceStatusSpec statuses[] = {
     { "available", TP_CONNECTION_PRESENCE_TYPE_AVAILABLE, TRUE,
-        NULL, NULL, NULL },
+        arg_specs, NULL, NULL },
     { "busy", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE,
-        NULL, NULL, NULL },
+        arg_specs, NULL, NULL },
     { "away", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE,
-        NULL, NULL, NULL },
+        arg_specs, NULL, NULL },
     { "ext_away", TP_CONNECTION_PRESENCE_TYPE_EXTENDED_AWAY, TRUE,
-        NULL, NULL, NULL },
+        arg_specs, NULL, NULL },
     { "invisible", TP_CONNECTION_PRESENCE_TYPE_HIDDEN, TRUE, NULL, NULL, NULL },
     { "offline", TP_CONNECTION_PRESENCE_TYPE_OFFLINE, FALSE, NULL, NULL, NULL },
     { NULL, TP_CONNECTION_PRESENCE_TYPE_UNSET, FALSE, NULL, NULL, NULL }
+};
+
+/* Indexed by HazeStatusIndex */
+static const PurpleStatusPrimitive primitives[] = {
+    PURPLE_STATUS_AVAILABLE,
+    PURPLE_STATUS_UNAVAILABLE,
+    PURPLE_STATUS_AWAY,
+    PURPLE_STATUS_EXTENDED_AWAY,
+    PURPLE_STATUS_INVISIBLE,
+    PURPLE_STATUS_OFFLINE
+};
+
+/* Indexed by PurpleStatusPrimitive */
+static const HazeStatusIndex status_indices[] = {
+    HAZE_NUM_STATUSES,     /* invalid! */
+    HAZE_STATUS_OFFLINE,   /* PURPLE_STATUS_OFFLINE */
+    HAZE_STATUS_AVAILABLE, /* PURPLE_STATUS_AVAILABLE */
+    HAZE_STATUS_BUSY,      /* PURPLE_STATUS_UNAVAILABLE */
+    HAZE_STATUS_INVISIBLE, /* PURPLE_STATUS_INVISIBLE */
+    HAZE_STATUS_AWAY,      /* PURPLE_STATUS_AWAY */
+    HAZE_STATUS_EXT_AWAY   /* PURPLE_STATUS_EXTENDED_AWAY */
 };
 
 static gboolean
 _status_available (GObject *obj,
                    guint index)
 {
-    /* FIXME */
-    return FALSE;
+    /* FIXME: (a) should we be able to set offline on ourselves;
+     *        (b) deal with some protocols not having status messages.
+     */
+    return TRUE;
 }
 
 static TpPresenceStatus *
@@ -305,37 +344,62 @@ _get_tp_status (PurpleStatus *p_status)
 {
     PurpleStatusType *type;
     PurpleStatusPrimitive prim;
+    GHashTable *arguments = g_hash_table_new_full (g_str_hash, g_str_equal,
+        NULL, (GDestroyNotify) tp_g_value_slice_free);
     guint status_ix = -1;
+    const gchar *message;
+    TpPresenceStatus *tp_status;
 
     g_assert (p_status != NULL);
 
     type = purple_status_get_type (p_status);
     prim = purple_status_type_get_primitive (type);
+    status_ix = status_indices[prim];
 
-    switch (prim) {
-        case PURPLE_STATUS_AVAILABLE:
-            status_ix = 0;
-            break;
-        case PURPLE_STATUS_UNAVAILABLE:
-            status_ix = 1;
-            break;
-        case PURPLE_STATUS_AWAY:
-            status_ix = 2;
-            break;
-        case PURPLE_STATUS_EXTENDED_AWAY:
-            status_ix = 3;
-            break;
-        case PURPLE_STATUS_INVISIBLE:
-            status_ix = 4;
-            break;
-        case PURPLE_STATUS_OFFLINE:
-            status_ix = 5;
-            break;
-        default:
-            g_critical ("What kind of Primitive is %u?", prim);
+    message = purple_status_get_attr_string (p_status, "message");
+    if (message)
+    {
+        GValue *message_v = g_slice_new0 (GValue);
+        g_value_init (message_v, G_TYPE_STRING);
+        g_value_set_string (message_v, message);
+        g_hash_table_insert (arguments, "message", message_v);
     }
 
-    return (tp_presence_status_new (status_ix, NULL));
+    tp_status = tp_presence_status_new (status_ix, arguments);
+    g_hash_table_destroy (arguments);
+    return tp_status;
+}
+
+static const char *
+_get_purple_status_id (HazeConnection *self,
+                       const TpPresenceStatus *tp_status)
+{
+    PurpleStatusPrimitive prim = PURPLE_STATUS_UNSET;
+    PurpleStatusType *type;
+    const char *def = "available";
+
+    if (!tp_status)
+    {
+        g_debug ("defaulting to \"%s\" since tp_status is NULL", def);
+        return def;
+    }
+
+    g_assert (tp_status->index < HAZE_NUM_STATUSES);
+    g_assert (tp_status->index >= 0);
+    prim = primitives[tp_status->index];
+
+    type = purple_account_get_status_type_with_primitive (self->account, prim);
+    if (type)
+    {
+        return (purple_status_type_get_id (type));
+    }
+    else
+    {
+        g_warning ("[%s] Couldn't find PurpleStatusType corresponding to %u; "
+                   "defaulting to \"%s\"", self->account->username,
+                   tp_status->index, def);
+        return def;
+    }
 }
 
 static GHashTable *
@@ -445,11 +509,31 @@ _set_own_status (GObject *obj,
                  const TpPresenceStatus *status,
                  GError **error)
 {
-    /* status can be null, signifying "set default".  does purple even have a
-     * default? */
-    /* FIXME */
-    g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED, "la la la");
-    return FALSE;
+    HazeConnection *self = HAZE_CONNECTION (obj);
+    const char *status_id = _get_purple_status_id (self, status);
+    GValue *message_v;
+    char *message;
+    GList *attrs = NULL;
+
+    if (status->optional_arguments)
+    {
+        message_v = g_hash_table_lookup (status->optional_arguments, "message");
+        if (message_v)
+            message = g_value_dup_string (message_v);
+    }
+
+    if (message)
+    {
+        attrs = g_list_append (attrs, "message");
+        attrs = g_list_append (attrs, message);
+    }
+
+    purple_account_set_status_list (self->account, status_id, TRUE, attrs);
+    g_list_free (attrs);
+    if (message)
+        g_free (message);
+
+    return TRUE;
 }
 
 static void
