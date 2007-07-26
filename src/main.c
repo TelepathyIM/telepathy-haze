@@ -138,9 +138,24 @@ haze_debug_print (PurpleDebugLevel level,
                   const char *category,
                   const char *arg_s)
 {
-    char *argh = g_strdup(arg_s);
-    g_debug("[%s] %s: %s", debug_level_names[level], category,
-            g_strchomp(argh));
+    char *argh = g_strchomp (g_strdup (arg_s));
+    const char *level_name = debug_level_names[level];
+    switch (level)
+    {
+        case PURPLE_DEBUG_WARNING:
+            g_warning ("%s: %s", category, argh);
+            break;
+        case PURPLE_DEBUG_ERROR:
+        case PURPLE_DEBUG_FATAL:
+            /* g_critical doesn't cause abort in haze */
+            g_critical ("[%s] %s: %s", level_name, category, argh);
+            break;
+        case PURPLE_DEBUG_MISC:
+        case PURPLE_DEBUG_INFO:
+        default:
+            g_message ("[%s] %s: %s", level_name, category, argh);
+            break;
+    }
     g_free(argh);
 }
 
@@ -148,6 +163,9 @@ static gboolean
 haze_debug_is_enabled (PurpleDebugLevel level,
                        const char *category)
 {
+    /* The Jabber prpl produces an immense volume of useless (as far as haze
+     * is concerned) debug output, so let's suppress it.
+     */
     return level != PURPLE_DEBUG_MISC && strcmp (category, "jabber");
 }
 
