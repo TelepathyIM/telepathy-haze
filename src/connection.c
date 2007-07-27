@@ -329,16 +329,6 @@ static const HazeStatusIndex status_indices[] = {
     HAZE_STATUS_EXT_AWAY   /* PURPLE_STATUS_EXTENDED_AWAY */
 };
 
-static gboolean
-_status_available (GObject *obj,
-                   guint index)
-{
-    /* FIXME: (a) should we be able to set offline on ourselves;
-     *        (b) deal with some protocols not having status messages.
-     */
-    return TRUE;
-}
-
 static TpPresenceStatus *
 _get_tp_status (PurpleStatus *p_status)
 {
@@ -372,21 +362,13 @@ _get_tp_status (PurpleStatus *p_status)
 
 static const char *
 _get_purple_status_id (HazeConnection *self,
-                       const TpPresenceStatus *tp_status)
+                       guint index)
 {
     PurpleStatusPrimitive prim = PURPLE_STATUS_UNSET;
     PurpleStatusType *type;
-    const char *def = "available";
 
-    if (!tp_status)
-    {
-        g_debug ("defaulting to \"%s\" since tp_status is NULL", def);
-        return def;
-    }
-
-    g_assert (tp_status->index < HAZE_NUM_STATUSES);
-    g_assert (tp_status->index >= 0);
-    prim = primitives[tp_status->index];
+    g_assert (index < HAZE_NUM_STATUSES);
+    prim = primitives[index];
 
     type = purple_account_get_status_type_with_primitive (self->account, prim);
     if (type)
@@ -395,12 +377,21 @@ _get_purple_status_id (HazeConnection *self,
     }
     else
     {
-        g_warning ("[%s] Couldn't find PurpleStatusType corresponding to %u; "
-                   "defaulting to \"%s\"", self->account->username,
-                   tp_status->index, def);
-        return def;
+        return NULL;
     }
 }
+
+static gboolean
+_status_available (GObject *obj,
+                   guint index)
+{
+    HazeConnection *self = HAZE_CONNECTION (obj);
+    /* FIXME: (a) should we be able to set offline on ourselves;
+     *        (b) deal with some protocols not having status messages.
+     */
+    return (_get_purple_status_id (self, index) != NULL);
+}
+
 
 static GHashTable *
 _get_contact_statuses (GObject *obj,
@@ -510,10 +501,20 @@ _set_own_status (GObject *obj,
                  GError **error)
 {
     HazeConnection *self = HAZE_CONNECTION (obj);
-    const char *status_id = _get_purple_status_id (self, status);
+    const char *status_id = NULL;
     GValue *message_v;
     char *message;
     GList *attrs = NULL;
+
+    if (status)
+        status_id = _get_purple_status_id (self, status->index);
+
+    if (!status_id)
+    {
+        /* TODO: Is there a more sensible way to have a default? */
+        g_debug ("defaulting to 'available' status");
+        status_id = "available";
+    }
 
     if (status->optional_arguments)
     {
