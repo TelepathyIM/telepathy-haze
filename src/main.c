@@ -145,11 +145,13 @@ haze_debug_print (PurpleDebugLevel level,
         case PURPLE_DEBUG_WARNING:
             g_warning ("%s: %s", category, argh);
             break;
-        case PURPLE_DEBUG_ERROR:
         case PURPLE_DEBUG_FATAL:
-            /* g_critical doesn't cause abort in haze */
+            /* g_critical doesn't cause an abort() in haze, so libpurple will
+             * still get to do the honours of blowing us out of the water.
+             */
             g_critical ("[%s] %s: %s", level_name, category, argh);
             break;
+        case PURPLE_DEBUG_ERROR:
         case PURPLE_DEBUG_MISC:
         case PURPLE_DEBUG_INFO:
         default:
