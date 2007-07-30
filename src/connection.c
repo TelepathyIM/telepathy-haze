@@ -34,7 +34,7 @@ typedef struct _HazeConnectionPrivate
   ((HazeConnectionPrivate *)o->priv)
 
 #define PC_GET_BASE_CONN(pc) \
-    (TP_BASE_CONNECTION (purple_connection_get_account (pc)->ui_data))
+    (ACCOUNT_GET_TP_BASE_CONNECTION (purple_connection_get_account (pc)))
 
 void
 signed_on_cb (PurpleConnection *pc, gpointer data)

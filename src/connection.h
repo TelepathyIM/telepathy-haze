@@ -46,6 +46,8 @@ struct _HazeConnection {
 
 #define ACCOUNT_GET_HAZE_CONNECTION(account) \
     (HAZE_CONNECTION ((account)->ui_data))
+#define ACCOUNT_GET_TP_BASE_CONNECTION(account) \
+    (TP_BASE_CONNECTION ((account)->ui_data))
 
 GType haze_connection_get_type (void);
 
