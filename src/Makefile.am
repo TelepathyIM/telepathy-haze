@@ -4,6 +4,8 @@ haze_SOURCES = main.c \
                defines.h \
                connection-manager.c \
                connection-manager.h \
+               connection-aliasing.c \
+               connection-aliasing.h \
                connection-presence.c \
                connection-presence.h \
                connection.c \

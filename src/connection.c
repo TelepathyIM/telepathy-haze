@@ -6,6 +6,7 @@
 #include "defines.h"
 #include "connection.h"
 #include "connection-presence.h"
+#include "connection-aliasing.h"
 
 enum
 {
@@ -21,6 +22,8 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
     TP_TYPE_BASE_CONNECTION,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE,
         tp_presence_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING,
+        haze_connection_aliasing_iface_init);
     );
 
 typedef struct _HazeConnectionPrivate
@@ -286,6 +289,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
     GParamSpec *param_spec;
     static const gchar *interfaces_always_present[] = {
         TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
+        TP_IFACE_CONNECTION_INTERFACE_ALIASING, /* FIXME: I'm lying */
         NULL };
     void *connection_handle = purple_connections_get_handle ();
 
@@ -342,6 +346,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
                           klass, PURPLE_CALLBACK(signed_off_cb), NULL);
 
     haze_connection_presence_class_init (object_class);
+    haze_connection_aliasing_class_init (object_class);
 }
 
 static void
