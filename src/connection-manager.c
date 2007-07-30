@@ -22,6 +22,7 @@ static const TpCMParamSpec params[] = {
     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
     G_STRUCT_OFFSET(HazeParams, username), NULL, NULL },
   { "password", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
+    /* FIXME: zephyr for instance doesn't need a password */
     TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
     G_STRUCT_OFFSET(HazeParams, password), NULL, NULL },
   { "server", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL,

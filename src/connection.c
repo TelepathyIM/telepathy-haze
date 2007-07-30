@@ -1,7 +1,11 @@
+#include <string.h>
+
 #include <telepathy-glib/handle-repo-dynamic.h>
 #include <telepathy-glib/handle-repo-static.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/errors.h>
+
+#include <accountopt.h>
 
 #include "defines.h"
 #include "connection.h"
@@ -89,24 +93,50 @@ _haze_connection_start_connecting (TpBaseConnection *base,
 {
     HazeConnection *self = HAZE_CONNECTION(base);
     HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
-    char *protocol, *password, *prpl;
+    char *protocol, *password, *server, *prpl_id;
+    PurpleAccount *account;
+    PurplePlugin *prpl;
+    PurplePluginProtocolInfo *prpl_info;
     TpHandleRepoIface *contact_handles =
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
 
     g_object_get(G_OBJECT(self),
                  "protocol", &protocol,
                  "password", &password,
+                 "server", &server,
                  NULL);
 
     base->self_handle = tp_handle_ensure(contact_handles, priv->username,
                                          NULL, error);
 
-    prpl = g_strconcat("prpl-", protocol, NULL);
-    self->account = purple_account_new(priv->username, prpl);
-    g_free(prpl);
+    prpl_id = g_strconcat("prpl-", protocol, NULL);
+    prpl = purple_find_prpl (prpl_id);
+    g_assert (prpl);
+    account = self->account = purple_account_new(priv->username, prpl_id);
+    g_free(prpl_id);
 
-    self->account->ui_data = self;
-    purple_account_set_password(self->account, password);
+    account->ui_data = self;
+    purple_account_set_password (account, password);
+    if (server && *server)
+    {
+        GList *l;
+        PurpleAccountOption *option;
+        prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (prpl);
+
+        /* :'-( :'-( :'-( :'-( */
+        for (l = prpl_info->protocol_options; l != NULL; l = l->next)
+        {
+            option = (PurpleAccountOption *)l->data;
+            if (!strcmp (option->pref_name, "server") /* oscar */
+                || !strcmp (option->pref_name, "connect_server")) /* xmpp */
+            {
+                purple_account_set_string (account, option->pref_name, server);
+                break;
+            }
+        }
+        if (l == NULL)
+            g_warning ("server protocol option not found!");
+    }
     purple_account_set_enabled(self->account, UI_ID, TRUE);
     purple_account_connect(self->account);
 
