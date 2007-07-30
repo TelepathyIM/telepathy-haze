@@ -3,6 +3,8 @@
 
 #include <glib-object.h>
 
+#include <conversation.h>
+
 G_BEGIN_DECLS
 
 #define HAZE_TYPE_IM_CHANNEL_FACTORY \
@@ -24,14 +26,16 @@ typedef struct _HazeImChannelFactory      HazeImChannelFactory;
 typedef struct _HazeImChannelFactoryClass HazeImChannelFactoryClass;
 
 struct _HazeImChannelFactory {
-	 GObject parent;
+    GObject parent;
 };
 
 struct _HazeImChannelFactoryClass {
-	GObjectClass parent_class;
+    GObjectClass parent_class;
 };
 
 GType        haze_im_channel_factory_get_type    (void) G_GNUC_CONST;
+
+PurpleConversationUiOps *haze_get_conv_ui_ops (void);
 
 G_END_DECLS
 

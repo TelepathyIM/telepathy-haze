@@ -27,7 +27,6 @@
 #include <glib.h>
 
 #include <account.h>
-
 #include <core.h>
 #include <blist.h>
 #include <debug.h>
@@ -40,6 +39,7 @@
 
 #include "defines.h"
 #include "connection-manager.h"
+#include "im-channel-factory.h"
 
 /* Copied verbatim from nullclient, modulo changing whitespace. */
 #define PURPLE_GLIB_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
@@ -118,9 +118,7 @@ static PurpleEventLoopUiOps glib_eventloops =
 static void
 haze_ui_init ()
 {
-    /* We don't actually have any UI ops for anything besides debug, core and
-     * eventloop...
-     */
+    purple_conversations_set_ui_ops (haze_get_conv_ui_ops ());
 }
 
 static char *debug_level_names[] =

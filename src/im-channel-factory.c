@@ -109,21 +109,10 @@ haze_im_channel_factory_set_property (GObject      *object,
 }
 
 static void
-received_message_cb(PurpleAccount *account,
-                    const char *sender,
-                    char *message,
-                    PurpleConversation *conv,
-                    PurpleMessageFlags flags,
-                    time_t mtime,
-                    gpointer unused);
-
-static void
 haze_im_channel_factory_class_init (HazeImChannelFactoryClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     GParamSpec *param_spec;
-
-    void *conv_handle = purple_conversations_get_handle();
 
     object_class->dispose = haze_im_channel_factory_dispose;
     object_class->get_property = haze_im_channel_factory_get_property;
@@ -141,9 +130,6 @@ haze_im_channel_factory_class_init (HazeImChannelFactoryClass *klass)
 
     g_type_class_add_private (object_class,
                               sizeof(HazeImChannelFactoryPrivate));
-
-    purple_signal_connect(conv_handle, "received-im-msg-with-timestamp", klass,
-                          PURPLE_CALLBACK(received_message_cb), NULL);
 }
 
 static void
@@ -214,53 +200,6 @@ haze_im_channel_factory_iface_close_all (TpChannelFactoryIface *iface)
         g_hash_table_destroy (priv->channels);
         priv->channels = NULL;
     }
-}
-
-static void
-received_message_cb(PurpleAccount *account,
-                    const char *sender,
-                    char *xhtml_message,
-                    PurpleConversation *conv,
-                    PurpleMessageFlags flags,
-                    time_t mtime,
-                    gpointer unused)
-{
-    HazeImChannelFactory *self =
-        ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (self);
-    TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
-    TpHandleRepoIface *contact_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
-    TpHandle handle;
-    TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
-    HazeIMChannel *chan = NULL;
-    char *message = purple_markup_strip_html (xhtml_message);
-
-    handle = tp_handle_ensure (contact_repo, sender, NULL, NULL);
-    if (handle == 0) {
-        g_debug ("got a 0 handle, ignoring message");
-        return;
-    }
-
-    chan = g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle));
-    if (chan == NULL) {
-        g_debug ("creating a new channel...");
-        chan = new_im_channel (self, handle);
-    }
-    g_assert (chan != NULL);
-
-    tp_handle_unref (contact_repo, handle); /* reffed by chan */
-
-    if (flags & PURPLE_MESSAGE_AUTO_RESP) {
-        type = TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY;
-    }
-    else if (purple_message_meify(message, -1)) {
-        type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
-    }
-
-    tp_text_mixin_receive (G_OBJECT (chan), type, handle,
-                           mtime, message);
 }
 
 static void
@@ -361,4 +300,102 @@ haze_im_channel_factory_iface_init (gpointer g_iface,
     klass->disconnected = haze_im_channel_factory_iface_disconnected;
     klass->foreach = haze_im_channel_factory_iface_foreach;
     klass->request = haze_im_channel_factory_iface_request;
+}
+
+static void
+haze_write_im (PurpleConversation *conv,
+               const char *who,
+               const char *xhtml_message,
+               PurpleMessageFlags flags,
+               time_t mtime)
+{
+    PurpleAccount *account = purple_conversation_get_account (conv);
+
+    HazeImChannelFactory *self =
+        ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
+    HazeImChannelFactoryPrivate *priv =
+        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (self);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+    TpHandleRepoIface *contact_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+    TpHandle handle;
+    TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
+    HazeIMChannel *chan = NULL;
+    char *message;
+
+    if (flags & PURPLE_MESSAGE_SEND)
+        return; /* outgoing message; we deal with these elsewhere */
+
+    message = purple_markup_strip_html (xhtml_message);
+
+    if (!who)
+    {
+        /* Inexplicably, serv_got_im passes NULL as who, so we have to get it
+         * from the conversation.  What even is the point of having a who
+         * parameter if it's going to be NULL despite serv_got_im knowing it?
+         */
+        who = purple_conversation_get_name (conv);
+    }
+    g_assert (who);
+
+    handle = tp_handle_ensure (contact_repo, who, NULL, NULL);
+    if (handle == 0) {
+        g_debug ("got a 0 handle, ignoring message");
+        return;
+    }
+
+    chan = g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle));
+    if (chan == NULL) {
+        g_debug ("creating a new channel...");
+        chan = new_im_channel (self, handle);
+    }
+    g_assert (chan != NULL);
+
+    tp_handle_unref (contact_repo, handle); /* reffed by chan */
+
+    if (flags & PURPLE_MESSAGE_AUTO_RESP) {
+        type = TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY;
+    }
+    else if (purple_message_meify(message, -1)) {
+        type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
+    }
+
+    tp_text_mixin_receive (G_OBJECT (chan), type, handle,
+                           mtime, message);
+    g_free (message);
+}
+
+static PurpleConversationUiOps
+conversation_ui_ops =
+{
+    NULL,          /* create_conversation */
+    NULL,          /* destroy_conversation */
+    NULL,          /* write_chat */
+    haze_write_im, /* write_im */
+    NULL,          /* write_conv */
+    NULL,          /* chat_add_users */
+    NULL,          /* chat_rename_user */
+    NULL,          /* chat_remove_users */
+    NULL,          /* chat_update_user */
+
+    NULL,          /* present */
+
+    NULL,          /* has_focus */
+
+    NULL,          /* custom_smiley_add */
+    NULL,          /* custom_smiley_write */
+    NULL,          /* custom_smiley_close */
+
+    NULL,          /* send_confirm */
+
+    NULL,          /* _purple_reserved1 */
+    NULL,          /* _purple_reserved2 */
+    NULL,          /* _purple_reserved3 */
+    NULL,          /* _purple_reserved4 */
+};
+
+PurpleConversationUiOps *
+haze_get_conv_ui_ops(void)
+{
+    return &conversation_ui_ops;
 }
