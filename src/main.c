@@ -300,7 +300,7 @@ int main(int argc, char **argv)
     init_libpurple();
     g_debug("libpurple initialized.");
 
-    tp_debug_set_all_flags();
+    tp_debug_set_flags_from_env ("HAZE_DEBUG");
     ret = tp_run_connection_manager(UI_ID, "0.0.1", get_cm, argc, argv);
 
     purple_core_quit();
