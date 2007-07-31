@@ -430,8 +430,6 @@ _initial_buddies_foreach (PurpleBuddy *buddy,
     TpIntSet *group_set;
     TpHandle handle;
 
-    g_debug ("look! '%s' is in group '%s'", name, group_name);
-
     handle = tp_handle_ensure (context->contact_repo, name, NULL, NULL);
     tp_handle_set_add (context->add_handles, handle);
 
@@ -444,7 +442,7 @@ _initial_buddies_foreach (PurpleBuddy *buddy,
 
     tp_intset_add (group_set, handle);
 
-    tp_handle_unref (context->contact_repo, handle); /*reffed by add_handles*/
+    tp_handle_unref (context->contact_repo, handle);
 
 }
 
