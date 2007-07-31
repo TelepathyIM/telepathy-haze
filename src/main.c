@@ -25,6 +25,7 @@
 #include <errno.h>
 
 #include <glib.h>
+#include <glib/gstdio.h>
 
 #include <account.h>
 #include <core.h>
@@ -203,7 +204,6 @@ static PurpleCoreUiOps haze_core_uiops =
 static void
 init_libpurple()
 {
-    /* FIXME: clean up this directory on close. */
     char *user_dir = g_strconcat (g_get_tmp_dir (), G_DIR_SEPARATOR_S,
                                   "haze-XXXXXX", NULL);
 
@@ -251,9 +251,49 @@ get_cm (void)
     return (TpBaseConnectionManager *) haze_connection_manager_get ();
 }
 
+static gboolean
+delete_directory (const char *path)
+{
+    const gchar *child_path;
+    GDir *dir = g_dir_open (path, 0, NULL);
+    gboolean ret = TRUE;
+
+    if (!dir)
+        return FALSE;
+
+    while (ret && (child_path = g_dir_read_name (dir)))
+    {
+        gchar *child_full_path =
+            g_strconcat (path, G_DIR_SEPARATOR_S, child_path, NULL);
+        if (g_file_test (child_full_path, G_FILE_TEST_IS_DIR))
+        {
+            if (!delete_directory (child_full_path))
+                ret = FALSE;
+        }
+        else
+        {
+            g_debug ("deleting %s", child_full_path);
+            if (g_unlink (child_full_path))
+                ret = FALSE;
+        }
+        g_free (child_full_path);
+    }
+
+    g_dir_close (dir);
+
+    if (ret)
+    {
+        g_debug ("deleting %s", path);
+        ret = !g_rmdir (path);
+    }
+
+    return ret;
+}
+
 int main(int argc, char **argv)
 {
     int ret = 0;
+    const char *user_dir;
 
     g_set_prgname(UI_ID);
 
@@ -264,6 +304,10 @@ int main(int argc, char **argv)
     ret = tp_run_connection_manager(UI_ID, "0.0.1", get_cm, argc, argv);
 
     purple_core_quit();
+    user_dir = purple_user_dir ();
+    if (!delete_directory (user_dir))
+        g_warning ("couldn't delete %s", user_dir);
+
     return ret;
 }
 
