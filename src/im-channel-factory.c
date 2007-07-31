@@ -326,8 +326,6 @@ haze_write_im (PurpleConversation *conv,
     if (flags & PURPLE_MESSAGE_SEND)
         return; /* outgoing message; we deal with these elsewhere */
 
-    message = purple_markup_strip_html (xhtml_message);
-
     if (!who)
     {
         /* Inexplicably, serv_got_im passes NULL as who, so we have to get it
@@ -343,6 +341,8 @@ haze_write_im (PurpleConversation *conv,
         g_debug ("got a 0 handle, ignoring message");
         return;
     }
+
+    message = purple_markup_strip_html (xhtml_message);
 
     chan = g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle));
     if (chan == NULL) {
