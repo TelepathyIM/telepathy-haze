@@ -59,7 +59,8 @@ _get_tp_status (PurpleStatus *p_status)
     GHashTable *arguments = g_hash_table_new_full (g_str_hash, g_str_equal,
         NULL, (GDestroyNotify) tp_g_value_slice_free);
     guint status_ix = -1;
-    const gchar *message;
+    const gchar *xhtml_message;
+    gchar *message;
     TpPresenceStatus *tp_status;
 
     g_assert (p_status != NULL);
@@ -68,13 +69,15 @@ _get_tp_status (PurpleStatus *p_status)
     prim = purple_status_type_get_primitive (type);
     status_ix = status_indices[prim];
 
-    message = purple_status_get_attr_string (p_status, "message");
-    if (message)
+    xhtml_message = purple_status_get_attr_string (p_status, "message");
+    if (xhtml_message)
     {
+        message = purple_markup_strip_html (xhtml_message);
         GValue *message_v = g_slice_new0 (GValue);
         g_value_init (message_v, G_TYPE_STRING);
         g_value_set_string (message_v, message);
         g_hash_table_insert (arguments, "message", message_v);
+        g_free (message);
     }
 
     tp_status = tp_presence_status_new (status_ix, arguments);
