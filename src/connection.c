@@ -11,6 +11,7 @@
 #include "connection.h"
 #include "connection-presence.h"
 #include "connection-aliasing.h"
+#include "connection-avatars.h"
 
 enum
 {
@@ -28,6 +29,8 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         tp_presence_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING,
         haze_connection_aliasing_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
+        haze_connection_avatars_iface_init);
     );
 
 typedef struct _HazeConnectionPrivate
@@ -47,6 +50,16 @@ void
 signed_on_cb (PurpleConnection *pc, gpointer data)
 {
     TpBaseConnection *base_conn = PC_GET_BASE_CONN (pc);
+    HazeConnection *conn = HAZE_CONNECTION (base_conn);
+    PurplePluginProtocolInfo *prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
+
+    if (prpl_info->icon_spec.format != NULL)
+    {
+        static const gchar *avatar_ifaces[] = {
+            TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+            NULL };
+        tp_base_connection_add_interfaces (base_conn, avatar_ifaces);
+    }
 
     tp_base_connection_change_status (base_conn,
         TP_CONNECTION_STATUS_CONNECTED,
@@ -377,6 +390,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
 
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);
+    haze_connection_avatars_class_init (object_class);
 }
 
 static void
