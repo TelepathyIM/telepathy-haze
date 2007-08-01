@@ -1,10 +1,31 @@
+AC_PREREQ([2.59])
+
 AC_INIT([haze],[0.0.1],[resiak@soc.pidgin.im])
-AM_INIT_AUTOMAKE([AC_PACKAGE_NAME],[AC_PACKAGE_VERSION])
+
+AC_CONFIG_MACRO_DIR([m4])
+
+AM_INIT_AUTOMAKE([1.8])
+
 AC_PROG_CC
-PKG_CHECK_MODULES([PURPLE],[purple],[],[AC_MSG_ERROR([
-* purple is needed to build haze.])])
-PKG_CHECK_MODULES([TP_GLIB],[telepathy-glib],[],[AC_MSG_ERROR([
-* telepathy-glib is needed to build haze.])])
+AC_PROG_CC_STDC
+AC_PROG_INSTALL
+AC_PROG_LIBTOOL
+
+PKG_CHECK_MODULES(PURPLE,[purple >= 2.0.0])
+AC_SUBST(PURPLE_CFLAGS)
+AC_SUBST(PURPLE_LIBS)
+
+PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib])
+AC_SUBST(TP_GLIB_CFLAGS)
+AC_SUBST(TP_GLIB_LIBS)
+
+#AS_AC_EXPAND(DATADIR, $datadir)
+#DBUS_SERVICES_DIR="$DATADIR/dbus-1/services"
+#AC_SUBST(DBUS_SERVICES_DIR)
+#AC_DEFINE_UNQUOTED(DBUS_SERVICES_DIR, "$DBUS_SERVICES_DIR", [DBus services directory])
+
 AC_OUTPUT([Makefile
            src/Makefile
+           data/Makefile
+           m4/Makefile
            ])

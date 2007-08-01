@@ -1,0 +1,68 @@
+[ConnectionManager]
+BusName=org.freedesktop.Telepathy.ConnectionManager.haze
+ObjectPath=/org/freedesktop/Telepathy/ConnectionManager/haze
+
+[Protocol aim]
+param-account=s required
+param-password=s required
+param-server=s
+
+[Protocol bonjour]
+param-account=s required
+param-password=s required
+param-server=s
+
+[Protocol gg]
+param-account=s required
+param-password=s required
+param-server=s
+
+[Protocol novell]
+param-account=s required
+param-password=s required
+param-server=s
+
+[Protocol icq]
+param-account=s required
+param-password=s required
+param-server=s
+
+[Protocol irc]
+param-account=s required
+param-password=s required
+param-server=s
+
+[Protocol msn]
+param-account=s required
+param-password=s required
+param-server=s
+
+[Protocol qq]
+param-account=s required
+param-password=s required
+param-server=s
+
+[Protocol simple]
+param-account=s required
+param-password=s required
+param-server=s
+
+[Protocol meanwhile]
+param-account=s required
+param-password=s required
+param-server=s
+
+[Protocol jabber]
+param-account=s required
+param-password=s required
+param-server=s
+
+[Protocol yahoo]
+param-account=s required
+param-password=s required
+param-server=s
+
+[Protocol zephyr]
+param-account=s required
+param-password=s required
+param-server=s
