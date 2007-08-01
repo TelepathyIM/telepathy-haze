@@ -48,6 +48,8 @@ struct _HazeConnection {
     (HAZE_CONNECTION ((account)->ui_data))
 #define ACCOUNT_GET_TP_BASE_CONNECTION(account) \
     (TP_BASE_CONNECTION ((account)->ui_data))
+#define HAZE_CONNECTION_GET_PRPL_INFO(conn) \
+    (PURPLE_PLUGIN_PROTOCOL_INFO (conn->account->gc->prpl))
 
 GType haze_connection_get_type (void);
 

@@ -13,7 +13,7 @@ can_alias (HazeConnection *conn)
 
     g_assert (!purple_account_is_disconnected (conn->account));
 
-    prpl = PURPLE_PLUGIN_PROTOCOL_INFO (conn->account->gc->prpl);
+    prpl = HAZE_CONNECTION_GET_PRPL_INFO (conn);
 
     return (prpl->alias_buddy != NULL);
 }
