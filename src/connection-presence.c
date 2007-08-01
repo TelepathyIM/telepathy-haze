@@ -228,7 +228,7 @@ _set_own_status (GObject *obj,
     HazeConnection *self = HAZE_CONNECTION (obj);
     const char *status_id = NULL;
     GValue *message_v;
-    char *message;
+    char *message = NULL;
     GList *attrs = NULL;
 
     if (status)
