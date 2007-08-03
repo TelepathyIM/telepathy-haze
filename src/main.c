@@ -301,7 +301,7 @@ int main(int argc, char **argv)
     g_debug("libpurple initialized.");
 
     tp_debug_set_flags_from_env ("HAZE_DEBUG");
-    ret = tp_run_connection_manager(UI_ID, "0.0.1", get_cm, argc, argv);
+    ret = tp_run_connection_manager(UI_ID, HAZE_VERSION, get_cm, argc, argv);
 
     purple_core_quit();
     user_dir = purple_user_dir ();
