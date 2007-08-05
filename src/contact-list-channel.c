@@ -111,11 +111,8 @@ _haze_contact_list_channel_add_member_cb (GObject *obj,
 
             /* FIXME: This causes it to be added to 'subscribed' too. */
             purple_blist_add_buddy (buddy, NULL, priv->group, NULL);
-            /* FIXME: Surely there's a better way to save this group on the
-             * server than this?
-             */
             purple_account_add_buddy(buddy->account, buddy);
-                
+
             return TRUE;
         default:
             g_assert_not_reached ();
@@ -136,60 +133,63 @@ _haze_contact_list_channel_remove_member_cb (GObject *obj,
     TpHandleRepoIface *handle_repo =
         tp_base_connection_get_handles (conn, TP_HANDLE_TYPE_CONTACT);
     const gchar *bname = tp_handle_inspect (handle_repo, handle);
+    PurpleAccount *account = priv->conn->account;
     PurpleBuddy *buddy;
+    PurpleGroup *group;
     GSList *buddies, *l;
 
     switch (priv->handle_type)
     {
         case TP_HANDLE_TYPE_LIST:
-            buddies = purple_find_buddies (priv->conn->account, bname);
+            buddies = purple_find_buddies (account, bname);
             if (!buddies)
             {
                 g_warning("'%s' is in the group mixin for '%s' but not on the "
-                    "libpurple blist", bname, priv->conn->account->username);
+                    "libpurple blist", bname, account->username);
                 /* This occurring is a bug in haze or libpurple, but I figure
                  * it's better not to explode
                  */
                 return TRUE;
             }
 
+            /* Removing a buddy from subscribe entails removing it from all
+             * groups since you can't have a buddy without groups in libpurple.
+             */
             for (l = buddies; l != NULL; l = l->next)
             {
                 buddy = (PurpleBuddy *) l->data;
-                /* FIXME: randomly removing buddy from all groups! */
-                purple_blist_remove_buddy(buddy);
-                purple_account_remove_buddy(buddy->account, buddy,
-                    purple_buddy_get_group(buddy));
+                group = purple_buddy_get_group (buddy);
+                purple_account_remove_buddy (account, buddy, group);
+                purple_blist_remove_buddy (buddy);
             }
-            
+
             g_slist_free (buddies);
 
             return TRUE;
+
         case TP_HANDLE_TYPE_GROUP:
-            buddy = purple_find_buddy_in_group (priv->conn->account, bname,
-                priv->group);
+            group = priv->group;
+            buddy = purple_find_buddy_in_group (account, bname, group);
 
             /* FIXME: check if the buddy is in another group; if not, move it
              * to the default group to avoid it falling off the subscribe list.
              */
+            purple_account_remove_buddy (account, buddy, group);
             purple_blist_remove_buddy(buddy);
-            purple_account_remove_buddy(buddy->account, buddy,
-                purple_buddy_get_group(buddy));
 
-            buddy = purple_find_buddy_in_group (priv->conn->account, bname,
-                priv->group);
-            while (buddy)
+            /* Sanity checking: see if the buddy was in the group more than
+             * once, since this is possible in libpurple...
+             */
+            while ((buddy = purple_find_buddy_in_group (account, bname, group)))
             {
                 g_warning("'%s' was in group '%s' more than once! purging!",
-                          bname, priv->group->name);
+                          bname, group->name);
+                purple_account_remove_buddy (account, buddy, group);
                 purple_blist_remove_buddy(buddy);
-                purple_account_remove_buddy(buddy->account, buddy,
-                    purple_buddy_get_group(buddy));
-                buddy = purple_find_buddy_in_group (priv->conn->account, bname,
-                    priv->group);
             }
 
             return TRUE;
+
         default:
             g_assert_not_reached ();
             return FALSE;
