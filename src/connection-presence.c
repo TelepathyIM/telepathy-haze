@@ -163,15 +163,11 @@ _get_contact_statuses (GObject *obj,
 
         if (handle == base_conn->self_handle)
         {
-            g_debug ("[%s] getting own status", conn->account->username);
-
             p_status = purple_account_get_active_status (conn->account);
         }
         else
         {
             bname = tp_handle_inspect (handle_repo, handle);
-            g_debug ("[%s] getting status for %s",
-                     conn->account->username, bname);
             buddy = purple_find_buddy (conn->account, bname);
 
             if (buddy)
@@ -181,8 +177,13 @@ _get_contact_statuses (GObject *obj,
             }
             else
             {
-                g_critical ("can't find %s", bname);
-                continue;
+                g_debug ("[%s] %s isn't on the blist, ergo no status!",
+                         conn->account->username, bname);
+                g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+                    "Presence for %u unknown; subscribe to them first", handle);
+                g_hash_table_destroy (status_table);
+                status_table = NULL;
+                break;
             }
         }
 
@@ -212,8 +213,6 @@ update_status (PurpleBuddy *buddy,
     g_debug ("%s changed to status %s", bname, purple_status_get_id (status));
 
     tp_status = _get_tp_status (status);
-
-    g_debug ("tp_status index: %u", tp_status->index);
 
     tp_presence_mixin_emit_one_presence_update (G_OBJECT (conn), handle,
         tp_status);

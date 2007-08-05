@@ -93,7 +93,15 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
         {
             buddy = purple_find_buddy (conn->account, bname);
 
-            g_assert (buddy != NULL);
+            if (!buddy)
+            {
+                g_debug ("%s not on blist; throwing NotAvailable from "
+                    "RequestAliases()", bname);
+                g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+                    "Alias for %u unknown; subscribe to them first", handle);
+                break;
+            }
+
             alias = purple_buddy_get_alias (buddy);
         }
         g_debug ("%s has alias \"%s\"", bname, alias);
@@ -102,9 +110,18 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
         aliases[i] = (gchar *) alias;
     }
 
-    /* Hrm, why do I need to cast up to const? */
-    tp_svc_connection_interface_aliasing_return_from_request_aliases (
-        context, (const gchar **)aliases);
+    if (error)
+    {
+        dbus_g_method_return_error (context, error);
+        g_error_free (error);
+    }
+    else
+    {
+        /* Hrm, why do I need to cast up to const? */
+        tp_svc_connection_interface_aliasing_return_from_request_aliases (
+            context, (const gchar **)aliases);
+    }
+    g_free (aliases);
 }
 
 struct _g_hash_table_foreach_all_in_my_brain
