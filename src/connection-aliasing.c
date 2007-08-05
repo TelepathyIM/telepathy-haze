@@ -87,7 +87,15 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
 
         if (handle == base->self_handle)
         {
-            alias = purple_account_get_alias (conn->account);
+            alias = purple_connection_get_display_name (conn->account->gc);
+            if (!alias)
+            {
+                g_debug ("%s has no display_name, throwing NotAvailable from "
+                    "RequestAliases()", bname);
+                g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+                    "%u has no alias", handle);
+                break;
+            }
         }
         else
         {
