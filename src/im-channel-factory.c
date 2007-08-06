@@ -308,6 +308,7 @@ haze_im_channel_factory_iface_request (TpChannelFactoryIface *iface,
             (TpBaseConnection *)priv->conn, TP_HANDLE_TYPE_CONTACT);
     HazeIMChannel *chan;
     TpChannelFactoryRequestStatus status;
+    gboolean created;
 
     if (strcmp (chan_type, TP_IFACE_CHANNEL_TYPE_TEXT))
         return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
@@ -318,19 +319,16 @@ haze_im_channel_factory_iface_request (TpChannelFactoryIface *iface,
     if (!tp_handle_is_valid (contact_repo, handle, error))
         return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
 
-    chan = g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle));
-
-    if (chan)
+    chan = get_im_channel (self, handle, &created);
+    if (created)
     {
-        status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
+        status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
     }
     else
     {
-        status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
-        chan = new_im_channel (self, handle);
+        status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
     }
 
-    g_assert (chan);
     *ret = TP_CHANNEL_IFACE (chan);
     return status;
 }
@@ -391,12 +389,7 @@ haze_write_im (PurpleConversation *conv,
 
     message = purple_markup_strip_html (xhtml_message);
 
-    chan = g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle));
-    if (chan == NULL) {
-        g_debug ("creating a new channel...");
-        chan = new_im_channel (self, handle);
-    }
-    g_assert (chan != NULL);
+    chan = get_im_channel (self, handle, NULL);
 
     tp_handle_unref (contact_repo, handle); /* reffed by chan */
 
