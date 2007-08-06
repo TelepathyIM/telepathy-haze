@@ -382,23 +382,19 @@ haze_write_im (PurpleConversation *conv,
     g_assert (who);
 
     handle = tp_handle_ensure (contact_repo, who, NULL, NULL);
-    if (handle == 0) {
+    if (handle == 0)
+    {
         g_debug ("got a 0 handle, ignoring message");
         return;
     }
+    chan = get_im_channel (self, handle, NULL);
+    tp_handle_unref (contact_repo, handle);
 
     message = purple_markup_strip_html (xhtml_message);
-
-    chan = get_im_channel (self, handle, NULL);
-
-    tp_handle_unref (contact_repo, handle); /* reffed by chan */
-
-    if (flags & PURPLE_MESSAGE_AUTO_RESP) {
+    if (flags & PURPLE_MESSAGE_AUTO_RESP)
         type = TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY;
-    }
-    else if (purple_message_meify(message, -1)) {
+    else if (purple_message_meify(message, -1))
         type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
-    }
 
     tp_text_mixin_receive (G_OBJECT (chan), type, handle,
                            mtime, message);
