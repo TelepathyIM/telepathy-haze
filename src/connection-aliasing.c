@@ -280,6 +280,7 @@ blist_node_aliased_cb (PurpleBlistNode *node,
 
     g_value_unset (&entry);
     g_ptr_array_free (aliases, TRUE);
+    tp_handle_unref (contact_handles, handle);
 }
 
 void
