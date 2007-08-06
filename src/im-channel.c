@@ -42,7 +42,11 @@ typedef struct _HazeIMChannelPrivate
     HazeConnection *conn;
     char *object_path;
     guint handle;
+
     PurpleConversation *conv;
+
+    gboolean closed;
+    gboolean dispose_has_run;
 } HazeIMChannelPrivate;
 
 #define HAZE_IM_CHANNEL_GET_PRIVATE(o) \
@@ -64,7 +68,13 @@ haze_im_channel_close (TpSvcChannel *iface,
     HazeIMChannel *self = HAZE_IM_CHANNEL (iface);
     HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (self);
 
-    purple_conversation_destroy (priv->conv);
+    if (!priv->closed)
+    {
+        purple_conversation_destroy (priv->conv);
+        priv->conv = NULL;
+        tp_svc_channel_emit_closed (iface);
+        priv->closed = TRUE;
+    }
 
     tp_svc_channel_return_from_close(context);
 }
@@ -239,6 +249,7 @@ haze_im_channel_set_property (GObject     *object,
             break;
     }
 }
+
 static GObject *
 haze_im_channel_constructor (GType type, guint n_props,
                              GObjectConstructParam *props)
@@ -268,9 +279,31 @@ haze_im_channel_constructor (GType type, guint n_props,
     priv->conv = purple_conversation_new (PURPLE_CONV_TYPE_IM,
                                           priv->conn->account,
                                           recipient);
-    purple_conversation_set_data (priv->conv, "haze-im-channel", obj);
+    priv->closed = FALSE;
+    priv->dispose_has_run = FALSE;
 
     return obj;
+}
+
+static void
+haze_im_channel_dispose (GObject *obj)
+{
+    HazeIMChannel *chan = HAZE_IM_CHANNEL (obj);
+    HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (chan);
+
+    if (priv->dispose_has_run)
+        return;
+    priv->dispose_has_run = TRUE;
+
+    if (!priv->closed)
+    {
+        purple_conversation_destroy (priv->conv);
+        priv->conv = NULL;
+        tp_svc_channel_emit_closed (obj);
+        priv->closed = TRUE;
+    }
+
+    g_free (priv->object_path);
 }
 
 static void
@@ -287,6 +320,7 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
     object_class->get_property = haze_im_channel_get_property;
     object_class->set_property = haze_im_channel_set_property;
     object_class->constructor = haze_im_channel_constructor;
+    object_class->dispose = haze_im_channel_dispose;
 
     g_object_class_override_property (object_class, PROP_OBJECT_PATH,
         "object-path");
