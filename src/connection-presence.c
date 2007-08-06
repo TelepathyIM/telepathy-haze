@@ -195,6 +195,27 @@ _get_contact_statuses (GObject *obj,
     return status_table;
 }
 
+void
+haze_connection_presence_account_status_changed (PurpleAccount *account,
+                                                 PurpleStatus *status)
+{
+    TpBaseConnection *base_conn;
+    TpPresenceStatus *tp_status;
+
+    /* This gets called as soon as the account is created, before we get a
+     * chance to set ui_data.  This is a "shame".  (You'd think that an account
+     * could not have a status before it is enabled, but you'd be "wrong".)
+     */
+    if (account->ui_data)
+    {
+        base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
+        tp_status = _get_tp_status (status);
+
+        tp_presence_mixin_emit_one_presence_update (G_OBJECT (base_conn),
+            base_conn->self_handle, tp_status);
+    }
+}
+
 static void
 update_status (PurpleBuddy *buddy,
                PurpleStatus *status)

@@ -422,3 +422,43 @@ haze_connection_init (HazeConnection *self)
 
     haze_connection_presence_init (self);
 }
+
+static void *
+request_authorize_cb (PurpleAccount *account,
+                      const char *remote_user,
+                      const char *id,
+                      const char *alias,
+                      const char *message,
+                      gboolean on_list,
+                      GCallback authorize_cb,
+                      GCallback deny_cb,
+                      void *user_data)
+{
+    /* Woo for argument lists which are longer than the function! */
+    /* FIXME: Implement the publish list, then deal with this properly. */
+    g_debug ("[%s] Quietly authorizing presence subscription from '%s'...",
+             account->username, remote_user);
+    ((PurpleAccountRequestAuthorizationCb) authorize_cb) (user_data);
+    return NULL;
+}
+
+static PurpleAccountUiOps
+account_ui_ops =
+{
+    NULL,                                            /* notify_added */
+    haze_connection_presence_account_status_changed, /* status_changed */
+    NULL,                                            /* request_add */
+    request_authorize_cb,                            /* request_authorize */
+    NULL,                                            /* close_account_request */
+
+    NULL, /* purple_reserved1 */
+    NULL, /* purple_reserved2 */
+    NULL, /* purple_reserved3 */
+    NULL  /* purple_reserved4 */
+};
+
+PurpleAccountUiOps *
+haze_get_account_ui_ops ()
+{
+    return &account_ui_ops;
+}

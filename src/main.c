@@ -45,6 +45,7 @@
 
 #include "defines.h"
 #include "connection-manager.h"
+#include "connection.h"
 #include "im-channel-factory.h"
 
 /* Copied verbatim from nullclient, modulo changing whitespace. */
@@ -124,6 +125,7 @@ static PurpleEventLoopUiOps glib_eventloops =
 static void
 haze_ui_init ()
 {
+    purple_accounts_set_ui_ops (haze_get_account_ui_ops ());
     purple_conversations_set_ui_ops (haze_get_conv_ui_ops ());
 }
 

@@ -20,11 +20,11 @@
  *
  */
 
-
 #include <glib-object.h>
 #include <telepathy-glib/base-connection.h>
 #include <telepathy-glib/presence-mixin.h>
 
+#include <account.h>
 #include <prpl.h>
 
 #include "contact-list.h"
@@ -70,6 +70,8 @@ struct _HazeConnection {
     (TP_BASE_CONNECTION ((account)->ui_data))
 #define HAZE_CONNECTION_GET_PRPL_INFO(conn) \
     (PURPLE_PLUGIN_PROTOCOL_INFO (conn->account->gc->prpl))
+
+PurpleAccountUiOps *haze_get_account_ui_ops ();
 
 GType haze_connection_get_type (void);
 
