@@ -184,6 +184,8 @@ new_im_channel (HazeImChannelFactory *self,
     priv = HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (self);
     conn = (TpBaseConnection *)priv->conn;
 
+    g_assert (!g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle)));
+
     object_path = g_strdup_printf ("%s/ImChannel%u", conn->object_path, handle);
 
     chan = g_object_new (HAZE_TYPE_IM_CHANNEL,
@@ -192,7 +194,7 @@ new_im_channel (HazeImChannelFactory *self,
                          "handle", handle,
                          NULL);
 
-    g_debug ("object path %s", object_path);
+    g_debug ("Created IM channel with object path %s", object_path);
 
     g_signal_connect (chan, "closed", G_CALLBACK (im_channel_closed_cb), self);
 
@@ -203,6 +205,31 @@ new_im_channel (HazeImChannelFactory *self,
 
     g_free (object_path);
 
+    return chan;
+}
+
+static HazeIMChannel *
+get_im_channel (HazeImChannelFactory *self,
+                TpHandle handle,
+                gboolean *created)
+{
+    HazeImChannelFactoryPrivate *priv =
+        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (self);
+    HazeIMChannel *chan =
+        g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle));
+
+    if (chan)
+    {
+        if (created)
+            *created = FALSE;
+    }
+    else
+    {
+        chan = new_im_channel (self, handle);
+        if (created)
+            *created = TRUE;
+    }
+    g_assert (chan);
     return chan;
 }
 
