@@ -1,5 +1,5 @@
 /*
- * im-channel.c - HazeImChannel source
+ * im-channel.c - HazeIMChannel source
  * Copyright (C) 2007 Will Thompson
  *
  * This program is free software; you can redistribute it and/or modify
@@ -56,17 +56,6 @@ G_DEFINE_TYPE_WITH_CODE(HazeIMChannel, haze_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     )
-
-#define CONV_IM_CHANNEL_KEY "haze-im-channel"
-
-#if 0
-static HazeIMChannel *
-get_haze_im_channel (PurpleConversation *conv)
-{
-    gpointer thing = purple_conversation_get_data (conv, CONV_IM_CHANNEL_KEY);
-    return HAZE_IM_CHANNEL (thing);
-}   
-#endif
 
 static void
 haze_im_channel_close (TpSvcChannel *iface,
@@ -232,14 +221,15 @@ haze_im_channel_set_property (GObject     *object,
             priv->object_path = g_value_dup_string (value);
             break;
         case PROP_HANDLE:
-            /* we don't ref it here because we don't necessarily have access to the
+            /* we don't ref it here because we don't have access to the
              * contact repo yet - instead we ref it in the constructor.
              */
             priv->handle = g_value_get_uint (value);
             break;
         case PROP_HANDLE_TYPE:
             /* this property is writable in the interface, but not actually
-             * meaningfully changable on this channel, so we do nothing */
+             * meaningfully changable on this channel, so we do nothing.
+             */
             break;
         case PROP_CONNECTION:
             priv->conn = g_value_get_object (value);
