@@ -31,6 +31,11 @@
 #include <core.h>
 #include <blist.h>
 #include <debug.h>
+#include <version.h>
+#if PURPLE_VERSION_CHECK(2,1,1)
+/* Before 2.1.1, this include failed because dbus-types.h was not installed. */
+#include <dbus-server.h>
+#endif
 #include <eventloop.h>
 #include <prefs.h>
 #include <util.h>
@@ -223,10 +228,15 @@ init_libpurple()
 
     purple_eventloop_set_ui_ops(&glib_eventloops);
 
-    if (!purple_core_init(UI_ID)) {
-        g_error ("libpurple initialization failed. Dumping core."
-                 "Please report this!");
-    }
+    if (!purple_core_init(UI_ID))
+        g_error ("libpurple initialization failed.  :-/");
+#if PURPLE_VERSION_CHECK(2,1,1) /* see #includes */
+    /* purple_core_init () calls purple_dbus_init ().  We don't want libpurple's
+     * own dbus server, so let's kill it here.  Ideally, it would never be
+     * initialized in the first place, but hey.
+     */
+    purple_dbus_uninit ();
+#endif
 
     purple_set_blist(purple_blist_new());
     purple_blist_load();
