@@ -61,6 +61,16 @@ GType haze_im_channel_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), HAZE_TYPE_IM_CHANNEL, \
                               HazeIMChannelClass))
 
+typedef struct _HazeConversationUiData HazeConversationUiData;
+
+struct _HazeConversationUiData
+{
+    TpHandle contact_handle;
+};
+
+#define PURPLE_CONV_GET_HAZE_UI_DATA(conv) \
+    ((HazeConversationUiData *) conv->ui_data)
+
 G_END_DECLS
 
 #endif /* #ifndef __HAZE_IM_CHANNEL_H__*/

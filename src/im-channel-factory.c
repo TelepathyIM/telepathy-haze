@@ -356,47 +356,27 @@ haze_write_im (PurpleConversation *conv,
 {
     PurpleAccount *account = purple_conversation_get_account (conv);
 
-    HazeImChannelFactory *self =
+    HazeImChannelFactory *im_factory =
         ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (self);
-    TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
-    TpHandleRepoIface *contact_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
-    TpHandle handle;
     TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
     HazeIMChannel *chan = NULL;
     char *message;
 
+    HazeConversationUiData *ui_data = PURPLE_CONV_GET_HAZE_UI_DATA (conv);
+
     if (flags & PURPLE_MESSAGE_SEND)
         return; /* outgoing message; we deal with these elsewhere */
 
-    if (!who)
-    {
-        /* Inexplicably, serv_got_im passes NULL as who, so we have to get it
-         * from the conversation.  What even is the point of having a who
-         * parameter if it's going to be NULL despite serv_got_im knowing it?
-         */
-        who = purple_conversation_get_name (conv);
-    }
-    g_assert (who);
-
-    handle = tp_handle_ensure (contact_repo, who, NULL, NULL);
-    if (handle == 0)
-    {
-        g_debug ("got a 0 handle, ignoring message");
-        return;
-    }
-    chan = get_im_channel (self, handle, NULL);
-    tp_handle_unref (contact_repo, handle);
-
     message = purple_markup_strip_html (xhtml_message);
+
     if (flags & PURPLE_MESSAGE_AUTO_RESP)
         type = TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY;
     else if (purple_message_meify(message, -1))
         type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
 
-    tp_text_mixin_receive (G_OBJECT (chan), type, handle,
+    chan = get_im_channel (im_factory, ui_data->contact_handle, NULL);
+
+    tp_text_mixin_receive (G_OBJECT (chan), type, ui_data->contact_handle,
                            mtime, message);
     g_free (message);
 }
@@ -404,13 +384,64 @@ haze_write_im (PurpleConversation *conv,
 static void
 haze_create_conversation (PurpleConversation *conv)
 {
+    PurpleAccount *account = purple_conversation_get_account (conv);
+
+    HazeImChannelFactory *im_factory =
+        ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
+    HazeImChannelFactoryPrivate *priv =
+        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (im_factory);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+    TpHandleRepoIface *contact_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+
+    const gchar *who = purple_conversation_get_name (conv);
+
+    HazeConversationUiData *ui_data;
+
     g_debug ("(PurpleConversation *)%p created", conv);
+
+    if (conv->type != PURPLE_CONV_TYPE_IM)
+    {
+        g_debug ("not an IM conversation; ignoring");
+        return;
+    }
+
+    g_assert (who);
+
+    conv->ui_data = ui_data = g_slice_new (HazeConversationUiData);
+
+    ui_data->contact_handle = tp_handle_ensure (contact_repo, who, NULL, NULL);
+    g_assert (ui_data->contact_handle);
 }
 
 static void
 haze_destroy_conversation (PurpleConversation *conv)
 {
+    PurpleAccount *account = purple_conversation_get_account (conv);
+
+    HazeImChannelFactory *im_factory =
+        ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
+    HazeImChannelFactoryPrivate *priv =
+        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (im_factory);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+    TpHandleRepoIface *contact_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+
+    HazeConversationUiData *ui_data;
+
     g_debug ("(PurpleConversation *)%p destroyed", conv);
+    if (conv->type != PURPLE_CONV_TYPE_IM)
+    {
+        g_debug ("not an IM conversation; ignoring");
+        return;
+    }
+
+    ui_data = PURPLE_CONV_GET_HAZE_UI_DATA (conv);
+
+    tp_handle_unref (contact_repo, ui_data->contact_handle);
+
+    g_slice_free (HazeConversationUiData, ui_data);
+    conv->ui_data = NULL;
 }
 
 static PurpleConversationUiOps
