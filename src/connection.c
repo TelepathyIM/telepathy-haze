@@ -67,7 +67,7 @@ typedef struct _HazeConnectionPrivate
     (ACCOUNT_GET_TP_BASE_CONNECTION (purple_connection_get_account (pc)))
 
 void
-signed_on_cb (PurpleConnection *pc, gpointer data)
+connected_cb (PurpleConnection *pc)
 {
     TpBaseConnection *base_conn = PC_GET_BASE_CONN (pc);
     HazeConnection *conn = HAZE_CONNECTION (base_conn);
@@ -86,27 +86,20 @@ signed_on_cb (PurpleConnection *pc, gpointer data)
         TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
 }
 
-void
-signing_off_cb (PurpleConnection *pc, gpointer data)
+static void
+report_disconnect_cb (PurpleConnection *gc,
+                      const char *text)
 {
-    TpBaseConnection *base_conn = PC_GET_BASE_CONN (pc);
-
-    /* FIXME: reason for disconnection, via
-     *        PurpleConnectionUiOps.report_disconnect I guess
-     */
-    if(base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
-    {
-        tp_base_connection_change_status (base_conn,
-            TP_CONNECTION_STATUS_DISCONNECTED,
-            TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
-    }
+    /* FIXME: Actually report the reason to tp_base_connection_change_status */
+    g_debug ("report_disconnect_cb: %s", text);
 }
 
 static gboolean
-idle_signed_off_cb(gpointer data)
+idle_disconnected_cb(gpointer data)
 {
     PurpleAccount *account = (PurpleAccount *) data;
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
+
     g_debug ("deleting account %s", account->username);
     purple_accounts_delete (account);
     tp_base_connection_finish_shutdown (TP_BASE_CONNECTION (conn));
@@ -114,10 +107,19 @@ idle_signed_off_cb(gpointer data)
 }
 
 void
-signed_off_cb (PurpleConnection *pc, gpointer data)
+disconnected_cb (PurpleConnection *pc)
 {
     PurpleAccount *account = purple_connection_get_account (pc);
-    g_idle_add(idle_signed_off_cb, account);
+    TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
+
+    if(base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
+    {
+        tp_base_connection_change_status (base_conn,
+            TP_CONNECTION_STATUS_DISCONNECTED,
+            TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
+    }
+
+    g_idle_add(idle_disconnected_cb, account);
 }
 
 static gboolean
@@ -354,7 +356,6 @@ haze_connection_class_init (HazeConnectionClass *klass)
         TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
         TP_IFACE_CONNECTION_INTERFACE_ALIASING, /* FIXME: I'm lying */
         NULL };
-    void *connection_handle = purple_connections_get_handle ();
 
     g_debug("Initializing (HazeConnectionClass *)%p", klass);
 
@@ -400,13 +401,6 @@ haze_connection_class_init (HazeConnectionClass *klass)
                                       G_PARAM_STATIC_NAME |
                                       G_PARAM_STATIC_BLURB);
     g_object_class_install_property (object_class, PROP_SERVER, param_spec);
-
-    purple_signal_connect(connection_handle, "signed-on",
-                          klass, PURPLE_CALLBACK(signed_on_cb), NULL);
-    purple_signal_connect(connection_handle, "signing-off",
-                          klass, PURPLE_CALLBACK(signing_off_cb), NULL);
-    purple_signal_connect(connection_handle, "signed-off",
-                          klass, PURPLE_CALLBACK(signed_off_cb), NULL);
 
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);
@@ -461,4 +455,27 @@ PurpleAccountUiOps *
 haze_get_account_ui_ops ()
 {
     return &account_ui_ops;
+}
+
+static PurpleConnectionUiOps
+connection_ui_ops =
+{
+    NULL,            /* connect_progress */
+    connected_cb,    /* connected */
+    disconnected_cb, /* disconnected */
+    NULL,            /* notice */
+    report_disconnect_cb, /* report_disconnect */
+    NULL,            /* network_connected */
+    NULL,            /* network_disconnected */
+
+    NULL, /* _purple_reserved1 */
+    NULL, /* _purple_reserved2 */
+    NULL, /* _purple_reserved3 */
+    NULL  /* _purple_reserved4 */
+};
+
+PurpleConnectionUiOps *
+haze_get_connection_ui_ops ()
+{
+    return &connection_ui_ops;
 }

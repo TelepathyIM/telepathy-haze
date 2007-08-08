@@ -127,6 +127,7 @@ haze_ui_init ()
 {
     purple_accounts_set_ui_ops (haze_get_account_ui_ops ());
     purple_conversations_set_ui_ops (haze_get_conv_ui_ops ());
+    purple_connections_set_ui_ops (haze_get_connection_ui_ops ());
 }
 
 static char *debug_level_names[] =

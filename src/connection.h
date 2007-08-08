@@ -72,6 +72,7 @@ struct _HazeConnection {
     (PURPLE_PLUGIN_PROTOCOL_INFO (conn->account->gc->prpl))
 
 PurpleAccountUiOps *haze_get_account_ui_ops ();
+PurpleConnectionUiOps *haze_get_connection_ui_ops ();
 
 GType haze_connection_get_type (void);
 
