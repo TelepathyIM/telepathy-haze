@@ -54,11 +54,14 @@ typedef struct _HazeIMChannelPrivate
 
 static void channel_iface_init (gpointer, gpointer);
 static void text_iface_init (gpointer, gpointer);
+static void chat_state_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE(HazeIMChannel, haze_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_CHAT_STATE,
+        chat_state_iface_init);
     )
 
 static void
@@ -98,13 +101,27 @@ haze_im_channel_get_handle (TpSvcChannel *iface,
         priv->handle);
 }
 
+static gboolean
+_chat_state_available (HazeIMChannel *chan)
+{
+    HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (chan);
+    PurplePluginProtocolInfo *prpl_info =
+        PURPLE_PLUGIN_PROTOCOL_INFO (priv->conn->account->gc->prpl);
+
+    return (prpl_info->send_typing != NULL);
+}
+
 static void
 haze_im_channel_get_interfaces (TpSvcChannel *iface,
                                 DBusGMethodInvocation *context)
 {
-  const char *interfaces[] = { NULL };
-
-  tp_svc_channel_return_from_get_interfaces (context, interfaces);
+    const char *no_interfaces[] = { NULL };
+    const char *chat_state_ifaces[] =
+        { TP_IFACE_CHANNEL_INTERFACE_CHAT_STATE, NULL };
+    if (_chat_state_available (HAZE_IM_CHANNEL (iface)))
+        tp_svc_channel_return_from_get_interfaces (context, chat_state_ifaces);
+    else
+        tp_svc_channel_return_from_get_interfaces (context, no_interfaces);
 }
 
 static void
@@ -121,6 +138,122 @@ channel_iface_init (gpointer g_iface, gpointer iface_data)
 #undef IMPLEMENT
 }
 
+const gchar *typing_state_names[] = {
+    "not typing",
+    "typing",
+    "typed"
+};
+
+static gboolean
+resend_typing_cb (gpointer data)
+{
+    PurpleConversation *conv = (PurpleConversation *)data;
+    HazeConversationUiData *ui_data = PURPLE_CONV_GET_HAZE_UI_DATA (conv);
+    PurpleConnection *gc = purple_conversation_get_gc (conv);
+    const gchar *who = purple_conversation_get_name (conv);
+    PurpleTypingState typing = ui_data->active_state;
+
+    g_debug ("resending '%s' to %s", typing_state_names[typing], who);
+    if (serv_send_typing (gc, who, typing))
+    {
+        return TRUE; /* Let's keep doing this thang. */
+    }
+    else
+    {
+        g_debug ("clearing resend_typing_cb timeout");
+        ui_data->resend_typing_timeout_id = 0;
+        return FALSE;
+    }
+}
+
+
+static void
+haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
+                                guint state,
+                                DBusGMethodInvocation *context)
+{
+    HazeIMChannel *chan = HAZE_IM_CHANNEL (self);
+    HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (chan);
+
+    PurpleConversation *conv = priv->conv;
+    HazeConversationUiData *ui_data = PURPLE_CONV_GET_HAZE_UI_DATA (conv);
+    PurpleConnection *gc = purple_conversation_get_gc (conv);
+    const gchar *who = purple_conversation_get_name (conv);
+
+    GError *error = NULL;
+    PurpleTypingState typing;
+    guint timeout;
+
+    g_assert (_chat_state_available (chan));
+
+    if (ui_data->resend_typing_timeout_id)
+    {
+        g_debug ("clearing existing resend_typing_cb timeout");
+        g_source_remove (ui_data->resend_typing_timeout_id);
+        ui_data->resend_typing_timeout_id = 0;
+    }
+
+    switch (state)
+    {
+        case TP_CHANNEL_CHAT_STATE_GONE:
+            g_debug ("The Gone state may not be explicitly set");
+            g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                "The Gone state may not be explicitly set");
+            break;
+        case TP_CHANNEL_CHAT_STATE_INACTIVE:
+        case TP_CHANNEL_CHAT_STATE_ACTIVE:
+            typing = PURPLE_NOT_TYPING;
+            break;
+        case TP_CHANNEL_CHAT_STATE_PAUSED:
+            typing = PURPLE_TYPED;
+            break;
+        case TP_CHANNEL_CHAT_STATE_COMPOSING:
+            typing = PURPLE_TYPING;
+            break;
+        default:
+            g_debug ("Invalid chat state: %u", state);
+            g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                "Invalid chat state: %u", state);
+    }
+
+    if (error)
+    {
+          dbus_g_method_return_error (context, error);
+          g_error_free (error);
+          return;
+    }
+
+    g_debug ("sending '%s' to %s", typing_state_names[typing], who);
+
+    ui_data->active_state = typing;
+    timeout = serv_send_typing (gc, who, typing);
+    /* Apparently some protocols need you to repeatedly set the typing state,
+     * so let's rig up a callback to do that.  serv_send_typing returns the
+     * number of seconds till the state times out, or 0 if states don't time
+     * out.
+     *
+     * That said, it would be stupid to repeatedly send not typing, so let's
+     * not do that.
+     */
+    if (timeout && typing != PURPLE_NOT_TYPING)
+    {
+        ui_data->resend_typing_timeout_id = g_timeout_add (timeout * 1000,
+            resend_typing_cb, conv);
+    }
+
+    tp_svc_channel_interface_chat_state_return_from_set_chat_state (context);
+}
+
+static void
+chat_state_iface_init (gpointer g_iface, gpointer iface_data)
+{
+    TpSvcChannelInterfaceChatStateClass *klass =
+        (TpSvcChannelInterfaceChatStateClass *)g_iface;
+#define IMPLEMENT(x) tp_svc_channel_interface_chat_state_implement_##x (\
+    klass, haze_im_channel_##x)
+    IMPLEMENT(set_chat_state);
+#undef IMPLEMENT
+}
 
 void
 haze_im_channel_send (TpSvcChannelTypeText *channel,

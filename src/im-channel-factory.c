@@ -56,6 +56,58 @@ enum {
     LAST_PROPERTY
 };
 
+static HazeIMChannel *
+get_im_channel (HazeImChannelFactory *self,
+                TpHandle handle,
+                gboolean *created);
+
+static void
+conversation_updated_cb (PurpleConversation *conv,
+                         PurpleConvUpdateType type,
+                         gpointer unused)
+{
+    PurpleAccount *account = purple_conversation_get_account (conv);
+    HazeImChannelFactory *im_factory =
+        ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
+    HazeConversationUiData *ui_data;
+    HazeIMChannel *chan;
+
+    PurpleTypingState typing;
+    TpChannelChatState state;
+
+    if (type != PURPLE_CONV_UPDATE_TYPING)
+        return;
+
+    if (conv->type != PURPLE_CONV_TYPE_IM)
+    {
+        g_debug ("typing state update for a non-IM chat, ignoring");
+        return;
+    }
+
+    ui_data = PURPLE_CONV_GET_HAZE_UI_DATA (conv);
+    typing = purple_conv_im_get_typing_state (PURPLE_CONV_IM (conv));
+
+    switch (typing)
+    {
+        case PURPLE_TYPING:
+            state = TP_CHANNEL_CHAT_STATE_COMPOSING;
+            break;
+        case PURPLE_TYPED:
+            state = TP_CHANNEL_CHAT_STATE_PAUSED;
+            break;
+        case PURPLE_NOT_TYPING:
+            state = TP_CHANNEL_CHAT_STATE_ACTIVE;
+            break;
+        default:
+            g_assert_not_reached ();
+    }
+
+    chan = get_im_channel (im_factory, ui_data->contact_handle, NULL);
+
+    tp_svc_channel_interface_chat_state_emit_chat_state_changed (
+        (TpSvcChannelInterfaceChatState*)chan, ui_data->contact_handle, state);
+}
+
 static void
 haze_im_channel_factory_init (HazeImChannelFactory *self)
 {
@@ -133,6 +185,7 @@ haze_im_channel_factory_class_init (HazeImChannelFactoryClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     GParamSpec *param_spec;
+    void *conv_handle = purple_conversations_get_handle();
 
     object_class->dispose = haze_im_channel_factory_dispose;
     object_class->get_property = haze_im_channel_factory_get_property;
@@ -150,6 +203,9 @@ haze_im_channel_factory_class_init (HazeImChannelFactoryClass *klass)
 
     g_type_class_add_private (object_class,
                               sizeof(HazeImChannelFactoryPrivate));
+
+    purple_signal_connect (conv_handle, "conversation-updated", klass,
+        (PurpleCallback) conversation_updated_cb, NULL);
 }
 
 static void
@@ -408,7 +464,7 @@ haze_create_conversation (PurpleConversation *conv)
 
     g_assert (who);
 
-    conv->ui_data = ui_data = g_slice_new (HazeConversationUiData);
+    conv->ui_data = ui_data = g_slice_new0 (HazeConversationUiData);
 
     ui_data->contact_handle = tp_handle_ensure (contact_repo, who, NULL, NULL);
     g_assert (ui_data->contact_handle);
@@ -439,6 +495,8 @@ haze_destroy_conversation (PurpleConversation *conv)
     ui_data = PURPLE_CONV_GET_HAZE_UI_DATA (conv);
 
     tp_handle_unref (contact_repo, ui_data->contact_handle);
+    if (ui_data->resend_typing_timeout_id)
+        g_source_remove (ui_data->resend_typing_timeout_id);
 
     g_slice_free (HazeConversationUiData, ui_data);
     conv->ui_data = NULL;
