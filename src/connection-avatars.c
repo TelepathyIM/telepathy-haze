@@ -86,11 +86,11 @@ get_avatar (HazeConnection *conn,
     {
         const gchar *bname = tp_handle_inspect (contact_handles, handle);
         PurpleBuddy *buddy = purple_find_buddy (conn->account, bname);
-        PurpleBuddyIcon *icon = purple_buddy_get_icon (buddy);
+        PurpleBuddyIcon *icon;
+        if (buddy)
+            icon = purple_buddy_get_icon (buddy);
         if (icon)
-        {
             icon_data = purple_buddy_icon_get_data (icon, &icon_size);
-        }
     }
 
     if (icon_data)
