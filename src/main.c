@@ -172,10 +172,24 @@ static gboolean
 haze_debug_is_enabled (PurpleDebugLevel level,
                        const char *category)
 {
-    /* The Jabber prpl produces an immense volume of useless (as far as haze
-     * is concerned) debug output, so let's suppress it.
+    if (level == PURPLE_DEBUG_MISC)
+        return FALSE;
+    /* oscar and yahoo, among others, supply a NULL category for some of their
+     * output.  "yay"
      */
-    return level != PURPLE_DEBUG_MISC && strcmp (category, "jabber");
+    if (!category)
+        return FALSE;
+    /* The Jabber prpl produces an unreasonable volume of debug output, so
+     * let's suppress it.
+     */
+    if (!strcmp (category, "jabber"))
+        return FALSE;
+    if (!strcmp (category, "dns") ||
+        !strcmp (category, "dnsquery") ||
+        !strcmp (category, "proxy") ||
+        !strcmp (category, "gnutls"))
+        return FALSE;
+    return TRUE;
 }
 
 static PurpleDebugUiOps haze_debug_uiops =
