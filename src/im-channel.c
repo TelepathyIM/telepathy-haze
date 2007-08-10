@@ -181,7 +181,7 @@ haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
     const gchar *who = purple_conversation_get_name (conv);
 
     GError *error = NULL;
-    PurpleTypingState typing;
+    PurpleTypingState typing = PURPLE_NOT_TYPING;
     guint timeout;
 
     g_assert (_chat_state_available (chan));
