@@ -26,6 +26,7 @@
 #include <telepathy-glib/errors.h>
 
 #include <accountopt.h>
+#include <version.h>
 
 #include "defines.h"
 #include "connection.h"
@@ -417,6 +418,9 @@ haze_connection_init (HazeConnection *self)
     haze_connection_presence_init (self);
 }
 
+/* Without the ifdef check, this compiles with warnings.  Except I want
+ * -Werror, so...
+ */
 static void *
 request_authorize_cb (PurpleAccount *account,
                       const char *remote_user,
@@ -424,15 +428,27 @@ request_authorize_cb (PurpleAccount *account,
                       const char *alias,
                       const char *message,
                       gboolean on_list,
+#if PURPLE_VERSION_CHECK(2,1,1)
+                      PurpleAccountRequestAuthorizationCb authorize_cb,
+                      PurpleAccountRequestAuthorizationCb deny_cb,
+#else
                       GCallback authorize_cb,
                       GCallback deny_cb,
+#endif
                       void *user_data)
 {
     /* Woo for argument lists which are longer than the function! */
+    PurpleAccountRequestAuthorizationCb cb =
+#if PURPLE_VERSION_CHECK(2,1,1)
+        authorize_cb;
+#else
+        (PurpleAccountRequestAuthorizationCb) authorize_cb;
+#endif
+
     /* FIXME: Implement the publish list, then deal with this properly. */
     g_debug ("[%s] Quietly authorizing presence subscription from '%s'...",
              account->username, remote_user);
-    ((PurpleAccountRequestAuthorizationCb) authorize_cb) (user_data);
+    cb (user_data);
     return NULL;
 }
 
