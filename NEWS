@@ -1,0 +1,15 @@
+Version 0.1.0 – "It's Like The ... 90s"
+=======================================
+
+Supported in this release:
+
+ * Connecting to MSN, XMPP, AIM known to work.
+ * Plain text conversations with individual contacts.
+ * The 'subscribe' list, plus contact list groups.
+ * Basic presence: available, busy, away, extended away, invisible, with a
+   message when supported by the underlying prpl.
+ * Retrieving your own server alias and those of your contacts, plus saving
+   custom aliases for your contacts to the server (where supported by the
+   prpl).
+ * Retrieving your contacts' avatars (but not setting your own).
+ * Typing notifications.

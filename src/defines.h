@@ -20,6 +20,6 @@
  *
  */
 #define UI_ID           "haze"
-#define HAZE_VERSION    "0.0.1"
+#define HAZE_VERSION    "0.1.0"
 
 #endif /* __HAZE_DEFINES_H__ */
