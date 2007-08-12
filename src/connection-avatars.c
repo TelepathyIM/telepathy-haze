@@ -207,7 +207,7 @@ haze_connection_request_avatar (TpSvcConnectionInterfaceAvatars *self,
 
         dbus_g_method_return_error (context, error);
 
-        g_free (error);
+        g_error_free (error);
         g_free (message);
     }
 }
@@ -248,7 +248,7 @@ haze_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *self,
     g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
         "Haven't got around to dealing with your own avatar yet");
     dbus_g_method_return_error (context, error);
-    g_free (error);
+    g_error_free (error);
 /*    tp_svc_connection_interface_avatars_return_from_clear_avatar (context);*/
 }
 
@@ -262,7 +262,7 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
     g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
         "Haven't got around to dealing with your own avatar yet");
     dbus_g_method_return_error (context, error);
-    g_free (error);
+    g_error_free (error);
 //  tp_svc_connection_interface_avatars_return_from_set_avatar (context, token);
 }
 
