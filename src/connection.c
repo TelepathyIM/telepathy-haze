@@ -196,8 +196,9 @@ static const char *list_handle_strings[] =
     "subscribe",    /* HAZE_LIST_HANDLE_SUBSCRIBE */
 #if 0
     "publish",      /* HAZE_LIST_HANDLE_PUBLISH */
-    "known",        /* HAZE_LIST_HANDLE_KNOWN */
-    "deny",         /* HAZE_LIST_HANDLE_DENY */
+    "hide",         /* HAZE_LIST_HANDLE_HIDE */
+    "allow",        /* HAZE_LIST_HANDLE_ALLOW */
+    "deny"          /* HAZE_LIST_HANDLE_DENY */
 #endif
     NULL
 };

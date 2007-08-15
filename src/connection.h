@@ -35,11 +35,12 @@ G_BEGIN_DECLS
 /* Must be in the same order as list_handle_strings in connection.c */
 typedef enum
 {
-  HAZE_LIST_HANDLE_SUBSCRIBE = 1,
+    HAZE_LIST_HANDLE_SUBSCRIBE = 1,
 #if 0
-  HAZE_LIST_HANDLE_PUBLISH,
-  HAZE_LIST_HANDLE_KNOWN,
-  HAZE_LIST_HANDLE_DENY
+    HAZE_LIST_HANDLE_PUBLISH,
+    HAZE_LIST_HANDLE_HIDE,
+    HAZE_LIST_HANDLE_ALLOW,
+    HAZE_LIST_HANDLE_DENY
 #endif
 } HazeListHandle;
 
