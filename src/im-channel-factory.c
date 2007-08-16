@@ -295,13 +295,15 @@ haze_im_channel_factory_iface_close_all (TpChannelFactoryIface *iface)
     HazeImChannelFactory *fac = HAZE_IM_CHANNEL_FACTORY (iface);
     HazeImChannelFactoryPrivate *priv =
         HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (fac);
+    GHashTable *tmp;
 
     g_debug ("closing im channels");
 
     if (priv->channels)
     {
-        g_hash_table_destroy (priv->channels);
+        tmp = priv->channels;
         priv->channels = NULL;
+        g_hash_table_destroy (tmp);
     }
 }
 

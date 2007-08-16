@@ -35,6 +35,7 @@ struct _HazeContactListChannelPrivate {
 
     PurpleGroup *group;
 
+    gboolean closed;
     gboolean dispose_has_run;
 };
 
@@ -205,7 +206,7 @@ haze_contact_list_channel_init (HazeContactListChannel *self)
 
     self->priv = priv;
     priv->dispose_has_run = FALSE;
-
+    priv->closed = FALSE;
 }
 
 static GObject *
@@ -284,6 +285,12 @@ haze_contact_list_channel_dispose (GObject *object)
         return;
 
     priv->dispose_has_run = TRUE;
+
+    if (!priv->closed)
+    {
+        priv->closed = TRUE;
+        tp_svc_channel_emit_closed ((TpSvcChannel *)self);
+    }
 
     if (G_OBJECT_CLASS (haze_contact_list_channel_parent_class)->dispose)
         G_OBJECT_CLASS (haze_contact_list_channel_parent_class)->dispose (object);
@@ -424,18 +431,18 @@ haze_contact_list_channel_close (TpSvcChannel *iface,
     }
     else /* TP_HANDLE_TYPE_GROUP */
     {
-        /* XXX Check the group is non-empty, close the channel if so. */
-        GError e = { TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-            "Didn't actually implement groups" };
-        /*
-
-          priv->closed = TRUE;
-          tp_svc_channel_emit_closed ((TpSvcChannel *)self);
-          tp_svc_channel_return_from_close (context);
-          return;
-         */
-
-        dbus_g_method_return_error (context, &e);
+        if (tp_handle_set_size (self->group.members) == 0)
+        {
+            priv->closed = TRUE;
+            tp_svc_channel_emit_closed ((TpSvcChannel *)self);
+            tp_svc_channel_return_from_close (context);
+        }
+        else
+        {
+            GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+                "This group is not empty, so you cannot close it." };
+            dbus_g_method_return_error (context, &e);
+        }
     }
 }
 

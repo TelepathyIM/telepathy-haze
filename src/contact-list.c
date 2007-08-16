@@ -194,6 +194,31 @@ haze_contact_list_class_init (HazeContactListClass *klass)
                            klass, PURPLE_CALLBACK(buddy_removed_cb), NULL);
 }
 
+static void
+contact_list_channel_closed_cb (HazeContactListChannel *chan,
+                                gpointer user_data)
+{
+    HazeContactList *contact_list = HAZE_CONTACT_LIST (user_data);
+    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (contact_list);
+    TpHandle handle;
+    guint handle_type;
+    GHashTable *channels;
+
+    g_object_get (chan, "handle", &handle, "handle-type", &handle_type, NULL);
+    g_assert (handle_type == TP_HANDLE_TYPE_LIST ||
+              handle_type == TP_HANDLE_TYPE_GROUP);
+
+    channels = (handle_type == TP_HANDLE_TYPE_GROUP
+        ? priv->group_channels : priv->list_channels);
+
+    if (channels)
+    {
+        g_debug ("removing channel %d:%d", handle_type, handle);
+
+        g_hash_table_remove (channels, GINT_TO_POINTER (handle));
+    }
+}
+
 static HazeContactListChannel *
 _haze_contact_list_create_channel (HazeContactList *contact_list,
                                    guint handle_type,
@@ -236,6 +261,9 @@ _haze_contact_list_create_channel (HazeContactList *contact_list,
                          NULL);
 
     g_debug ("created %s", object_path);
+
+    g_signal_connect (chan, "closed",
+        G_CALLBACK (contact_list_channel_closed_cb), contact_list);
 
     g_hash_table_insert (channels, GINT_TO_POINTER (handle), chan);
 
@@ -310,16 +338,19 @@ haze_contact_list_factory_iface_close_all (TpChannelFactoryIface *iface)
 {
     HazeContactList *self = HAZE_CONTACT_LIST (iface);
     HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (self);
+    GHashTable *tmp;
 
     if (priv->list_channels)
     {
-        g_hash_table_destroy (priv->list_channels);
+        tmp = priv->list_channels;
         priv->list_channels = NULL;
+        g_hash_table_destroy (tmp);
     }
     if (priv->group_channels)
     {
-        g_hash_table_destroy (priv->group_channels);
+        tmp = priv->group_channels;
         priv->group_channels = NULL;
+        g_hash_table_destroy (tmp);
     }
 }
 
