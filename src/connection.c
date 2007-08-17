@@ -496,3 +496,15 @@ haze_get_connection_ui_ops ()
 {
     return &connection_ui_ops;
 }
+
+const gchar *
+haze_connection_handle_inspect (HazeConnection *conn,
+                                TpHandleType handle_type,
+                                TpHandle handle)
+{
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (base_conn, handle_type);
+    g_assert (tp_handle_is_valid (handle_repo, handle, NULL));
+    return tp_handle_inspect (handle_repo, handle);
+}

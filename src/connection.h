@@ -75,6 +75,11 @@ struct _HazeConnection {
 PurpleAccountUiOps *haze_get_account_ui_ops ();
 PurpleConnectionUiOps *haze_get_connection_ui_ops ();
 
+const gchar *
+haze_connection_handle_inspect (HazeConnection *conn,
+                                TpHandleType handle_type,
+                                TpHandle handle);
+
 GType haze_connection_get_type (void);
 
 /* TYPE MACROS */
