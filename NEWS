@@ -1,5 +1,11 @@
-Version 0.1.0 – "It's Like The ... 90s"
-=======================================
+telepathy-haze 0.1.1 – "Release less often, release correctly" (2007-08-17)
+===========================================================================
+
+ * Fixed some segfaults, and some corruption caused by g_free-ing
+   slice-allocated memory.
+
+telepathy-haze 0.1.0 – "It's Like The ... 90s" (2007-08-10)
+===========================================================
 
 Supported in this release:
 
