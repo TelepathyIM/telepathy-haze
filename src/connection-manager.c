@@ -18,10 +18,13 @@
  *
  */
 
+#include <string.h>
+
 #include <glib.h>
 #include <dbus/dbus-protocol.h>
 
 #include <prpl.h>
+#include <accountopt.h>
 
 #include "connection-manager.h"
 
@@ -35,6 +38,17 @@ struct _HazeParams {
     gchar *username;
     gchar *password;
     gchar *server;
+};
+
+/** These are protocols for which stripping off the "prpl-" prefix is not
+ *  sufficient, or for which special munging has to be done.
+ */
+static HazeProtocolInfo known_protocol_info[] = {
+    { "gadugadu",   "prpl-gg",          NULL,   FALSE },
+    { "groupwise",  "prpl-novell",      NULL,   FALSE },
+    { "irc",        "prpl-irc",         NULL,   TRUE },
+    { "sametime",   "prpl-meanwhile",   NULL,   FALSE },
+    { NULL,         NULL,               NULL,   FALSE }
 };
 
 static const TpCMParamSpec params[] = {
@@ -67,30 +81,45 @@ free_params (void *p)
     g_free (params);
 }
 
+struct _protocol_info_foreach_data
+{
+    TpCMProtocolSpec *protocols;
+    guint index;
+};
+
+static void
+_protocol_info_foreach (gpointer key,
+                        gpointer value,
+                        gpointer user_data)
+{
+    HazeProtocolInfo *info = (HazeProtocolInfo *)value;
+    struct _protocol_info_foreach_data *data =
+        (struct _protocol_info_foreach_data *)user_data;
+    TpCMProtocolSpec *protocol = &(data->protocols[data->index]);
+
+    protocol->name = info->tp_protocol_name;
+    protocol->parameters = params;
+    protocol->params_new = alloc_params;
+    protocol->params_free = free_params;
+
+    (data->index)++;
+}
+
 static TpCMProtocolSpec *
-get_protocols() {
-    GList* iter;
-    TpCMProtocolSpec *protocols, *protocol;
+get_protocols (HazeConnectionManagerClass *klass)
+{
+    struct _protocol_info_foreach_data foreach_data;
+    TpCMProtocolSpec *protocols;
     guint n_protocols;
 
-    iter = purple_plugins_get_protocols();
-    n_protocols = g_list_length(iter);
+    n_protocols = g_hash_table_size (klass->protocol_info_table);
+    foreach_data.protocols = protocols = (TpCMProtocolSpec *)
+        g_slice_alloc0 (sizeof (TpCMProtocolSpec) * (n_protocols + 1));
+    foreach_data.index = 0;
 
-    protocols = g_new0(TpCMProtocolSpec, n_protocols + 1);
+    g_hash_table_foreach (klass->protocol_info_table, _protocol_info_foreach,
+        &foreach_data);
 
-    for (protocol = protocols; iter; iter = iter->next) {
-        PurplePlugin *plugin = iter->data;
-        PurplePluginInfo *info = plugin->info;
-        if (info && info->id) {
-            if(g_str_has_prefix(info->id, "prpl-")) {
-                protocol->name = g_strdup(info->id + 5);
-                protocol->parameters = params;
-                protocol->params_new = alloc_params;
-                protocol->params_free = free_params;
-                protocol++;
-            }
-        }
-    }
     return protocols;
 }
 
@@ -127,21 +156,109 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          void *parsed_params,
                                          GError **error)
 {
-    HazeConnectionManager *self = HAZE_CONNECTION_MANAGER(base);
+    HazeConnectionManager *cm = HAZE_CONNECTION_MANAGER(base);
+    HazeConnectionManagerClass *klass = HAZE_CONNECTION_MANAGER_GET_CLASS (cm);
     HazeParams *params = (HazeParams *)parsed_params;
+    HazeProtocolInfo *info =
+        g_hash_table_lookup (klass->protocol_info_table, proto);
     HazeConnection *conn = g_object_new (HAZE_TYPE_CONNECTION,
-                                         "protocol",    proto,
-                                         "username",    params->username,
-                                         "password",    params->password,
-                                         "server",      params->server,
+                                         "protocol",        proto,
+                                         "protocol-info",   info,
+                                         "username",        params->username,
+                                         "password",        params->password,
+                                         "server",          params->server,
                                          NULL);
 
-    self->connections = g_list_prepend(self->connections, conn);
+    cm->connections = g_list_prepend(cm->connections, conn);
     g_signal_connect (conn, "shutdown-finished",
                       G_CALLBACK (connection_shutdown_finished_cb),
-                      self);
+                      cm);
 
     return (TpBaseConnection *) conn;
+}
+
+/** Frees the slice-allocated HazeProtocolInfo pointed to by @a data.  Useful
+ *  as the value-destroying callback in a hash table.
+ */
+static void
+_protocol_info_slice_free (gpointer data)
+{
+    g_slice_free (HazeProtocolInfo, data);
+}
+
+/** Predicate for g_hash_table_find to search on prpl_id.
+ *  @param key      (const gchar *)tp_protocol_name
+ *  @param value    (HazeProtocolInfo *)info
+ *  @param data     (const gchar *)prpl_id
+ *  @return @c TRUE iff info->prpl_id eq prpl_id
+ */
+static gboolean
+_compare_protocol_id (gpointer key,
+                      gpointer value,
+                      gpointer data)
+{
+    HazeProtocolInfo *info = (HazeProtocolInfo *)value;
+    const gchar *prpl_id = (const gchar *)data;
+    return (!strcmp (info->prpl_id, prpl_id));
+}
+
+static void _init_protocol_table (HazeConnectionManagerClass *klass)
+{
+    GHashTable *table;
+    HazeProtocolInfo *i, *info;
+    PurplePlugin *plugin;
+    PurplePluginInfo *p_info;
+    PurplePluginProtocolInfo *prpl_info;
+    GList *iter;
+
+    table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+                                   _protocol_info_slice_free);
+
+    for (i = known_protocol_info; i->prpl_id != NULL; i++)
+    {
+        plugin = purple_find_prpl (i->prpl_id);
+        if (!plugin)
+            continue;
+
+        info = g_slice_new (HazeProtocolInfo);
+
+        info->prpl_id = i->prpl_id;
+        info->tp_protocol_name = i->tp_protocol_name;
+        info->respect_user_split = i->respect_user_split;
+        info->prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
+
+        g_debug ("Using '%s' to provide '%s'", info->prpl_id,
+            info->tp_protocol_name);
+        g_hash_table_insert (table, info->tp_protocol_name, info);
+    }
+
+    for (iter = purple_plugins_get_protocols (); iter; iter = iter->next)
+    {
+        plugin = (PurplePlugin *)iter->data;
+        p_info = plugin->info;
+        prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
+
+        if (g_hash_table_find (table, _compare_protocol_id, p_info->id))
+            continue; /* already in the table from the previous loop */
+
+        info = g_slice_new (HazeProtocolInfo);
+        info->prpl_id = p_info->id;
+        if (g_str_has_prefix (p_info->id, "prpl-"))
+            info->tp_protocol_name = (p_info->id + 5);
+        else
+        {
+            g_warning ("prpl '%s' has a dumb id; spank its author", p_info->id);
+            info->tp_protocol_name = p_info->id;
+        }
+        info->respect_user_split = FALSE;
+        info->prpl_info = prpl_info;
+
+        g_debug ("Using '%s' to provide '%s'", info->prpl_id,
+            info->tp_protocol_name);
+        g_hash_table_insert (table, info->tp_protocol_name, info);
+    }
+
+    klass->protocol_info_table = table;
 }
 
 static void
@@ -150,9 +267,11 @@ haze_connection_manager_class_init (HazeConnectionManagerClass *klass)
     TpBaseConnectionManagerClass *base_class =
         (TpBaseConnectionManagerClass *)klass;
 
+    _init_protocol_table (klass);
+
     base_class->new_connection = _haze_connection_manager_new_connection;
     base_class->cm_dbus_name = "haze";
-    base_class->protocol_params = get_protocols();
+    base_class->protocol_params = get_protocols (klass);
 }
 
 static void

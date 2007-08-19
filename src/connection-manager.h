@@ -33,11 +33,27 @@ typedef struct _HazeConnectionManagerClass HazeConnectionManagerClass;
 
 struct _HazeConnectionManagerClass {
     TpBaseConnectionManagerClass parent_class;
+
+    /** GHashTable of (gchar *)tp_protocol_name => HazeProtocolInfo */
+    GHashTable *protocol_info_table;
 };
 
 struct _HazeConnectionManager {
     TpBaseConnectionManager parent;
     GList *connections;
+};
+
+typedef struct _HazeProtocolInfo HazeProtocolInfo;
+struct _HazeProtocolInfo
+{
+    /** Not const for convenience, but should not be freed */
+    gchar *tp_protocol_name;
+
+    /** Not const for convenience, but should not be freed */
+    gchar *prpl_id;
+    PurplePluginProtocolInfo *prpl_info;
+
+    gboolean respect_user_split;
 };
 
 GType haze_connection_manager_get_type (void);

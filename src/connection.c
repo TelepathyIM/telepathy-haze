@@ -29,6 +29,7 @@
 #include <version.h>
 
 #include "defines.h"
+#include "connection-manager.h"
 #include "connection.h"
 #include "connection-presence.h"
 #include "connection-aliasing.h"
@@ -39,6 +40,7 @@ enum
     PROP_USERNAME = 1,
     PROP_PASSWORD,
     PROP_SERVER,
+    PROP_PROTOCOL_INFO,
 
     LAST_PROPERTY
 };
@@ -59,6 +61,8 @@ typedef struct _HazeConnectionPrivate
     char *username;
     char *password;
     char *server;
+
+    HazeProtocolInfo *protocol_info;
 } HazeConnectionPrivate;
 
 #define HAZE_CONNECTION_GET_PRIVATE(o) \
@@ -129,35 +133,28 @@ _haze_connection_start_connecting (TpBaseConnection *base,
 {
     HazeConnection *self = HAZE_CONNECTION(base);
     HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
-    char *protocol, *password, *server, *prpl_id;
+
     PurpleAccount *account;
-    PurplePlugin *prpl;
-    PurplePluginProtocolInfo *prpl_info;
+    PurplePluginProtocolInfo *prpl_info = priv->protocol_info->prpl_info;
+
     TpHandleRepoIface *contact_handles =
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
 
-    g_object_get(G_OBJECT(self),
-                 "protocol", &protocol,
-                 "password", &password,
-                 "server", &server,
-                 NULL);
-
     base->self_handle = tp_handle_ensure(contact_handles, priv->username,
                                          NULL, error);
+    if (!base->self_handle)
+        return FALSE;
 
-    prpl_id = g_strconcat("prpl-", protocol, NULL);
-    prpl = purple_find_prpl (prpl_id);
-    g_assert (prpl);
-    account = self->account = purple_account_new(priv->username, prpl_id);
-    g_free(prpl_id);
+    account = self->account =
+        purple_account_new(priv->username, priv->protocol_info->prpl_id);
 
     account->ui_data = self;
-    purple_account_set_password (account, password);
-    if (server && *server)
+    purple_account_set_password (account, priv->password);
+
+    if (priv->server && *priv->server)
     {
         GList *l;
         PurpleAccountOption *option;
-        prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (prpl);
 
         /* :'-( :'-( :'-( :'-( */
         for (l = prpl_info->protocol_options; l != NULL; l = l->next)
@@ -166,12 +163,14 @@ _haze_connection_start_connecting (TpBaseConnection *base,
             if (!strcmp (option->pref_name, "server") /* oscar */
                 || !strcmp (option->pref_name, "connect_server")) /* xmpp */
             {
-                purple_account_set_string (account, option->pref_name, server);
+                purple_account_set_string (account, option->pref_name,
+                                           priv->server);
                 break;
             }
         }
         if (l == NULL)
-            g_warning ("server protocol option not found!");
+            g_warning ("server specified, but corresponding protocol option "
+                "not found!");
     }
     purple_account_set_enabled(self->account, UI_ID, TRUE);
     purple_account_connect(self->account);
@@ -273,6 +272,9 @@ haze_connection_get_property (GObject    *object,
         case PROP_SERVER:
             g_value_set_string (value, priv->server);
             break;
+        case PROP_PROTOCOL_INFO:
+            g_value_set_pointer (value, priv->protocol_info);
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             break;
@@ -300,6 +302,9 @@ haze_connection_set_property (GObject      *object,
         case PROP_SERVER:
             g_free (priv->server);
             priv->server = g_value_dup_string(value);
+            break;
+        case PROP_PROTOCOL_INFO:
+            priv->protocol_info = g_value_get_pointer (value);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -403,6 +408,17 @@ haze_connection_class_init (HazeConnectionClass *klass)
                                       G_PARAM_STATIC_NAME |
                                       G_PARAM_STATIC_BLURB);
     g_object_class_install_property (object_class, PROP_SERVER, param_spec);
+
+    param_spec = g_param_spec_pointer ("protocol-info",
+                                       "HazeProtocolInfo instance",
+                                       "Information on how this protocol "
+                                       "should be treated by haze",
+                                       G_PARAM_CONSTRUCT_ONLY |
+                                       G_PARAM_READWRITE |
+                                       G_PARAM_STATIC_NAME |
+                                       G_PARAM_STATIC_BLURB);
+    g_object_class_install_property (object_class, PROP_PROTOCOL_INFO,
+                                     param_spec);
 
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);
