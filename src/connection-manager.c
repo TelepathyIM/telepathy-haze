@@ -44,11 +44,11 @@ struct _HazeParams {
  *  sufficient, or for which special munging has to be done.
  */
 static HazeProtocolInfo known_protocol_info[] = {
-    { "gadugadu",   "prpl-gg",          NULL,   FALSE },
-    { "groupwise",  "prpl-novell",      NULL,   FALSE },
-    { "irc",        "prpl-irc",         NULL,   TRUE },
-    { "sametime",   "prpl-meanwhile",   NULL,   FALSE },
-    { NULL,         NULL,               NULL,   FALSE }
+    { "gadugadu",   "prpl-gg",          NULL },
+    { "groupwise",  "prpl-novell",      NULL },
+    { "irc",        "prpl-irc",         NULL },
+    { "sametime",   "prpl-meanwhile",   NULL },
+    { NULL,         NULL,               NULL }
 };
 
 static const TpCMParamSpec params[] = {
@@ -224,7 +224,6 @@ static void _init_protocol_table (HazeConnectionManagerClass *klass)
 
         info->prpl_id = i->prpl_id;
         info->tp_protocol_name = i->tp_protocol_name;
-        info->respect_user_split = i->respect_user_split;
         info->prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
 
         g_debug ("Using '%s' to provide '%s'", info->prpl_id,
@@ -250,7 +249,6 @@ static void _init_protocol_table (HazeConnectionManagerClass *klass)
             g_warning ("prpl '%s' has a dumb id; spank its author", p_info->id);
             info->tp_protocol_name = p_info->id;
         }
-        info->respect_user_split = FALSE;
         info->prpl_info = prpl_info;
 
         g_debug ("Using '%s' to provide '%s'", info->prpl_id,

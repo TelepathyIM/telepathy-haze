@@ -53,7 +53,6 @@ struct _HazeProtocolInfo
     gchar *prpl_id;
     PurplePluginProtocolInfo *prpl_info;
 
-    gboolean respect_user_split;
 };
 
 GType haze_connection_manager_get_type (void);
