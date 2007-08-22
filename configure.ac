@@ -1,6 +1,6 @@
 AC_PREREQ([2.59])
 
-AC_INIT([haze],[0.1.1],[resiak@soc.pidgin.im])
+AC_INIT([telepathy-haze],[0.1.2],[resiak@soc.pidgin.im])
 
 AC_CONFIG_MACRO_DIR([m4])
 
