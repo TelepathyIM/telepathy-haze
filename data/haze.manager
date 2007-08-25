@@ -7,17 +7,17 @@ param-account=s required
 param-password=s required
 param-server=s
 
-[Protocol bonjour]
+[Protocol local-xmpp]
 param-account=s required
 param-password=s required
 param-server=s
 
-[Protocol gg]
+[Protocol gadugadu]
 param-account=s required
 param-password=s required
 param-server=s
 
-[Protocol novell]
+[Protocol groupwise]
 param-account=s required
 param-password=s required
 param-server=s
@@ -47,7 +47,7 @@ param-account=s required
 param-password=s required
 param-server=s
 
-[Protocol meanwhile]
+[Protocol sametime]
 param-account=s required
 param-password=s required
 param-server=s
