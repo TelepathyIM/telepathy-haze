@@ -23,6 +23,7 @@
 
 #include <string.h>
 #include <errno.h>
+#include <signal.h>
 
 #include <glib.h>
 #include <glib/gstdio.h>
@@ -333,6 +334,7 @@ main(int argc,
 
     g_set_prgname(UI_ID);
 
+    signal (SIGCHLD, SIG_IGN);
     init_libpurple();
     g_debug("libpurple initialized.");
 
