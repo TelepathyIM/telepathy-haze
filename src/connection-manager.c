@@ -48,6 +48,7 @@ static HazeProtocolInfo known_protocol_info[] = {
     { "groupwise",  "prpl-novell",      NULL },
     { "irc",        "prpl-irc",         NULL },
     { "sametime",   "prpl-meanwhile",   NULL },
+    { "local-xmpp", "prpl-bonjour",     NULL },
     { NULL,         NULL,               NULL }
 };
 
