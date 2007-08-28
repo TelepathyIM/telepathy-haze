@@ -135,6 +135,8 @@ _create_account (HazeConnection *self)
     PurpleAccount *account;
     PurplePluginProtocolInfo *prpl_info = priv->protocol_info->prpl_info;
 
+    g_assert (self->account == NULL);
+
     account = self->account =
         purple_account_new(priv->username, priv->protocol_info->prpl_id);
 
