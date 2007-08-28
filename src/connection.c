@@ -171,15 +171,12 @@ _haze_connection_start_connecting (TpBaseConnection *base,
                                    GError **error)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
 
     TpHandleRepoIface *contact_handles =
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
 
-    _create_account (self);
-
-    base->self_handle = tp_handle_ensure(contact_handles, priv->username,
-                                         NULL, error);
+    base->self_handle = tp_handle_ensure (contact_handles,
+        purple_account_get_username (self->account), NULL, error);
     if (!base->self_handle)
         return FALSE;
 
@@ -259,9 +256,8 @@ gchar *
 haze_connection_get_unique_connection_name(TpBaseConnection *base)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
 
-    return g_strdup(priv->username);
+    return g_strdup (purple_account_get_username (self->account));
 }
 
 static void
