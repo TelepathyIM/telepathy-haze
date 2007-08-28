@@ -127,23 +127,13 @@ disconnected_cb (PurpleConnection *pc)
     g_idle_add(idle_disconnected_cb, account);
 }
 
-static gboolean
-_haze_connection_start_connecting (TpBaseConnection *base,
-                                   GError **error)
+static void
+_create_account (HazeConnection *self)
 {
-    HazeConnection *self = HAZE_CONNECTION(base);
     HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
 
     PurpleAccount *account;
     PurplePluginProtocolInfo *prpl_info = priv->protocol_info->prpl_info;
-
-    TpHandleRepoIface *contact_handles =
-        tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
-
-    base->self_handle = tp_handle_ensure(contact_handles, priv->username,
-                                         NULL, error);
-    if (!base->self_handle)
-        return FALSE;
 
     account = self->account =
         purple_account_new(priv->username, priv->protocol_info->prpl_id);
@@ -172,6 +162,25 @@ _haze_connection_start_connecting (TpBaseConnection *base,
             g_warning ("server specified, but corresponding protocol option "
                 "not found!");
     }
+}
+
+static gboolean
+_haze_connection_start_connecting (TpBaseConnection *base,
+                                   GError **error)
+{
+    HazeConnection *self = HAZE_CONNECTION(base);
+    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
+
+    TpHandleRepoIface *contact_handles =
+        tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+
+    _create_account (self);
+
+    base->self_handle = tp_handle_ensure(contact_handles, priv->username,
+                                         NULL, error);
+    if (!base->self_handle)
+        return FALSE;
+
     purple_account_set_enabled(self->account, UI_ID, TRUE);
     purple_account_connect(self->account);
 
