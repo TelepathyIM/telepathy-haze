@@ -334,6 +334,7 @@ haze_connection_constructor (GType type,
 
     g_debug("Post-construction: (HazeConnection *)%p", self);
 
+    _create_account (self);
 
     return (GObject *)self;
 }
