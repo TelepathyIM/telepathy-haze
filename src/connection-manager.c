@@ -34,14 +34,6 @@ G_DEFINE_TYPE(HazeConnectionManager,
     haze_connection_manager,
     TP_TYPE_BASE_CONNECTION_MANAGER)
 
-typedef struct _HazeParams HazeParams;
-
-struct _HazeParams {
-    gchar *username;
-    gchar *password;
-    gchar *server;
-};
-
 /** These are protocols for which stripping off the "prpl-" prefix is not
  *  sufficient, or for which special munging has to be done.
  */
@@ -56,32 +48,45 @@ static HazeProtocolInfo known_protocol_info[] = {
 
 static const TpCMParamSpec params[] = {
   { "account", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
-    TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
-    G_STRUCT_OFFSET(HazeParams, username), NULL, NULL },
+    TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL },
   { "password", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
     /* FIXME: zephyr for instance doesn't need a password */
-    TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL,
-    G_STRUCT_OFFSET(HazeParams, password), NULL, NULL },
-  { "server", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING, 0, NULL,
-    G_STRUCT_OFFSET(HazeParams, server), NULL, NULL },
+    TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL },
+  { "server", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
+    0, NULL, 0, NULL, NULL },
   { NULL, NULL, 0, 0, NULL, 0, NULL, NULL }
 };
 
 static void *
-alloc_params (void)
+_haze_cm_alloc_params (void)
 {
-  return g_new0 (HazeParams, 1);
+    /* (gchar *) => (GValue *) */
+    return g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+        (GDestroyNotify) tp_g_value_slice_free);
 }
 
 static void
-free_params (void *p)
+_haze_cm_free_params (void *p)
 {
-    HazeParams *params = (HazeParams *)p;
-    g_free (params->username);
-    g_free (params->password);
-    g_free (params->server);
+    GHashTable *params = (GHashTable *)p;
+    g_hash_table_unref (params);
+}
 
-    g_free (params);
+static void
+_haze_cm_set_param (const TpCMParamSpec *paramspec,
+                    const GValue *value,
+                    gpointer params_)
+{
+    GHashTable *params = (GHashTable *) params_;
+    GValue *value_copy = tp_g_value_slice_new (paramspec->gtype);
+
+    g_assert (G_VALUE_TYPE (value) == G_VALUE_TYPE (value_copy));
+
+    g_value_copy (value, value_copy);
+
+    g_debug ("setting parameter %s", paramspec->name);
+
+    g_hash_table_insert (params, g_strdup (paramspec->name), value_copy);
 }
 
 struct _protocol_info_foreach_data
@@ -102,8 +107,9 @@ _protocol_info_foreach (gpointer key,
 
     protocol->name = info->tp_protocol_name;
     protocol->parameters = params;
-    protocol->params_new = alloc_params;
-    protocol->params_free = free_params;
+    protocol->params_new = _haze_cm_alloc_params;
+    protocol->params_free = _haze_cm_free_params;
+    protocol->set_param = _haze_cm_set_param;
 
     (data->index)++;
 }
@@ -161,15 +167,13 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
 {
     HazeConnectionManager *cm = HAZE_CONNECTION_MANAGER(base);
     HazeConnectionManagerClass *klass = HAZE_CONNECTION_MANAGER_GET_CLASS (cm);
-    HazeParams *params = (HazeParams *)parsed_params;
+    GHashTable *params = (GHashTable *)parsed_params;
     HazeProtocolInfo *info =
         g_hash_table_lookup (klass->protocol_info_table, proto);
     HazeConnection *conn = g_object_new (HAZE_TYPE_CONNECTION,
                                          "protocol",        proto,
                                          "protocol-info",   info,
-                                         "username",        params->username,
-                                         "password",        params->password,
-                                         "server",          params->server,
+                                         "parameters",      params,
                                          NULL);
 
     cm->connections = g_list_prepend(cm->connections, conn);
