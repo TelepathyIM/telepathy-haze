@@ -95,6 +95,69 @@ struct _protocol_info_foreach_data
     guint index;
 };
 
+static TpCMParamSpec *
+_build_paramspecs (HazeProtocolInfo *hpi)
+{
+    const TpCMParamSpec account_spec =
+        { "account", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
+        TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL };
+    TpCMParamSpec password_spec =
+        { "password", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
+        TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL };
+    TpCMParamSpec paramspec = { NULL, NULL, 0, 0, NULL, 0, NULL, NULL };
+
+    GArray *paramspecs = g_array_new (TRUE, TRUE, sizeof (TpCMParamSpec));
+    GList *opts;
+
+    g_array_append_val (paramspecs, account_spec);
+
+    if (!(hpi->prpl_info->options & OPT_PROTO_NO_PASSWORD))
+    {
+        if (hpi->prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL)
+            password_spec.flags = 0;
+        g_array_append_val (paramspecs, password_spec);
+    }
+
+    for (opts = hpi->prpl_info->protocol_options; opts; opts = opts->next)
+    {
+        PurpleAccountOption *option = (PurpleAccountOption *)opts->data;
+        /* FIXME: have a mapping from pref_name to telepathy name for options
+         *        like connect_server => server on xmpp; use the tp name here
+         *        and set the prpl name as setter_data.
+         */
+        paramspec.name = option->pref_name;
+        switch (purple_account_option_get_type (option))
+        {
+            case PURPLE_PREF_BOOLEAN:
+                paramspec.dtype = DBUS_TYPE_BOOLEAN_AS_STRING;
+                paramspec.gtype = G_TYPE_BOOLEAN;
+                paramspec.def = GINT_TO_POINTER (
+                    purple_account_option_get_default_bool (option));
+                break;
+            case PURPLE_PREF_INT:
+                paramspec.dtype = DBUS_TYPE_INT32_AS_STRING;
+                paramspec.gtype = G_TYPE_INT;
+                paramspec.def = GINT_TO_POINTER (
+                    purple_account_option_get_default_int (option));
+                break;
+            case PURPLE_PREF_STRING:
+                paramspec.dtype = DBUS_TYPE_STRING_AS_STRING;
+                paramspec.gtype = G_TYPE_STRING;
+                paramspec.def =
+                    purple_account_option_get_default_string (option);
+                break;
+            default:
+                g_warning ("account option %s has unknown type %u; ignoring",
+                    option->pref_name, purple_account_option_get_type (option));
+                continue;
+        }
+        paramspec.flags = 0;
+        g_array_append_val (paramspecs, paramspec);
+    }
+
+    return (TpCMParamSpec *) g_array_free (paramspecs, FALSE);
+}
+
 static void
 _protocol_info_foreach (gpointer key,
                         gpointer value,
@@ -106,7 +169,7 @@ _protocol_info_foreach (gpointer key,
     TpCMProtocolSpec *protocol = &(data->protocols[data->index]);
 
     protocol->name = info->tp_protocol_name;
-    protocol->parameters = params;
+    protocol->parameters = _build_paramspecs (info);
     protocol->params_new = _haze_cm_alloc_params;
     protocol->params_free = _haze_cm_free_params;
     protocol->set_param = _haze_cm_set_param;
