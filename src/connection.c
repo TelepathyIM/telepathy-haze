@@ -217,48 +217,83 @@ disconnected_cb (PurpleConnection *pc)
 }
 
 static void
+_warn_unhandled_parameter (const gchar *key,
+                           const GValue *value,
+                           gpointer user_data)
+{
+    g_warning ("received an unknown parameter '%s'; ignoring", key);
+}
+
+struct _i_want_closure
+{
+    PurpleAccount *account;
+    GHashTable *params;
+};
+
+static void
+_set_option (const PurpleAccountOption *option,
+             struct _i_want_closure *context)
+{
+    GValue *value = g_hash_table_lookup (context->params, option->pref_name);
+    if (!value)
+        return;
+
+    switch (option->type)
+    {
+        case PURPLE_PREF_BOOLEAN:
+            g_assert (G_VALUE_TYPE (value) == G_TYPE_BOOLEAN);
+            purple_account_set_bool (context->account, option->pref_name,
+                g_value_get_boolean (value));
+            break;
+        case PURPLE_PREF_INT:
+            g_assert (G_VALUE_TYPE (value) == G_TYPE_INT);
+            purple_account_set_int (context->account, option->pref_name,
+                g_value_get_int (value));
+            break;
+        case PURPLE_PREF_STRING:
+            g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
+            purple_account_set_string (context->account, option->pref_name,
+                g_value_get_string (value));
+            break;
+        default:
+            g_warning ("option '%s' has unhandled type %u",
+                option->pref_name, option->type);
+    }
+
+    g_hash_table_remove (context->params, option->pref_name);
+}
+
+static void
 _create_account (HazeConnection *self)
 {
     HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
-
-    PurpleAccount *account;
+    GHashTable *params = priv->parameters;
     PurplePluginProtocolInfo *prpl_info = priv->protocol_info->prpl_info;
 
-    const gchar *username, *password, *server;
+    const gchar *username, *password;
+    struct _i_want_closure context;
 
-    username = _get_param_string (priv->parameters, "account");
+    username = _get_param_string (params, "account");
     g_assert (username);
-
-    password = _get_param_string (priv->parameters, "password");
-    server = _get_param_string (priv->parameters, "server");
 
     g_assert (self->account == NULL);
     account = self->account =
         purple_account_new(priv->username, priv->protocol_info->prpl_id);
 
-    account->ui_data = self;
-    purple_account_set_password (account, password);
+    self->account->ui_data = self;
 
-    if (server && *server)
+    password = _get_param_string (params, "password");
+    if (password)
     {
-        GList *l;
-        PurpleAccountOption *option;
-
-        /* :'-( :'-( :'-( :'-( */
-        for (l = prpl_info->protocol_options; l != NULL; l = l->next)
-        {
-            option = (PurpleAccountOption *)l->data;
-            if (!strcmp (option->pref_name, "server") /* oscar */
-                || !strcmp (option->pref_name, "connect_server")) /* xmpp */
-            {
-                purple_account_set_string (account, option->pref_name, server);
-                break;
-            }
-        }
-        if (l == NULL)
-            g_warning ("server specified, but corresponding protocol option "
-                "not found!");
+        purple_account_set_password (self->account, password);
+        g_hash_table_remove (params, "password");
     }
+
+    context.account = self->account;
+    context.params = params;
+    g_list_foreach (prpl_info->protocol_options, (GFunc) _set_option, &context);
+
+    g_hash_table_foreach (params, (GHFunc) _warn_unhandled_parameter, "lala");
 }
 
 static gboolean
