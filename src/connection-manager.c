@@ -46,17 +46,6 @@ static HazeProtocolInfo known_protocol_info[] = {
     { NULL,         NULL,               NULL }
 };
 
-static const TpCMParamSpec params[] = {
-  { "account", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
-    TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL },
-  { "password", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
-    /* FIXME: zephyr for instance doesn't need a password */
-    TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL },
-  { "server", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
-    0, NULL, 0, NULL, NULL },
-  { NULL, NULL, 0, 0, NULL, 0, NULL, NULL }
-};
-
 static void *
 _haze_cm_alloc_params (void)
 {
