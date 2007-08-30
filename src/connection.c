@@ -139,6 +139,7 @@ _create_account (HazeConnection *self)
 
     account = self->account =
         purple_account_new(priv->username, priv->protocol_info->prpl_id);
+    purple_accounts_add (account);
 
     account->ui_data = self;
     purple_account_set_password (account, priv->password);
