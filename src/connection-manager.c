@@ -68,14 +68,16 @@ _haze_cm_set_param (const TpCMParamSpec *paramspec,
 {
     GHashTable *params = (GHashTable *) params_;
     GValue *value_copy = tp_g_value_slice_new (paramspec->gtype);
+    const gchar *prpl_param_name = (const gchar *) paramspec->setter_data;
 
     g_assert (G_VALUE_TYPE (value) == G_VALUE_TYPE (value_copy));
 
     g_value_copy (value, value_copy);
 
-    g_debug ("setting parameter %s", paramspec->name);
+    g_debug ("setting parameter %s (telepathy name %s)",
+        prpl_param_name, paramspec->name);
 
-    g_hash_table_insert (params, g_strdup (paramspec->name), value_copy);
+    g_hash_table_insert (params, g_strdup (prpl_param_name), value_copy);
 }
 
 struct _protocol_info_foreach_data
@@ -115,6 +117,7 @@ _build_paramspecs (HazeProtocolInfo *hpi)
          *        and set the prpl name as setter_data.
          */
         paramspec.name = option->pref_name;
+        paramspec.setter_data = option->pref_name;
         switch (purple_account_option_get_type (option))
         {
             case PURPLE_PREF_BOOLEAN:
