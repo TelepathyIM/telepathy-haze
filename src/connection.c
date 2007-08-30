@@ -277,8 +277,10 @@ _create_account (HazeConnection *self)
     g_assert (username);
 
     g_assert (self->account == NULL);
-    account = self->account =
-        purple_account_new(priv->username, priv->protocol_info->prpl_id);
+    self->account = purple_account_new (username, priv->protocol_info->prpl_id);
+    purple_accounts_add (self->account);
+    g_assert (self->account);
+    g_hash_table_remove (params, "account");
 
     self->account->ui_data = self;
 
