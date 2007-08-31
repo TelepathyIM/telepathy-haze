@@ -38,12 +38,13 @@ G_DEFINE_TYPE(HazeConnectionManager,
  *  sufficient, or for which special munging has to be done.
  */
 static HazeProtocolInfo known_protocol_info[] = {
-    { "gadugadu",   "prpl-gg",          NULL },
-    { "groupwise",  "prpl-novell",      NULL },
-    { "irc",        "prpl-irc",         NULL },
-    { "sametime",   "prpl-meanwhile",   NULL },
-    { "local-xmpp", "prpl-bonjour",     NULL },
-    { NULL,         NULL,               NULL }
+    { "gadugadu",   "prpl-gg",          NULL, "" },
+    { "groupwise",  "prpl-novell",      NULL, "" },
+    { "irc",        "prpl-irc",         NULL, "" },
+    { "sametime",   "prpl-meanwhile",   NULL, "" },
+    { "local-xmpp", "prpl-bonjour",     NULL, "" },
+    { "jabber",     "prpl-jabber",      NULL, "connect_server:server" },
+    { NULL,         NULL,               NULL, "" }
 };
 
 static void *
@@ -100,8 +101,22 @@ _build_paramspecs (HazeProtocolInfo *hpi)
     GArray *paramspecs = g_array_new (TRUE, TRUE, sizeof (TpCMParamSpec));
     GList *opts;
 
+    /* Mad "deserializing" of "foo:bar,baz:badger" to a hash table */
+    GHashTable *parameter_map = g_hash_table_new (g_str_hash, g_str_equal);
+    gchar **map_chunks = g_strsplit_set (hpi->parameter_map, ",:", 0);
+    int i;
+    for (i = 0; map_chunks[i] != NULL; i = i + 2)
+    {
+        g_assert (map_chunks[i+1] != NULL);
+        g_hash_table_insert (parameter_map, map_chunks[i], map_chunks[i+1]);
+    }
+
+    /* TODO: Some protocols shouldn't actually have account parameters (I think
+     *       local-xmpp is one example)
+     */
     g_array_append_val (paramspecs, account_spec);
 
+    /* Password parameter: */
     if (!(hpi->prpl_info->options & OPT_PROTO_NO_PASSWORD))
     {
         if (hpi->prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL)
@@ -112,12 +127,14 @@ _build_paramspecs (HazeProtocolInfo *hpi)
     for (opts = hpi->prpl_info->protocol_options; opts; opts = opts->next)
     {
         PurpleAccountOption *option = (PurpleAccountOption *)opts->data;
-        /* FIXME: have a mapping from pref_name to telepathy name for options
-         *        like connect_server => server on xmpp; use the tp name here
-         *        and set the prpl name as setter_data.
+
+        gchar *name = g_hash_table_lookup (parameter_map, option->pref_name);
+        /* TODO: These are never free'd.  They'd only be free'd when the
+         *       class is unloaded.  Is there any point in freeing them?
          */
-        paramspec.name = option->pref_name;
+        paramspec.name = g_strdup (name ? name : option->pref_name);
         paramspec.setter_data = option->pref_name;
+
         switch (purple_account_option_get_type (option))
         {
             case PURPLE_PREF_BOOLEAN:
@@ -143,9 +160,15 @@ _build_paramspecs (HazeProtocolInfo *hpi)
                     option->pref_name, purple_account_option_get_type (option));
                 continue;
         }
+        /* TODO: does libpurple ever require a parameter besides the username
+         *       and possibly password?
+         */
         paramspec.flags = 0;
         g_array_append_val (paramspecs, paramspec);
     }
+
+    g_hash_table_destroy (parameter_map);
+    g_strfreev (map_chunks);
 
     return (TpCMParamSpec *) g_array_free (paramspecs, FALSE);
 }
@@ -308,6 +331,7 @@ static void _init_protocol_table (HazeConnectionManagerClass *klass)
         info->prpl_id = i->prpl_id;
         info->tp_protocol_name = i->tp_protocol_name;
         info->prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
+        info->parameter_map = i->parameter_map;
 
         g_hash_table_insert (table, info->tp_protocol_name, info);
     }
@@ -331,6 +355,7 @@ static void _init_protocol_table (HazeConnectionManagerClass *klass)
             info->tp_protocol_name = p_info->id;
         }
         info->prpl_info = prpl_info;
+        info->parameter_map = "";
 
         g_hash_table_insert (table, info->tp_protocol_name, info);
     }

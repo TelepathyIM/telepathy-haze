@@ -53,6 +53,13 @@ struct _HazeProtocolInfo
     gchar *prpl_id;
     PurplePluginProtocolInfo *prpl_info;
 
+    /** A string of the form
+     *      "foo:bar,baz:badger"
+     *  where foo and baz are the names of prpl account options, and bar
+     *  and badger are the names theses options should be given as
+     *  Telepathy parameters.
+     */
+    const gchar *parameter_map;
 };
 
 GType haze_connection_manager_get_type (void);
