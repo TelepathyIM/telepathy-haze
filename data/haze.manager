@@ -29,6 +29,20 @@ param-password=s required
 param-server=s
 param-port=i
 
+[Protocol yahoo]
+param-account=s required
+param-password=s required
+param-yahoojp=b
+param-server=s
+param-serverjp=s
+param-port=i
+param-xfer_host=s
+param-xferjp_host=s
+param-xfer_port=i
+param-room_list_locale=s
+param-ignore_invites=b
+param-charset=s
+
 [Protocol simple]
 param-account=s required
 param-password=s required
@@ -46,25 +60,11 @@ param-password=s
 param-server=s
 param-port=i
 
-[Protocol yahoo]
-param-account=s required
-param-password=s required
-param-yahoojp=b
-param-server=s
-param-serverjp=s
-param-port=i
-param-xfer_host=s
-param-xferjp_host=s
-param-xfer_port=i
-param-room_list_locale=s
-param-ignore_invites=b
-param-local_charset=s
-
 [Protocol irc]
 param-account=s required
 param-password=s
 param-port=i
-param-encoding=s
+param-charset=s
 param-username=s
 param-realname=s
 param-ssl=b
@@ -75,7 +75,7 @@ param-password=s required
 param-server=s
 param-port=i
 param-always_use_rv_proxy=b
-param-encoding=s
+param-charset=s
 
 [Protocol gadugadu]
 param-account=s required
@@ -89,6 +89,18 @@ param-last=s
 param-email=s
 param-AIM=s
 param-jid=s
+
+[Protocol zephyr]
+param-account=s required
+param-use_tzc=b
+param-tzc_command=s
+param-write_anyone=b
+param-write_zsubs=b
+param-read_anyone=b
+param-read_zsubs=b
+param-realm=s
+param-exposure_level=s
+param-charset=s
 
 [Protocol msn]
 param-account=s required
@@ -104,18 +116,6 @@ param-password=s required
 param-use_tcp=b
 param-server=s
 param-port=s
-
-[Protocol zephyr]
-param-account=s required
-param-use_tzc=b
-param-tzc_command=s
-param-write_anyone=b
-param-write_zsubs=b
-param-read_anyone=b
-param-read_zsubs=b
-param-realm=s
-param-exposure_level=s
-param-encoding=s
 
 [Protocol sametime]
 param-account=s required
