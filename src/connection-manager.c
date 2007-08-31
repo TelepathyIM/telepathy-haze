@@ -40,10 +40,13 @@ G_DEFINE_TYPE(HazeConnectionManager,
 static HazeProtocolInfo known_protocol_info[] = {
     { "gadugadu",   "prpl-gg",          NULL, "" },
     { "groupwise",  "prpl-novell",      NULL, "" },
-    { "irc",        "prpl-irc",         NULL, "" },
+    { "irc",        "prpl-irc",         NULL, "encoding:charset" },
+    { "icq",        "prpl-icq",         NULL, "encoding:charset" },
     { "sametime",   "prpl-meanwhile",   NULL, "" },
     { "local-xmpp", "prpl-bonjour",     NULL, "" },
     { "jabber",     "prpl-jabber",      NULL, "connect_server:server" },
+    { "yahoo",      "prpl-yahoo",       NULL, "local_charset:charset" },
+    { "zephyr",     "prpl-zephyr",      NULL, "encoding:charset" },
     { NULL,         NULL,               NULL, "" }
 };
 
