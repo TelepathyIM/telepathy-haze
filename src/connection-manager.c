@@ -51,7 +51,7 @@ static void *
 _haze_cm_alloc_params (void)
 {
     /* (gchar *) => (GValue *) */
-    return g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
+    return g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
         (GDestroyNotify) tp_g_value_slice_free);
 }
 
@@ -69,7 +69,7 @@ _haze_cm_set_param (const TpCMParamSpec *paramspec,
 {
     GHashTable *params = (GHashTable *) params_;
     GValue *value_copy = tp_g_value_slice_new (paramspec->gtype);
-    const gchar *prpl_param_name = (const gchar *) paramspec->setter_data;
+    gchar *prpl_param_name = (gchar *) paramspec->setter_data;
 
     g_assert (G_VALUE_TYPE (value) == G_VALUE_TYPE (value_copy));
 
@@ -78,7 +78,7 @@ _haze_cm_set_param (const TpCMParamSpec *paramspec,
     g_debug ("setting parameter %s (telepathy name %s)",
         prpl_param_name, paramspec->name);
 
-    g_hash_table_insert (params, g_strdup (prpl_param_name), value_copy);
+    g_hash_table_insert (params, prpl_param_name, value_copy);
 }
 
 struct _protocol_info_foreach_data
