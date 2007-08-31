@@ -2,67 +2,126 @@
 BusName=org.freedesktop.Telepathy.ConnectionManager.haze
 ObjectPath=/org/freedesktop/Telepathy/ConnectionManager/haze
 
+[Protocol jabber]
+param-account=s required
+param-password=s required
+param-old_ssl=b
+param-auth_plain_in_clear=b
+param-port=i
+param-server=s
+
 [Protocol aim]
 param-account=s required
 param-password=s required
 param-server=s
+param-port=i
+param-always_use_rv_proxy=b
 
-[Protocol local-xmpp]
+[Protocol myspace]
 param-account=s required
 param-password=s required
 param-server=s
-
-[Protocol gadugadu]
-param-account=s required
-param-password=s required
-param-server=s
+param-port=i
 
 [Protocol groupwise]
 param-account=s required
 param-password=s required
 param-server=s
+param-port=i
+
+[Protocol simple]
+param-account=s required
+param-password=s required
+param-dopublish=b
+param-port=i
+param-udp=b
+param-useproxy=b
+param-proxy=s
+param-authuser=s
+param-authdomain=s
+
+[Protocol snpp]
+param-account=s required
+param-password=s
+param-server=s
+param-port=i
+
+[Protocol yahoo]
+param-account=s required
+param-password=s required
+param-yahoojp=b
+param-server=s
+param-serverjp=s
+param-port=i
+param-xfer_host=s
+param-xferjp_host=s
+param-xfer_port=i
+param-room_list_locale=s
+param-ignore_invites=b
+param-local_charset=s
+
+[Protocol irc]
+param-account=s required
+param-password=s
+param-port=i
+param-encoding=s
+param-username=s
+param-realname=s
+param-ssl=b
 
 [Protocol icq]
 param-account=s required
 param-password=s required
 param-server=s
+param-port=i
+param-always_use_rv_proxy=b
+param-encoding=s
 
-[Protocol irc]
+[Protocol gadugadu]
 param-account=s required
 param-password=s required
-param-server=s
+param-nick=s
+
+[Protocol local-xmpp]
+param-account=s required
+param-first=s
+param-last=s
+param-email=s
+param-AIM=s
+param-jid=s
 
 [Protocol msn]
 param-account=s required
 param-password=s required
 param-server=s
+param-port=i
+param-http_method=b
+param-custom_smileys=b
 
 [Protocol qq]
 param-account=s required
 param-password=s required
+param-use_tcp=b
 param-server=s
+param-port=s
 
-[Protocol simple]
+[Protocol zephyr]
 param-account=s required
-param-password=s required
-param-server=s
+param-use_tzc=b
+param-tzc_command=s
+param-write_anyone=b
+param-write_zsubs=b
+param-read_anyone=b
+param-read_zsubs=b
+param-realm=s
+param-exposure_level=s
+param-encoding=s
 
 [Protocol sametime]
 param-account=s required
 param-password=s required
 param-server=s
+param-port=i
+param-force_login=b
+param-fake_client_id=b
 
-[Protocol jabber]
-param-account=s required
-param-password=s required
-param-server=s
-
-[Protocol yahoo]
-param-account=s required
-param-password=s required
-param-server=s
-
-[Protocol zephyr]
-param-account=s required
-param-password=s required
-param-server=s
