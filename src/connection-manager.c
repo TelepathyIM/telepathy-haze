@@ -95,11 +95,14 @@ _build_paramspecs (HazeProtocolInfo *hpi)
 {
     const TpCMParamSpec account_spec =
         { "account", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
-        TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL };
+          TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL,
+          (gpointer) "account", NULL };
     TpCMParamSpec password_spec =
         { "password", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
-        TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL };
-    TpCMParamSpec paramspec = { NULL, NULL, 0, 0, NULL, 0, NULL, NULL };
+          TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL,
+          (gpointer) "password", NULL };
+    TpCMParamSpec paramspec =
+        { NULL, NULL, 0, 0, NULL, 0, NULL, NULL, NULL, NULL};
 
     GArray *paramspecs = g_array_new (TRUE, TRUE, sizeof (TpCMParamSpec));
     GList *opts;
