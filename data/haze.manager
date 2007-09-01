@@ -47,8 +47,8 @@ param-server=s
 
 [Protocol local-xmpp]
 param-account=s required
-param-first=s
-param-last=s
+param-first-name=s
+param-last-name=s
 param-email=s
 param-AIM=s
 param-jid=s
