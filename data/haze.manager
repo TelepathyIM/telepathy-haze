@@ -2,6 +2,41 @@
 BusName=org.freedesktop.Telepathy.ConnectionManager.haze
 ObjectPath=/org/freedesktop/Telepathy/ConnectionManager/haze
 
+[Protocol aim]
+param-account=s required
+param-password=s required
+param-server=s
+param-port=i
+param-always_use_rv_proxy=b
+
+[Protocol gadugadu]
+param-account=s required
+param-password=s required
+param-nick=s
+
+[Protocol groupwise]
+param-account=s required
+param-password=s required
+param-server=s
+param-port=i
+
+[Protocol icq]
+param-account=s required
+param-password=s required
+param-server=s
+param-port=i
+param-always_use_rv_proxy=b
+param-charset=s
+
+[Protocol irc]
+param-account=s required
+param-password=s
+param-port=i
+param-charset=s
+param-username=s
+param-realname=s
+param-ssl=b
+
 [Protocol jabber]
 param-account=s required
 param-password=s required
@@ -10,12 +45,21 @@ param-auth_plain_in_clear=b
 param-port=i
 param-server=s
 
-[Protocol aim]
+[Protocol local-xmpp]
+param-account=s required
+param-first=s
+param-last=s
+param-email=s
+param-AIM=s
+param-jid=s
+
+[Protocol msn]
 param-account=s required
 param-password=s required
 param-server=s
 param-port=i
-param-always_use_rv_proxy=b
+param-http_method=b
+param-custom_smileys=b
 
 [Protocol myspace]
 param-account=s required
@@ -23,25 +67,20 @@ param-password=s required
 param-server=s
 param-port=i
 
-[Protocol groupwise]
+[Protocol qq]
 param-account=s required
 param-password=s required
+param-use_tcp=b
 param-server=s
-param-port=i
+param-port=s
 
-[Protocol yahoo]
+[Protocol sametime]
 param-account=s required
 param-password=s required
-param-yahoojp=b
 param-server=s
-param-serverjp=s
 param-port=i
-param-xfer_host=s
-param-xferjp_host=s
-param-xfer_port=i
-param-room_list_locale=s
-param-ignore_invites=b
-param-charset=s
+param-force_login=b
+param-fake_client_id=b
 
 [Protocol simple]
 param-account=s required
@@ -60,35 +99,19 @@ param-password=s
 param-server=s
 param-port=i
 
-[Protocol irc]
-param-account=s required
-param-password=s
-param-port=i
-param-charset=s
-param-username=s
-param-realname=s
-param-ssl=b
-
-[Protocol icq]
+[Protocol yahoo]
 param-account=s required
 param-password=s required
+param-yahoojp=b
 param-server=s
+param-serverjp=s
 param-port=i
-param-always_use_rv_proxy=b
+param-xfer_host=s
+param-xferjp_host=s
+param-xfer_port=i
+param-room_list_locale=s
+param-ignore_invites=b
 param-charset=s
-
-[Protocol gadugadu]
-param-account=s required
-param-password=s required
-param-nick=s
-
-[Protocol local-xmpp]
-param-account=s required
-param-first=s
-param-last=s
-param-email=s
-param-AIM=s
-param-jid=s
 
 [Protocol zephyr]
 param-account=s required
@@ -101,27 +124,4 @@ param-read_zsubs=b
 param-realm=s
 param-exposure_level=s
 param-charset=s
-
-[Protocol msn]
-param-account=s required
-param-password=s required
-param-server=s
-param-port=i
-param-http_method=b
-param-custom_smileys=b
-
-[Protocol qq]
-param-account=s required
-param-password=s required
-param-use_tcp=b
-param-server=s
-param-port=s
-
-[Protocol sametime]
-param-account=s required
-param-password=s required
-param-server=s
-param-port=i
-param-force_login=b
-param-fake_client_id=b
 
