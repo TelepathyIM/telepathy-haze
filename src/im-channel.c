@@ -302,7 +302,7 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
      *        - probably shouldn't be called here, but it avoids having to
      *          reconstruct type.
      */
-    tp_svc_channel_type_text_emit_sent (channel, time (NULL), type, message);
+    tp_svc_channel_type_text_emit_sent (channel, time (NULL), type, text);
 
     g_free (escaped);
     g_free (message);
