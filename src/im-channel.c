@@ -265,7 +265,7 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
     HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (self);
     GError *error = NULL;
     PurpleMessageFlags flags = 0;
-    char *message;
+    char *message, *escaped;
 
     if (type >= NUM_TP_CHANNEL_TEXT_MESSAGE_TYPES) {
         g_debug ("invalid message type %u", type);
@@ -286,11 +286,14 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
     } else {
         message = g_strdup (text);
     }
+
+    escaped = g_markup_escape_text (message, -1);
+
     if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY) {
         flags |= PURPLE_MESSAGE_AUTO_RESP;
     }
 
-    purple_conv_im_send_with_flags (PURPLE_CONV_IM (priv->conv), message,
+    purple_conv_im_send_with_flags (PURPLE_CONV_IM (priv->conv), escaped,
                                     flags);
 
     /* FIXME: - time (NULL) here is kind of not ideal, but it turns out that
@@ -301,6 +304,7 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
      */
     tp_svc_channel_type_text_emit_sent (channel, time (NULL), type, message);
 
+    g_free (escaped);
     g_free (message);
 
     tp_svc_channel_type_text_return_from_send (context);
