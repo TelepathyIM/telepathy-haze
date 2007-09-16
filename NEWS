@@ -1,3 +1,13 @@
+telepathy-haze 0.1.2 – "Re: Your Brains" (2007-09-16)
+======================================================
+
+ * Properly clean up zombie children.  No more mountains of defunct
+   telepathy-haze processes!
+ * Fix sending messages with <, > and &.  (Previously, "i <3 u" was sent as
+   "i ", which is much less romantic.)
+ * Use "local-xmpp" rather than "bonjour" as the name of the protocol
+   formerly known as Rendezvous.
+
 telepathy-haze 0.1.1 – "Release less often, release correctly" (2007-08-17)
 ===========================================================================
 
