@@ -370,7 +370,11 @@ haze_connection_class_init (HazeConnectionClass *klass)
     GParamSpec *param_spec;
     static const gchar *interfaces_always_present[] = {
         TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
-        TP_IFACE_CONNECTION_INTERFACE_ALIASING, /* FIXME: I'm lying */
+        /* TODO: This is a lie.  Not all protocols supported by libpurple
+         *       actually have the concept of a user-settable alias, but
+         *       there's no way for the UI to know (yet).
+         */
+        TP_IFACE_CONNECTION_INTERFACE_ALIASING,
         NULL };
 
     g_debug("Initializing (HazeConnectionClass *)%p", klass);
