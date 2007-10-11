@@ -93,11 +93,72 @@ connected_cb (PurpleConnection *pc)
 }
 
 static void
-report_disconnect_cb (PurpleConnection *gc,
-                      const char *text)
+haze_report_disconnect_reason (PurpleConnection *gc,
+                               PurpleDisconnectReason reason,
+                               const char *text)
 {
-    /* FIXME: Actually report the reason to tp_base_connection_change_status */
-    g_debug ("report_disconnect_cb: %s", text);
+    PurpleAccount *account = purple_connection_get_account (gc);
+    TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
+
+    TpConnectionStatusReason tp_reason;
+
+    switch (reason)
+    {
+        case PURPLE_REASON_NETWORK_ERROR:
+        /* TODO: this isn't the right mapping.  should this map to
+         *       NoneSpecified?
+         */
+        case PURPLE_REASON_OTHER_ERROR:
+            tp_reason = TP_CONNECTION_STATUS_REASON_NETWORK_ERROR;
+            break;
+        case PURPLE_REASON_AUTHENTICATION_FAILED:
+        /* TODO: the following don't really match the tp reason but it's
+         *       the nearest match.  Invalid settings shouldn't exist in the
+         *       first place.
+         */
+        case PURPLE_REASON_AUTHENTICATION_IMPOSSIBLE:
+        case PURPLE_REASON_INVALID_SETTINGS:
+            tp_reason = TP_CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED;
+            break;
+        case PURPLE_REASON_NO_SSL_SUPPORT:
+        case PURPLE_REASON_ENCRYPTION_ERROR:
+            tp_reason = TP_CONNECTION_STATUS_REASON_ENCRYPTION_ERROR;
+            break;
+        case PURPLE_REASON_NAME_IN_USE:
+            tp_reason = TP_CONNECTION_STATUS_REASON_NAME_IN_USE;
+            break;
+        case PURPLE_REASON_CERT_NOT_PROVIDED:
+            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_NOT_PROVIDED;
+            break;
+        case PURPLE_REASON_CERT_UNTRUSTED:
+            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_UNTRUSTED;
+            break;
+        case PURPLE_REASON_CERT_EXPIRED:
+            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_EXPIRED;
+            break;
+        case PURPLE_REASON_CERT_NOT_ACTIVATED:
+            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_NOT_ACTIVATED;
+            break;
+        case PURPLE_REASON_CERT_HOSTNAME_MISMATCH:
+            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_HOSTNAME_MISMATCH;
+            break;
+        case PURPLE_REASON_CERT_FINGERPRINT_MISMATCH:
+            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_FINGERPRINT_MISMATCH;
+            break;
+        case PURPLE_REASON_CERT_SELF_SIGNED:
+            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_SELF_SIGNED;
+            break;
+        case PURPLE_REASON_CERT_OTHER_ERROR:
+            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_OTHER_ERROR;
+            break;
+        default:
+            g_warning ("report_disconnect_cb: "
+                       "invalid PurpleDisconnectReason %u", reason);
+            tp_reason = TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED;
+    }
+
+    tp_base_connection_change_status (base_conn,
+            TP_CONNECTION_STATUS_DISCONNECTED, tp_reason);
 }
 
 static gboolean
@@ -122,7 +183,7 @@ disconnected_cb (PurpleConnection *pc)
     {
         tp_base_connection_change_status (base_conn,
             TP_CONNECTION_STATUS_DISCONNECTED,
-            TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
+            TP_CONNECTION_STATUS_REASON_REQUESTED);
     }
 
     g_idle_add(idle_disconnected_cb, account);
@@ -511,14 +572,14 @@ connection_ui_ops =
     connected_cb,    /* connected */
     disconnected_cb, /* disconnected */
     NULL,            /* notice */
-    report_disconnect_cb, /* report_disconnect */
+    NULL,            /* report_disconnect */
     NULL,            /* network_connected */
     NULL,            /* network_disconnected */
+    haze_report_disconnect_reason, /* report_disconnect_reason */
 
     NULL, /* _purple_reserved1 */
     NULL, /* _purple_reserved2 */
-    NULL, /* _purple_reserved3 */
-    NULL  /* _purple_reserved4 */
+    NULL  /* _purple_reserved3 */
 };
 
 PurpleConnectionUiOps *
