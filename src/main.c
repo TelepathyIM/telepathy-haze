@@ -47,8 +47,6 @@
 #include "defines.h"
 #include "debug.h"
 #include "connection-manager.h"
-#include "connection.h"
-#include "im-channel-factory.h"
 
 /* Copied verbatim from nullclient, modulo changing whitespace. */
 #define PURPLE_GLIB_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
