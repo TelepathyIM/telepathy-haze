@@ -32,7 +32,6 @@
 #include <libpurple/account.h>
 #include <libpurple/core.h>
 #include <libpurple/blist.h>
-#include <libpurple/debug.h>
 #include <libpurple/version.h>
 #if PURPLE_VERSION_CHECK(2,1,1)
 /* Before 2.1.1, this include failed because dbus-types.h was not installed. */
@@ -46,6 +45,7 @@
 #include <telepathy-glib/debug.h>
 
 #include "defines.h"
+#include "debug.h"
 #include "connection-manager.h"
 #include "connection.h"
 #include "im-channel-factory.h"
@@ -132,85 +132,6 @@ haze_ui_init ()
     purple_connections_set_ui_ops (haze_get_connection_ui_ops ());
 }
 
-static char *debug_level_names[] =
-{
-    "all",
-    "misc",
-    "info",
-    "warning",
-    "error",
-    "fatal"
-};
-
-static void
-haze_debug_print (PurpleDebugLevel level,
-                  const char *category,
-                  const char *arg_s)
-{
-    char *argh = g_strchomp (g_strdup (arg_s));
-    const char *level_name = debug_level_names[level];
-    switch (level)
-    {
-        case PURPLE_DEBUG_WARNING:
-            g_warning ("%s: %s", category, argh);
-            break;
-        case PURPLE_DEBUG_FATAL:
-            /* g_critical doesn't cause an abort() in haze, so libpurple will
-             * still get to do the honours of blowing us out of the water.
-             */
-            g_critical ("[%s] %s: %s", level_name, category, argh);
-            break;
-        case PURPLE_DEBUG_ERROR:
-        case PURPLE_DEBUG_MISC:
-        case PURPLE_DEBUG_INFO:
-        default:
-            g_message ("[%s] %s: %s", level_name, category, argh);
-            break;
-    }
-    g_free(argh);
-}
-
-static gboolean
-haze_debug_is_enabled (PurpleDebugLevel level,
-                       const char *category)
-{
-    if (level == PURPLE_DEBUG_MISC)
-        return FALSE;
-    /* oscar and yahoo, among others, supply a NULL category for some of their
-     * output.  "yay"
-     */
-    if (!category)
-        return FALSE;
-    /* The Jabber prpl produces an unreasonable volume of debug output, so
-     * let's suppress it.
-     */
-    if (!strcmp (category, "jabber"))
-        return FALSE;
-    if (!strcmp (category, "dns") ||
-        !strcmp (category, "dnsquery") ||
-        !strcmp (category, "proxy") ||
-        !strcmp (category, "gnutls"))
-        return FALSE;
-    return TRUE;
-}
-
-static PurpleDebugUiOps haze_debug_uiops =
-{
-    haze_debug_print,
-    haze_debug_is_enabled,
-    /* padding */
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-};
-
-static void
-haze_debug_init()
-{
-    purple_debug_set_ui_ops(&haze_debug_uiops);
-}
-
 static PurpleCoreUiOps haze_core_uiops = 
 {
     NULL,
@@ -237,11 +158,6 @@ init_libpurple()
     }
 
     purple_util_set_user_dir (user_dir);
-
-    /* Disable spewing debug information directly to the terminal.  The debug
-     * uiops deal with it.
-     */
-    purple_debug_set_enabled(FALSE);
 
     purple_core_set_ui_ops(&haze_core_uiops);
 

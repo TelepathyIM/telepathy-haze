@@ -2,6 +2,8 @@ bin_PROGRAMS = telepathy-haze
 
 telepathy_haze_SOURCES = main.c \
                          defines.h \
+                         debug.c \
+                         debug.h \
                          connection-manager.c \
                          connection-manager.h \
                          connection-aliasing.c \
