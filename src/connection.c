@@ -25,8 +25,8 @@
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/errors.h>
 
-#include <accountopt.h>
-#include <version.h>
+#include <libpurple/accountopt.h>
+#include <libpurple/version.h>
 
 #include "defines.h"
 #include "connection-manager.h"

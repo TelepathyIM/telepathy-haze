@@ -3,6 +3,7 @@
 /*
  * im-channel-factory.h - HazeImChannelFactory header
  * Copyright (C) 2007 Will Thompson
+ * Copyright (C) 2007 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +23,7 @@
 
 #include <glib-object.h>
 
-#include <conversation.h>
+#include <libpurple/conversation.h>
 
 G_BEGIN_DECLS
 

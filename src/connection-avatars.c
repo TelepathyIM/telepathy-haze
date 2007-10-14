@@ -1,6 +1,7 @@
 /*
  * connection-avatars.c - Avatars interface implementation of HazeConnection
  * Copyright (C) 2007 Will Thompson
+ * Copyright (C) 2007 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +21,7 @@
 
 #include <telepathy-glib/svc-connection.h>
 
-#include <cipher.h>
+#include <libpurple/cipher.h>
 
 #include "connection-avatars.h"
 #include "connection.h"

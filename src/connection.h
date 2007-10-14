@@ -3,6 +3,7 @@
 /*
  * connection.h - HazeConnection header
  * Copyright (C) 2007 Will Thompson
+ * Copyright (C) 2007 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,8 +25,8 @@
 #include <telepathy-glib/base-connection.h>
 #include <telepathy-glib/presence-mixin.h>
 
-#include <account.h>
-#include <prpl.h>
+#include <libpurple/account.h>
+#include <libpurple/prpl.h>
 
 #include "contact-list.h"
 #include "im-channel-factory.h"

@@ -1,6 +1,7 @@
 /*
  * connection-manager.c - HazeConnectionManager source
  * Copyright (C) 2007 Will Thompson
+ * Copyright (C) 2007 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +24,8 @@
 #include <glib.h>
 #include <dbus/dbus-protocol.h>
 
-#include <prpl.h>
-#include <accountopt.h>
+#include <libpurple/prpl.h>
+#include <libpurple/accountopt.h>
 
 #include "connection-manager.h"
 

@@ -1,6 +1,7 @@
 /*
  * main.c - entry point and libpurple boilerplate for telepathy-haze
  * Copyright (C) 2007 Will Thompson
+ * Copyright (C) 2007 Collabora Ltd.
  * Portions taken from libpurple/examples/nullclient.c:
  *   Copyright (C) 2007 Sadrul Habib Chowdhury, Sean Egan, Gary Kramlich,
  *                      Mark Doliner, Richard Laager
@@ -28,18 +29,18 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
-#include <account.h>
-#include <core.h>
-#include <blist.h>
-#include <debug.h>
-#include <version.h>
+#include <libpurple/account.h>
+#include <libpurple/core.h>
+#include <libpurple/blist.h>
+#include <libpurple/debug.h>
+#include <libpurple/version.h>
 #if PURPLE_VERSION_CHECK(2,1,1)
 /* Before 2.1.1, this include failed because dbus-types.h was not installed. */
-#include <dbus-server.h>
+#include <libpurple/dbus-server.h>
 #endif
-#include <eventloop.h>
-#include <prefs.h>
-#include <util.h>
+#include <libpurple/eventloop.h>
+#include <libpurple/prefs.h>
+#include <libpurple/util.h>
 
 #include <telepathy-glib/run.h>
 #include <telepathy-glib/debug.h>
