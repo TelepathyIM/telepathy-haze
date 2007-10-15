@@ -122,6 +122,8 @@ static PurpleEventLoopUiOps glib_eventloops =
 };
 /*** End of the eventloop functions. ***/
 
+static char *user_dir = NULL;
+
 static void
 haze_ui_init ()
 {
@@ -147,7 +149,7 @@ static PurpleCoreUiOps haze_core_uiops =
 static void
 init_libpurple()
 {
-    char *user_dir = g_strconcat (g_get_tmp_dir (), G_DIR_SEPARATOR_S,
+    user_dir = g_strconcat (g_get_tmp_dir (), G_DIR_SEPARATOR_S,
                                   "haze-XXXXXX", NULL);
 
     if (!mkdtemp (user_dir)) {
@@ -236,9 +238,9 @@ delete_directory (const char *path)
 static void
 delete_user_dir (void)
 {
-    const char *user_dir = purple_user_dir ();
     if (!delete_directory (user_dir))
         g_warning ("couldn't delete %s", user_dir);
+    g_free (user_dir);
 }
 
 int
