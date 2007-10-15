@@ -94,7 +94,7 @@ connected_cb (PurpleConnection *pc)
 
 static void
 haze_report_disconnect_reason (PurpleConnection *gc,
-                               PurpleDisconnectReason reason,
+                               PurpleConnectionError reason,
                                const char *text)
 {
     PurpleAccount *account = purple_connection_get_account (gc);
@@ -104,51 +104,51 @@ haze_report_disconnect_reason (PurpleConnection *gc,
 
     switch (reason)
     {
-        case PURPLE_REASON_NETWORK_ERROR:
+        case PURPLE_CONNECTION_ERROR_NETWORK_ERROR:
         /* TODO: this isn't the right mapping.  should this map to
          *       NoneSpecified?
          */
-        case PURPLE_REASON_OTHER_ERROR:
+        case PURPLE_CONNECTION_ERROR_OTHER_ERROR:
             tp_reason = TP_CONNECTION_STATUS_REASON_NETWORK_ERROR;
             break;
-        case PURPLE_REASON_AUTHENTICATION_FAILED:
+        case PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED:
         /* TODO: the following don't really match the tp reason but it's
          *       the nearest match.  Invalid settings shouldn't exist in the
          *       first place.
          */
-        case PURPLE_REASON_AUTHENTICATION_IMPOSSIBLE:
-        case PURPLE_REASON_INVALID_SETTINGS:
+        case PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE:
+        case PURPLE_CONNECTION_ERROR_INVALID_SETTINGS:
             tp_reason = TP_CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED;
             break;
-        case PURPLE_REASON_NO_SSL_SUPPORT:
-        case PURPLE_REASON_ENCRYPTION_ERROR:
+        case PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT:
+        case PURPLE_CONNECTION_ERROR_ENCRYPTION_ERROR:
             tp_reason = TP_CONNECTION_STATUS_REASON_ENCRYPTION_ERROR;
             break;
-        case PURPLE_REASON_NAME_IN_USE:
+        case PURPLE_CONNECTION_ERROR_NAME_IN_USE:
             tp_reason = TP_CONNECTION_STATUS_REASON_NAME_IN_USE;
             break;
-        case PURPLE_REASON_CERT_NOT_PROVIDED:
+        case PURPLE_CONNECTION_ERROR_CERT_NOT_PROVIDED:
             tp_reason = TP_CONNECTION_STATUS_REASON_CERT_NOT_PROVIDED;
             break;
-        case PURPLE_REASON_CERT_UNTRUSTED:
+        case PURPLE_CONNECTION_ERROR_CERT_UNTRUSTED:
             tp_reason = TP_CONNECTION_STATUS_REASON_CERT_UNTRUSTED;
             break;
-        case PURPLE_REASON_CERT_EXPIRED:
+        case PURPLE_CONNECTION_ERROR_CERT_EXPIRED:
             tp_reason = TP_CONNECTION_STATUS_REASON_CERT_EXPIRED;
             break;
-        case PURPLE_REASON_CERT_NOT_ACTIVATED:
+        case PURPLE_CONNECTION_ERROR_CERT_NOT_ACTIVATED:
             tp_reason = TP_CONNECTION_STATUS_REASON_CERT_NOT_ACTIVATED;
             break;
-        case PURPLE_REASON_CERT_HOSTNAME_MISMATCH:
+        case PURPLE_CONNECTION_ERROR_CERT_HOSTNAME_MISMATCH:
             tp_reason = TP_CONNECTION_STATUS_REASON_CERT_HOSTNAME_MISMATCH;
             break;
-        case PURPLE_REASON_CERT_FINGERPRINT_MISMATCH:
+        case PURPLE_CONNECTION_ERROR_CERT_FINGERPRINT_MISMATCH:
             tp_reason = TP_CONNECTION_STATUS_REASON_CERT_FINGERPRINT_MISMATCH;
             break;
-        case PURPLE_REASON_CERT_SELF_SIGNED:
+        case PURPLE_CONNECTION_ERROR_CERT_SELF_SIGNED:
             tp_reason = TP_CONNECTION_STATUS_REASON_CERT_SELF_SIGNED;
             break;
-        case PURPLE_REASON_CERT_OTHER_ERROR:
+        case PURPLE_CONNECTION_ERROR_CERT_OTHER_ERROR:
             tp_reason = TP_CONNECTION_STATUS_REASON_CERT_OTHER_ERROR;
             break;
         default:
