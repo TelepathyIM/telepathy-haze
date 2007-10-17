@@ -423,9 +423,6 @@ haze_write_im (PurpleConversation *conv,
 
     HazeConversationUiData *ui_data = PURPLE_CONV_GET_HAZE_UI_DATA (conv);
 
-    if (flags & PURPLE_MESSAGE_SEND)
-        return; /* outgoing message; we deal with these elsewhere */
-
     message = purple_markup_strip_html (xhtml_message);
 
     if (flags & PURPLE_MESSAGE_AUTO_RESP)
@@ -435,8 +432,15 @@ haze_write_im (PurpleConversation *conv,
 
     chan = get_im_channel (im_factory, ui_data->contact_handle, NULL);
 
-    tp_text_mixin_receive (G_OBJECT (chan), type, ui_data->contact_handle,
-                           mtime, message);
+    if (flags & PURPLE_MESSAGE_RECV)
+        tp_text_mixin_receive (G_OBJECT (chan), type, ui_data->contact_handle,
+                               mtime, message);
+    else if (flags & PURPLE_MESSAGE_SEND)
+        tp_svc_channel_type_text_emit_sent (chan, mtime, type, message);
+    else
+        DEBUG ("channel %u: ignoring message %s with flags %u",
+            ui_data->contact_handle, message, flags);
+
     g_free (message);
 }
 
