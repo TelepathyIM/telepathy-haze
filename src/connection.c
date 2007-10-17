@@ -29,6 +29,7 @@
 #include <libpurple/accountopt.h>
 #include <libpurple/version.h>
 
+#include "debug.h"
 #include "defines.h"
 #include "connection-manager.h"
 #include "connection.h"
@@ -169,7 +170,7 @@ idle_disconnected_cb(gpointer data)
     PurpleAccount *account = (PurpleAccount *) data;
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
 
-    g_debug ("deleting account %s", account->username);
+    DEBUG ("deleting account %s", account->username);
     purple_accounts_delete (account);
     tp_base_connection_finish_shutdown (TP_BASE_CONNECTION (conn));
     return FALSE;
@@ -402,7 +403,7 @@ haze_connection_constructor (GType type,
             G_OBJECT_CLASS (haze_connection_parent_class)->constructor (
                 type, n_construct_properties, construct_params));
 
-    g_debug("Post-construction: (HazeConnection *)%p", self);
+    DEBUG ("Post-construction: (HazeConnection *)%p", self);
 
     _create_account (self);
 
@@ -414,7 +415,7 @@ haze_connection_dispose (GObject *object)
 {
     HazeConnection *self = HAZE_CONNECTION(object);
 
-    g_debug("disposing of (HazeConnection *)%p", self);
+    DEBUG ("disposing of (HazeConnection *)%p", self);
 
     G_OBJECT_CLASS (haze_connection_parent_class)->dispose (object);
 }
@@ -450,7 +451,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
         TP_IFACE_CONNECTION_INTERFACE_ALIASING,
         NULL };
 
-    g_debug("Initializing (HazeConnectionClass *)%p", klass);
+    DEBUG ("Initializing (HazeConnectionClass *)%p", klass);
 
     g_type_class_add_private (klass, sizeof (HazeConnectionPrivate));
     object_class->get_property = haze_connection_get_property;
@@ -514,7 +515,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
 static void
 haze_connection_init (HazeConnection *self)
 {
-    g_debug("Initializing (HazeConnection *)%p", self);
+    DEBUG ("Initializing (HazeConnection *)%p", self);
     self->priv = G_TYPE_INSTANCE_GET_PRIVATE (self, HAZE_TYPE_CONNECTION,
                                               HazeConnectionPrivate);
 
@@ -549,7 +550,7 @@ request_authorize_cb (PurpleAccount *account,
 #endif
 
     /* FIXME: Implement the publish list, then deal with this properly. */
-    g_debug ("[%s] Quietly authorizing presence subscription from '%s'...",
+    DEBUG ("[%s] Quietly authorizing presence subscription from '%s'...",
              account->username, remote_user);
     cb (user_data);
     return NULL;

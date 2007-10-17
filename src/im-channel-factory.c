@@ -1,6 +1,7 @@
 /*
  * im-channel-factory.c - HazeImChannelFactory source
  * Copyright (C) 2007 Will Thompson
+ * Copyright (C) 2007 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,8 +26,8 @@
 #include <telepathy-glib/handle-repo.h>
 #include <telepathy-glib/base-connection.h>
 
+#include "debug.h"
 #include "im-channel.h"
-
 #include "im-channel-factory.h"
 #include "connection.h"
 
@@ -80,7 +81,7 @@ conversation_updated_cb (PurpleConversation *conv,
 
     if (conv->type != PURPLE_CONV_TYPE_IM)
     {
-        g_debug ("typing state update for a non-IM chat, ignoring");
+        DEBUG ("typing state update for a non-IM chat, ignoring");
         return;
     }
 
@@ -220,7 +221,7 @@ im_channel_closed_cb (HazeIMChannel *chan, gpointer user_data)
     {
         g_object_get (chan, "handle", &contact_handle, NULL);
 
-        g_debug ("removing channel with handle %d", contact_handle);
+        DEBUG ("removing channel with handle %d", contact_handle);
 
         g_hash_table_remove (priv->channels, GINT_TO_POINTER (contact_handle));
     }
@@ -250,7 +251,7 @@ new_im_channel (HazeImChannelFactory *self,
                          "handle", handle,
                          NULL);
 
-    g_debug ("Created IM channel with object path %s", object_path);
+    DEBUG ("Created IM channel with object path %s", object_path);
 
     g_signal_connect (chan, "closed", G_CALLBACK (im_channel_closed_cb), self);
 
@@ -297,7 +298,7 @@ haze_im_channel_factory_iface_close_all (TpChannelFactoryIface *iface)
         HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (fac);
     GHashTable *tmp;
 
-    g_debug ("closing im channels");
+    DEBUG ("closing im channels");
 
     if (priv->channels)
     {
@@ -456,11 +457,11 @@ haze_create_conversation (PurpleConversation *conv)
 
     HazeConversationUiData *ui_data;
 
-    g_debug ("(PurpleConversation *)%p created", conv);
+    DEBUG ("(PurpleConversation *)%p created", conv);
 
     if (conv->type != PURPLE_CONV_TYPE_IM)
     {
-        g_debug ("not an IM conversation; ignoring");
+        DEBUG ("not an IM conversation; ignoring");
         return;
     }
 
@@ -487,10 +488,10 @@ haze_destroy_conversation (PurpleConversation *conv)
 
     HazeConversationUiData *ui_data;
 
-    g_debug ("(PurpleConversation *)%p destroyed", conv);
+    DEBUG ("(PurpleConversation *)%p destroyed", conv);
     if (conv->type != PURPLE_CONV_TYPE_IM)
     {
-        g_debug ("not an IM conversation; ignoring");
+        DEBUG ("not an IM conversation; ignoring");
         return;
     }
 

@@ -28,6 +28,7 @@
 #include <libpurple/accountopt.h>
 
 #include "connection-manager.h"
+#include "debug.h"
 
 G_DEFINE_TYPE(HazeConnectionManager,
     haze_connection_manager,
@@ -228,7 +229,7 @@ static void _init_protocol_table (HazeConnectionManagerClass *klass)
         info->tp_protocol_name = i->tp_protocol_name;
         info->prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
 
-        g_debug ("Using '%s' to provide '%s'", info->prpl_id,
+        DEBUG ("Using '%s' to provide '%s'", info->prpl_id,
             info->tp_protocol_name);
         g_hash_table_insert (table, info->tp_protocol_name, info);
     }
@@ -253,7 +254,7 @@ static void _init_protocol_table (HazeConnectionManagerClass *klass)
         }
         info->prpl_info = prpl_info;
 
-        g_debug ("Using '%s' to provide '%s'", info->prpl_id,
+        DEBUG ("Using '%s' to provide '%s'", info->prpl_id,
             info->tp_protocol_name);
         g_hash_table_insert (table, info->tp_protocol_name, info);
     }
@@ -277,7 +278,7 @@ haze_connection_manager_class_init (HazeConnectionManagerClass *klass)
 static void
 haze_connection_manager_init (HazeConnectionManager *self)
 {
-    g_debug("Initializing (HazeConnectionManager *)%p", self);
+    DEBUG ("Initializing (HazeConnectionManager *)%p", self);
 }
 
 HazeConnectionManager *

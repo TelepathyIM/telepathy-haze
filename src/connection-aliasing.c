@@ -1,6 +1,7 @@
 /*
  * connection-aliasing.c - Aliasing interface implementation of HazeConnection
  * Copyright (C) 2007 Will Thompson
+ * Copyright (C) 2007 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +23,7 @@
 
 #include "connection-aliasing.h"
 #include "connection.h"
+#include "debug.h"
 
 #define HAZE_TP_ALIAS_PAIR_TYPE (dbus_g_type_get_struct ("GValueArray", \
       G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID))
@@ -53,7 +55,7 @@ haze_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
         flags = TP_CONNECTION_ALIAS_FLAG_USER_SET;
     }
 
-    g_debug ("alias flags: %u", flags);
+    DEBUG ("alias flags: %u", flags);
     tp_svc_connection_interface_aliasing_return_from_get_alias_flags (
             context, flags);
 }
@@ -90,8 +92,7 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
             alias = purple_connection_get_display_name (conn->account->gc);
             if (!alias)
             {
-                g_debug ("%s has no display_name, throwing NotAvailable from "
-                    "RequestAliases()", bname);
+                DEBUG ("%s has no display_name, throwing NotAvailable", bname);
                 g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
                     "%u has no alias", handle);
                 break;
@@ -103,8 +104,7 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
 
             if (!buddy)
             {
-                g_debug ("%s not on blist; throwing NotAvailable from "
-                    "RequestAliases()", bname);
+                DEBUG ("%s not on blist; throwing NotAvailable", bname);
                 g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
                     "Alias for %u unknown; subscribe to them first", handle);
                 break;
@@ -112,7 +112,7 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
 
             alias = purple_buddy_get_alias (buddy);
         }
-        g_debug ("%s has alias \"%s\"", bname, alias);
+        DEBUG ("%s has alias \"%s\"", bname, alias);
 
         /* They'll be made const again shortly */
         aliases[i] = (gchar *) alias;
@@ -153,7 +153,7 @@ set_aliases_foreach (gpointer key,
 
     g_assert (can_alias (data->conn));
 
-    g_debug ("setting alias for %s to \"%s\"", bname, new_alias);
+    DEBUG ("setting alias for %s to \"%s\"", bname, new_alias);
 
     if (!tp_handle_is_valid (data->contact_handles, handle, &error))
     {
@@ -202,7 +202,7 @@ haze_connection_set_aliases (TpSvcConnectionInterfaceAliasing *self,
     data.contact_handles =
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
 
-    g_debug ("haze_connection_set_aliases called");
+    DEBUG ("called");
 
     if (!can_alias (conn))
     {

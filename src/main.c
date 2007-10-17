@@ -217,7 +217,7 @@ delete_directory (const char *path)
         }
         else
         {
-            g_debug ("deleting %s", child_full_path);
+            DEBUG ("deleting %s", child_full_path);
             if (g_unlink (child_full_path))
                 ret = FALSE;
         }
@@ -228,7 +228,7 @@ delete_directory (const char *path)
 
     if (ret)
     {
-        g_debug ("deleting %s", path);
+        DEBUG ("deleting %s", path);
         ret = !g_rmdir (path);
     }
 
@@ -253,7 +253,7 @@ main(int argc,
 
     signal (SIGCHLD, SIG_IGN);
     init_libpurple();
-    g_debug("libpurple initialized.");
+    DEBUG ("libpurple initialized.");
 
     tp_debug_set_flags_from_env ("HAZE_DEBUG");
     ret = tp_run_connection_manager (UI_ID, HAZE_VERSION, get_cm, argc, argv);

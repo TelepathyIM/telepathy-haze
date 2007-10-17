@@ -1,6 +1,7 @@
 /*
  * connection-presence.c - Presence interface implementation of HazeConnection
  * Copyright (C) 2007 Will Thompson
+ * Copyright (C) 2007 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +20,7 @@
  */
 
 #include "connection-presence.h"
+#include "debug.h"
 
 static const TpPresenceStatusOptionalArgumentSpec arg_specs[] = {
     { "message", "s" },
@@ -177,7 +179,7 @@ _get_contact_statuses (GObject *obj,
             }
             else
             {
-                g_debug ("[%s] %s isn't on the blist, ergo no status!",
+                DEBUG ("[%s] %s isn't on the blist, ergo no status!",
                          conn->account->username, bname);
                 g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
                     "Presence for %u unknown; subscribe to them first", handle);
@@ -231,7 +233,7 @@ update_status (PurpleBuddy *buddy,
 
     TpPresenceStatus *tp_status;
 
-    g_debug ("%s changed to status %s", bname, purple_status_get_id (status));
+    DEBUG ("%s changed to status %s", bname, purple_status_get_id (status));
 
     tp_status = _get_tp_status (status);
 
@@ -277,7 +279,7 @@ _set_own_status (GObject *obj,
     if (!status_id)
     {
         /* TODO: Is there a more sensible way to have a default? */
-        g_debug ("defaulting to 'available' status");
+        DEBUG ("defaulting to 'available' status");
         status_id = "available";
     }
 

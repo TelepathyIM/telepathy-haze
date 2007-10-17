@@ -1,6 +1,7 @@
 /*
  * contact-list.c - HazeContactList source
  * Copyright (C) 2007 Will Thompson
+ * Copyright (C) 2007 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +28,7 @@
 #include "connection.h"
 #include "contact-list.h"
 #include "contact-list-channel.h"
+#include "debug.h"
 
 typedef struct _HazeContactListPrivate HazeContactListPrivate;
 struct _HazeContactListPrivate {
@@ -213,7 +215,7 @@ contact_list_channel_closed_cb (HazeContactListChannel *chan,
 
     if (channels)
     {
-        g_debug ("removing channel %d:%d", handle_type, handle);
+        DEBUG ("removing channel %d:%d", handle_type, handle);
 
         g_hash_table_remove (channels, GINT_TO_POINTER (handle));
     }
@@ -245,7 +247,7 @@ _haze_contact_list_create_channel (HazeContactList *contact_list,
     g_assert (g_hash_table_lookup (channels, GINT_TO_POINTER (handle)) == NULL);
 
     name = haze_connection_handle_inspect (priv->conn, handle_type, handle);
-    g_debug ("Instantiating channel %u:%u \"%s\"", handle_type, handle, name);
+    DEBUG ("Instantiating channel %u:%u \"%s\"", handle_type, handle, name);
     mangled_name = tp_escape_as_identifier (name);
     object_path = g_strdup_printf ("%s/ContactListChannel/%s/%s",
                                    base_conn->object_path,
@@ -262,7 +264,7 @@ _haze_contact_list_create_channel (HazeContactList *contact_list,
                          "handle-type", handle_type,
                          NULL);
 
-    g_debug ("created %s", object_path);
+    DEBUG ("created %s", object_path);
 
     g_signal_connect (chan, "closed",
         G_CALLBACK (contact_list_channel_closed_cb), contact_list);
@@ -295,7 +297,7 @@ _haze_contact_list_get_channel (HazeContactList *contact_list,
               handle_type == TP_HANDLE_TYPE_GROUP);
     g_assert (tp_handle_is_valid (handle_repo, handle, NULL));
 
-    g_debug ("looking up channel %u:%u '%s'", handle_type, handle,
+    DEBUG ("looking up channel %u:%u '%s'", handle_type, handle,
         tp_handle_inspect (handle_repo, handle));
     chan = g_hash_table_lookup (channels, GINT_TO_POINTER (handle));
 
@@ -390,11 +392,11 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
     TpHandleSet *add_handles;
     const char *group_name;
 
-    g_debug ("buddy_added_cb (%s)", purple_buddy_get_name (buddy));
+    DEBUG ("%s", purple_buddy_get_name (buddy));
 
     if (TP_BASE_CONNECTION (conn)->status == TP_CONNECTION_STATUS_DISCONNECTED)
     {
-        g_debug ("disconnected, ignoring");
+        DEBUG ("disconnected, ignoring");
         return;
     }
 
@@ -428,11 +430,11 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
     gboolean last_instance = TRUE;
 
     buddy_name = purple_buddy_get_name (buddy);
-    g_debug ("buddy_removed_cb (%s)", buddy_name);
+    DEBUG ("%s", buddy_name);
 
     if (TP_BASE_CONNECTION (conn)->status == TP_CONNECTION_STATUS_DISCONNECTED)
     {
-        g_debug ("disconnected, ignoring");
+        DEBUG ("disconnected, ignoring");
         return;
     }
 
@@ -632,7 +634,7 @@ haze_contact_list_factory_iface_request (TpChannelFactoryIface *iface,
         return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
 
     channel_name = tp_handle_inspect (handle_repo, handle);
-    g_debug ("grabbing channel '%s'...", channel_name);
+    DEBUG ("grabbing channel '%s'...", channel_name);
     chan = _haze_contact_list_get_channel (self, handle_type, handle,
         &created);
 

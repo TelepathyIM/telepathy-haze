@@ -1,6 +1,7 @@
 /*
  * im-channel.c - HazeIMChannel source
  * Copyright (C) 2007 Will Thompson
+ * Copyright (C) 2007 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +25,7 @@
 
 #include "im-channel.h"
 #include "connection.h"
+#include "debug.h"
 
 /* properties */
 enum
@@ -153,14 +155,14 @@ resend_typing_cb (gpointer data)
     const gchar *who = purple_conversation_get_name (conv);
     PurpleTypingState typing = ui_data->active_state;
 
-    g_debug ("resending '%s' to %s", typing_state_names[typing], who);
+    DEBUG ("resending '%s' to %s", typing_state_names[typing], who);
     if (serv_send_typing (gc, who, typing))
     {
         return TRUE; /* Let's keep doing this thang. */
     }
     else
     {
-        g_debug ("clearing resend_typing_cb timeout");
+        DEBUG ("clearing resend_typing_cb timeout");
         ui_data->resend_typing_timeout_id = 0;
         return FALSE;
     }
@@ -188,7 +190,7 @@ haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
 
     if (ui_data->resend_typing_timeout_id)
     {
-        g_debug ("clearing existing resend_typing_cb timeout");
+        DEBUG ("clearing existing resend_typing_cb timeout");
         g_source_remove (ui_data->resend_typing_timeout_id);
         ui_data->resend_typing_timeout_id = 0;
     }
@@ -196,7 +198,7 @@ haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
     switch (state)
     {
         case TP_CHANNEL_CHAT_STATE_GONE:
-            g_debug ("The Gone state may not be explicitly set");
+            DEBUG ("The Gone state may not be explicitly set");
             g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
                 "The Gone state may not be explicitly set");
             break;
@@ -211,7 +213,7 @@ haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
             typing = PURPLE_TYPING;
             break;
         default:
-            g_debug ("Invalid chat state: %u", state);
+            DEBUG ("Invalid chat state: %u", state);
             g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
                 "Invalid chat state: %u", state);
     }
@@ -223,7 +225,7 @@ haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
           return;
     }
 
-    g_debug ("sending '%s' to %s", typing_state_names[typing], who);
+    DEBUG ("sending '%s' to %s", typing_state_names[typing], who);
 
     ui_data->active_state = typing;
     timeout = serv_send_typing (gc, who, typing);
@@ -268,7 +270,7 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
     char *message, *escaped;
 
     if (type >= NUM_TP_CHANNEL_TEXT_MESSAGE_TYPES) {
-        g_debug ("invalid message type %u", type);
+        DEBUG ("invalid message type %u", type);
         g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
                 "invalid message type: %u", type);
         dbus_g_method_return_error (context, error);
