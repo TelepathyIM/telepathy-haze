@@ -429,14 +429,14 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
     GSList *buddies, *l;
     gboolean last_instance = TRUE;
 
+    /* Every buddy gets removed after disconnection, because the PurpleAccount
+     * gets deleted.  So let's ignore removals when we're offline.
+     */
+    if (TP_BASE_CONNECTION (conn)->status == TP_CONNECTION_STATUS_DISCONNECTED)
+        return;
+
     buddy_name = purple_buddy_get_name (buddy);
     DEBUG ("%s", buddy_name);
-
-    if (TP_BASE_CONNECTION (conn)->status == TP_CONNECTION_STATUS_DISCONNECTED)
-    {
-        DEBUG ("disconnected, ignoring");
-        return;
-    }
 
     rem_handles = _handle_a_buddy (priv->conn, buddy);
 
