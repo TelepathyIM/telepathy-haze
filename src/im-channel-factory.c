@@ -441,6 +441,26 @@ haze_write_im (PurpleConversation *conv,
 }
 
 static void
+haze_write_conv (PurpleConversation *conv,
+                 const char *name,
+                 const char *alias,
+                 const char *message,
+                 PurpleMessageFlags flags,
+                 time_t mtime)
+{
+    PurpleConversationType type = purple_conversation_get_type (conv);
+    switch (type)
+    {
+        case PURPLE_CONV_TYPE_IM:
+            haze_write_im (conv, name, message, flags, mtime);
+            break;
+        default:
+            DEBUG ("ignoring message to conv type %u (flags=%u; message=%s)",
+                type, flags, message);
+    }
+}
+
+static void
 haze_create_conversation (PurpleConversation *conv)
 {
     PurpleAccount *account = purple_conversation_get_account (conv);
@@ -512,7 +532,7 @@ conversation_ui_ops =
     haze_destroy_conversation, /* destroy_conversation */
     NULL,                      /* write_chat */
     haze_write_im,             /* write_im */
-    NULL,                      /* write_conv */
+    haze_write_conv,           /* write_conv */
     NULL,                      /* chat_add_users */
     NULL,                      /* chat_rename_user */
     NULL,                      /* chat_remove_users */
