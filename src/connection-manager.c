@@ -229,8 +229,6 @@ static void _init_protocol_table (HazeConnectionManagerClass *klass)
         info->tp_protocol_name = i->tp_protocol_name;
         info->prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
 
-        DEBUG ("Using '%s' to provide '%s'", info->prpl_id,
-            info->tp_protocol_name);
         g_hash_table_insert (table, info->tp_protocol_name, info);
     }
 
@@ -254,9 +252,26 @@ static void _init_protocol_table (HazeConnectionManagerClass *klass)
         }
         info->prpl_info = prpl_info;
 
-        DEBUG ("Using '%s' to provide '%s'", info->prpl_id,
-            info->tp_protocol_name);
         g_hash_table_insert (table, info->tp_protocol_name, info);
+    }
+
+    {
+        GList *protocols = g_hash_table_get_values (table);
+        GList *l;
+        GString *debug_string = g_string_new ("");
+
+        for (l = protocols; l; l = l->next)
+        {
+            info = l->data;
+            g_string_append (debug_string, info->tp_protocol_name);
+            if (l->next)
+                g_string_append (debug_string, ", ");
+        }
+
+        DEBUG ("Found protocols %s", debug_string->str);
+
+        g_list_free (protocols);
+        g_string_free (debug_string, TRUE);
     }
 
     klass->protocol_info_table = table;
