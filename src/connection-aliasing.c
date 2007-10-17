@@ -202,8 +202,6 @@ haze_connection_set_aliases (TpSvcConnectionInterfaceAliasing *self,
     data.contact_handles =
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
 
-    DEBUG ("called");
-
     if (!can_alias (conn))
     {
         g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
