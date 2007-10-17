@@ -1,5 +1,5 @@
 /*
- * debug.h - header for haze's libpurple debug machinery
+ * debug.h - header for haze's debug machinery for itself and libpurple
  * Copyright (C) 2007 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -19,3 +19,9 @@
  */
 
 void haze_debug_init(void);
+
+void haze_debug (const gchar *format, ...)
+    G_GNUC_PRINTF (1,2);
+
+#define DEBUG(format, ...) \
+    haze_debug ("%s: " format, G_STRFUNC, ##__VA_ARGS__)

@@ -1,5 +1,5 @@
 /*
- * debug.c - haze's libpurple debug machinery
+ * debug.c - haze's debug machinery for itself and libpurple
  * Copyright (C) 2007 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -19,6 +19,7 @@
  */
 
 #include <string.h>
+#include <stdarg.h>
 
 #include <libpurple/debug.h>
 
@@ -104,4 +105,16 @@ haze_debug_init(void)
     purple_debug_set_enabled(FALSE);
 
     purple_debug_set_ui_ops(&haze_debug_uiops);
+}
+
+void
+haze_debug (const gchar *format,
+            ...)
+{
+    va_list args;
+    va_start (args, format);
+
+    g_logv (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, format, args);
+
+    va_end (args);
 }
