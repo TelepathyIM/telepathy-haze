@@ -447,7 +447,9 @@ haze_connection_constructor (GType type,
                 type, n_construct_properties, construct_params));
     HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (self);
 
-    g_debug("Post-construction: (HazeConnection *)%p", self);
+    DEBUG ("Post-construction: (HazeConnection *)%p", self);
+
+    priv->dispose_has_run = FALSE;
 
     _create_account (self);
 
