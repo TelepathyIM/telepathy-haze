@@ -437,6 +437,15 @@ haze_write_im (PurpleConversation *conv,
                                mtime, message);
     else if (flags & PURPLE_MESSAGE_SEND)
         tp_svc_channel_type_text_emit_sent (chan, mtime, type, message);
+    else if (flags & PURPLE_MESSAGE_ERROR)
+        /* This is wrong.  The mtime, type and message are of the error message
+         * (such as "Unable to send message: The message is too large.") not of
+         * the message causing the error, and the ChannelTextSendError parameter
+         * shouldn't always be unknown.  But this is the best that can be done
+         * until I fix libpurple.
+         */
+        tp_svc_channel_type_text_emit_send_error (chan,
+            TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, mtime, type, message);
     else
         DEBUG ("channel %u: ignoring message %s with flags %u",
             ui_data->contact_handle, message, flags);
