@@ -80,8 +80,14 @@ haze_debug_is_enabled (PurpleDebugLevel level,
     if (!strcmp (category, "dns") ||
         !strcmp (category, "dnsquery") ||
         !strcmp (category, "proxy") ||
-        !strcmp (category, "gnutls"))
+        !strcmp (category, "gnutls") ||
+        !strcmp (category, "prefs") ||
+        !strcmp (category, "util") ||
+        !strcmp (category, "plugins") ||
+        g_str_has_prefix (category, "certificate"))
+    {
         return FALSE;
+    }
     return TRUE;
 }
 

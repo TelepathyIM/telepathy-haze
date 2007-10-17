@@ -253,7 +253,6 @@ main(int argc,
 
     signal (SIGCHLD, SIG_IGN);
     init_libpurple();
-    DEBUG ("libpurple initialized.");
 
     tp_debug_set_flags_from_env ("HAZE_DEBUG");
     ret = tp_run_connection_manager (UI_ID, HAZE_VERSION, get_cm, argc, argv);
