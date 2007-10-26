@@ -1,4 +1,4 @@
-bin_PROGRAMS = telepathy-haze
+libexec_PROGRAMS = telepathy-haze
 
 telepathy_haze_SOURCES = main.c \
                          defines.h \
