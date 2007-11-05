@@ -1,5 +1,13 @@
 libexec_PROGRAMS = telepathy-haze
 
+man_MANS = telepathy-haze.8
+
+%.8: %.8.in Makefile
+	sed -e 's,[@]libexecdir[@],@libexecdir@,' < $< > $@
+
+EXTRA_DIST = telepathy-haze.8.in
+CLEANFILES = $(man_MANS)
+
 telepathy_haze_SOURCES = main.c \
                          defines.h \
                          debug.c \

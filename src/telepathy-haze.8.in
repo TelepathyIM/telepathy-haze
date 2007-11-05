@@ -1,0 +1,30 @@
+.TH TELEPATHY-HAZE "8" "October 2007" "Telepathy" "D-Bus services"
+\" This man page was written by Simon McVittie for the Debian project,
+\" but may be used by others.
+\" Copyright © 2007 Collabora Ltd. <http://www.collabora.co.uk/>
+\" It may be distributed under the same terms as telepathy-haze itself.
+.SH NAME
+telepathy-haze \- Telepathy connection manager using libpurple
+.SH SYNOPSIS
+\fB@libexecdir@/telepathy\-haze\fR
+.SH DESCRIPTION
+Haze implements the Telepathy D-Bus specification using libpurple,
+allowing Telepathy clients like
+.BR empathy (1)
+to connect to any protocol supported by
+.BR pidgin (1).
+.PP
+It is a D-Bus service which runs on the session bus, and should usually be
+started automatically by D-Bus activation. However, it might be useful to
+start it manually for debugging.
+.SH OPTIONS
+There are no command-line options.
+.SH ENVIRONMENT
+.TP
+\fBHAZE_DEBUG\fR=\fItype\fR
+May be set to "all" for full debug output, or various undocumented options
+(which may change from release to release) to filter the output.
+.SH SEE ALSO
+.IR http://telepathy.freedesktop.org/ ,
+.BR empathy (1),
+.BR pidgin (1)

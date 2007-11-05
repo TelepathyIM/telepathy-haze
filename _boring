@@ -17,6 +17,7 @@
 (^|/).deps($|/)
 (^|/).libs($|/)
 ^src/telepathy-haze$
+^src/telepathy-haze\.8$
 
 # Boring file regexps:
 \.hi$
