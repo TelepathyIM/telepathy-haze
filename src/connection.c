@@ -114,6 +114,7 @@ haze_report_disconnect_reason (PurpleConnection *gc,
             tp_reason = TP_CONNECTION_STATUS_REASON_NETWORK_ERROR;
             break;
         case PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED:
+        case PURPLE_CONNECTION_ERROR_INVALID_USERNAME:
         /* TODO: the following don't really match the tp reason but it's
          *       the nearest match.  Invalid settings shouldn't exist in the
          *       first place.
