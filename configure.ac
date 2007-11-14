@@ -1,6 +1,25 @@
 AC_PREREQ([2.59])
 
-AC_INIT([telepathy-haze],[0.1.3],[https://bugs.freedesktop.org/enter_bug.cgi?product=Telepathy&component=telepathy-haze])
+# Making releases:
+#  set the new version number
+#  set nano_version to 0
+#  make the release, tag it
+#  set nano_version to 1
+
+m4_define([haze_major_version], [0])
+m4_define([haze_minor_version], [1])
+m4_define([haze_micro_version], [3])
+m4_define([haze_nano_version], [0])
+
+m4_define([haze_base_version],
+          [haze_major_version.haze_minor_version.haze_micro_version])
+m4_define([haze_version],
+          [m4_if(haze_nano_version, 0,
+                 [haze_base_version],
+                 [haze_base_version].[haze_nano_version])])
+
+AC_INIT([telepathy-haze], [haze_version],
+        [https://bugs.freedesktop.org/enter_bug.cgi?product=Telepathy&component=telepathy-haze])
 
 AC_CONFIG_MACRO_DIR([m4])
 
