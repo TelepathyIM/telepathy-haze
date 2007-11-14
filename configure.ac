@@ -1,6 +1,6 @@
 AC_PREREQ([2.59])
 
-AC_INIT([telepathy-haze],[0.1.3],[resiak@soc.pidgin.im])
+AC_INIT([telepathy-haze],[0.1.3],[https://bugs.freedesktop.org/enter_bug.cgi?product=Telepathy&component=telepathy-haze])
 
 AC_CONFIG_MACRO_DIR([m4])
 
