@@ -31,6 +31,36 @@ AC_PROG_CC_STDC
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 
+# decide error flags
+AS_COMPILER_FLAG(-Wall, ERROR_CFLAGS="-Wall", ERROR_CFLAGS="")
+AS_COMPILER_FLAG(-Werror, werror=yes, werror=no)
+
+AC_ARG_ENABLE(Werror,
+  AC_HELP_STRING([--disable-Werror],[compile without -Werror (normally enabled in development builds)]),
+    werror=$enableval, :)
+
+AS_COMPILER_FLAG(-Wextra, wextra=yes, wextra=no)
+AS_COMPILER_FLAG(-Wno-missing-field-initializers,
+        wno_missing_field_initializers=yes,
+        wno_missing_field_initializers=no)
+AS_COMPILER_FLAG(-Wno-unused-parameter,
+        wno_unused_parameter=yes,
+        wno_unused_parameter=no)
+
+ifelse(haze_nano_version, 0, [],
+    [
+        if test x$werror = xyes; then
+            ERROR_CFLAGS="$ERROR_CFLAGS -Werror"
+        fi
+        if test x$wextra = xyes -a \
+            x$wno_missing_field_initializers = xyes -a \
+            x$wno_unused_parameter = xyes; then
+            ERROR_CFLAGS="$ERROR_CFLAGS -Wextra -Wno-missing-field-initializers -Wno-unused-parameter"
+        fi
+    ])
+
+AC_SUBST(ERROR_CFLAGS)
+
 PKG_CHECK_MODULES(PURPLE,[purple >= 2.0.0])
 AC_SUBST(PURPLE_CFLAGS)
 AC_SUBST(PURPLE_LIBS)

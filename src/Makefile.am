@@ -31,5 +31,9 @@ telepathy_haze_SOURCES = main.c \
                          im-channel-factory.c \
                          im-channel-factory.h
 
-AM_CFLAGS = @PURPLE_CFLAGS@ @TP_GLIB_CFLAGS@ -Wall -Werror
+AM_CFLAGS = \
+	$(ERROR_CFLAGS) \
+	@PURPLE_CFLAGS@ \
+	@TP_GLIB_CFLAGS@
+
 AM_LDFLAGS = @PURPLE_LIBS@ @TP_GLIB_LIBS@
