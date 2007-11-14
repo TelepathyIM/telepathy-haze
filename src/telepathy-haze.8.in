@@ -24,6 +24,10 @@ There are no command-line options.
 \fBHAZE_DEBUG\fR=\fItype\fR
 May be set to "all" for full debug output, or various undocumented options
 (which may change from release to release) to filter the output.
+.TP
+\fBHAZE_PERSIST\fR=1
+If set, Haze will not automatically close itself after five seconds without
+any connections.
 .SH SEE ALSO
 .IR http://telepathy.freedesktop.org/ ,
 .BR empathy (1),
