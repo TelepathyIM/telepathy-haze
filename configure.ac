@@ -5,6 +5,7 @@ AC_INIT([telepathy-haze],[0.1.3],[https://bugs.freedesktop.org/enter_bug.cgi?pro
 AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([1.8])
+AM_CONFIG_HEADER(config.h)
 
 AC_PROG_CC
 AC_PROG_CC_STDC

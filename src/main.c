@@ -44,6 +44,7 @@
 #include <telepathy-glib/run.h>
 #include <telepathy-glib/debug.h>
 
+#include "config.h"
 #include "defines.h"
 #include "debug.h"
 #include "connection-manager.h"
@@ -271,7 +272,8 @@ main(int argc,
 #endif
     }
 
-    ret = tp_run_connection_manager (UI_ID, HAZE_VERSION, get_cm, argc, argv);
+    ret = tp_run_connection_manager (UI_ID, PACKAGE_VERSION, get_cm, argc,
+                                     argv);
 
     purple_core_quit ();
     delete_user_dir ();
