@@ -206,11 +206,12 @@ _compare_protocol_id (gpointer key,
 }
 
 static void
-get_values_foreach(gpointer key,
-                   gpointer value,
-                   gpointer data)
+get_values_foreach (gpointer key,
+                    gpointer value,
+                    gpointer data)
 {
     GList **values = data;
+
     *values = g_list_prepend(*values, value);
 }
 
