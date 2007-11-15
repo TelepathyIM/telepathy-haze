@@ -205,6 +205,26 @@ _compare_protocol_id (gpointer key,
     return (!strcmp (info->prpl_id, prpl_id));
 }
 
+static void
+get_values_foreach(gpointer key,
+                   gpointer value,
+                   gpointer data)
+{
+    GList **values = data;
+    *values = g_list_prepend(*values, value);
+}
+
+/* Equivalent to g_hash_table_get_values, which only exists in GLib >=2.14. */
+static GList *
+haze_g_hash_table_get_values (GHashTable *table)
+{
+    GList *values = NULL;
+
+    g_hash_table_foreach(table, get_values_foreach, &values);
+
+    return values;
+}
+
 static void _init_protocol_table (HazeConnectionManagerClass *klass)
 {
     GHashTable *table;
@@ -256,7 +276,7 @@ static void _init_protocol_table (HazeConnectionManagerClass *klass)
     }
 
     {
-        GList *protocols = g_hash_table_get_values (table);
+        GList *protocols = haze_g_hash_table_get_values (table);
         GList *l;
         GString *debug_string = g_string_new ("");
 
