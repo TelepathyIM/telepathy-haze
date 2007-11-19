@@ -212,7 +212,7 @@ get_values_foreach (gpointer key,
 {
     GList **values = data;
 
-    *values = g_list_prepend(*values, value);
+    *values = g_list_prepend (*values, value);
 }
 
 /* Equivalent to g_hash_table_get_values, which only exists in GLib >=2.14. */
@@ -221,7 +221,7 @@ haze_g_hash_table_get_values (GHashTable *table)
 {
     GList *values = NULL;
 
-    g_hash_table_foreach(table, get_values_foreach, &values);
+    g_hash_table_foreach (table, get_values_foreach, &values);
 
     return values;
 }
