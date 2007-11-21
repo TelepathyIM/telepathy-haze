@@ -22,6 +22,8 @@
  *
  */
 
+#include "config.h"
+
 #include <string.h>
 #include <errno.h>
 #include <signal.h>
@@ -33,18 +35,22 @@
 #include <libpurple/core.h>
 #include <libpurple/blist.h>
 #include <libpurple/version.h>
-#if PURPLE_VERSION_CHECK(2,1,1)
-/* Before 2.1.1, this include failed because dbus-types.h was not installed. */
-#include <libpurple/dbus-server.h>
-#endif
 #include <libpurple/eventloop.h>
 #include <libpurple/prefs.h>
 #include <libpurple/util.h>
 
+#ifdef HAVE_PURPLE_DBUS_UNINIT
+#  if PURPLE_VERSION_CHECK(2,1,1)
+/* Before 2.1.1, this include failed because dbus-types.h was not installed. */
+#    include <libpurple/dbus-server.h>
+#  else
+void purple_dbus_uninit(void);
+#  endif
+#endif
+
 #include <telepathy-glib/run.h>
 #include <telepathy-glib/debug.h>
 
-#include "config.h"
 #include "defines.h"
 #include "debug.h"
 #include "connection-manager.h"
@@ -166,7 +172,7 @@ init_libpurple()
 
     if (!purple_core_init(UI_ID))
         g_error ("libpurple initialization failed.  :-/");
-#if PURPLE_VERSION_CHECK(2,1,1) /* see #includes */
+#ifdef HAVE_PURPLE_DBUS_UNINIT
     /* purple_core_init () calls purple_dbus_init ().  We don't want libpurple's
      * own dbus server, so let's kill it here.  Ideally, it would never be
      * initialized in the first place, but hey.
