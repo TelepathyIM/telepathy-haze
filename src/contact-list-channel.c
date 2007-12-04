@@ -360,6 +360,8 @@ haze_contact_list_channel_dispose (GObject *object)
         tp_svc_channel_emit_closed ((TpSvcChannel *)self);
     }
 
+    g_free (priv->object_path);
+
     if (G_OBJECT_CLASS (haze_contact_list_channel_parent_class)->dispose)
         G_OBJECT_CLASS (haze_contact_list_channel_parent_class)->dispose (object);
 }
