@@ -40,12 +40,7 @@
 #include <libpurple/util.h>
 
 #ifdef HAVE_PURPLE_DBUS_UNINIT
-#  if PURPLE_VERSION_CHECK(2,1,1)
-/* Before 2.1.1, this include failed because dbus-types.h was not installed. */
-#    include <libpurple/dbus-server.h>
-#  else
-void purple_dbus_uninit(void);
-#  endif
+#include <libpurple/dbus-server.h>
 #endif
 
 #include <telepathy-glib/run.h>

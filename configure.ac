@@ -61,7 +61,7 @@ ifelse(haze_nano_version, 0, [],
 
 AC_SUBST(ERROR_CFLAGS)
 
-PKG_CHECK_MODULES(PURPLE,[purple >= 2.0.0])
+PKG_CHECK_MODULES(PURPLE,[purple >= 2.1.1])
 AC_SUBST(PURPLE_CFLAGS)
 AC_SUBST(PURPLE_LIBS)
 

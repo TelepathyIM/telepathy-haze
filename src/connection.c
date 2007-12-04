@@ -533,27 +533,16 @@ request_authorize_cb (PurpleAccount *account,
                       const char *alias,
                       const char *message,
                       gboolean on_list,
-#if PURPLE_VERSION_CHECK(2,1,1)
                       PurpleAccountRequestAuthorizationCb authorize_cb,
                       PurpleAccountRequestAuthorizationCb deny_cb,
-#else
-                      GCallback authorize_cb,
-                      GCallback deny_cb,
-#endif
                       void *user_data)
 {
     /* Woo for argument lists which are longer than the function! */
-    PurpleAccountRequestAuthorizationCb cb =
-#if PURPLE_VERSION_CHECK(2,1,1)
-        authorize_cb;
-#else
-        (PurpleAccountRequestAuthorizationCb) authorize_cb;
-#endif
 
     /* FIXME: Implement the publish list, then deal with this properly. */
     DEBUG ("[%s] Quietly authorizing presence subscription from '%s'...",
              account->username, remote_user);
-    cb (user_data);
+    authorize_cb (user_data);
     return NULL;
 }
 
