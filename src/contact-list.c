@@ -278,13 +278,13 @@ _haze_contact_list_create_channel (HazeContactList *contact_list,
     return chan;
 }
 
-static HazeContactListChannel *
-_haze_contact_list_get_channel (HazeContactList *contact_list,
-                                guint handle_type,
-                                TpHandle handle,
-                                gboolean *created)
+HazeContactListChannel *
+haze_contact_list_get_channel (HazeContactList *contact_list,
+                               guint handle_type,
+                               TpHandle handle,
+                               gboolean *created)
 {
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE(contact_list);
+    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (contact_list);
     TpBaseConnection *conn = TP_BASE_CONNECTION (priv->conn);
     TpHandleRepoIface *handle_repo =
         tp_base_connection_get_handles (conn, handle_type);
@@ -329,7 +329,7 @@ _haze_contact_list_get_group (HazeContactList *contact_list,
         NULL);
     HazeContactListChannel *group;
 
-    group = _haze_contact_list_get_channel (contact_list, TP_HANDLE_TYPE_GROUP,
+    group = haze_contact_list_get_channel (contact_list, TP_HANDLE_TYPE_GROUP,
         group_handle, created);
 
     tp_handle_unref (group_repo, group_handle);
@@ -402,7 +402,7 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
 
     add_handles = _handle_a_buddy (priv->conn, buddy);
 
-    subscribe = _haze_contact_list_get_channel (contact_list,
+    subscribe = haze_contact_list_get_channel (contact_list,
         TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_SUBSCRIBE, NULL);
 
     tp_group_mixin_change_members (G_OBJECT (subscribe), "",
@@ -453,7 +453,7 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
 
     if (last_instance)
     {
-        subscribe = _haze_contact_list_get_channel (contact_list,
+        subscribe = haze_contact_list_get_channel (contact_list,
             TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_SUBSCRIBE, NULL);
 
         tp_group_mixin_change_members (G_OBJECT (subscribe), "",
@@ -513,7 +513,7 @@ _create_initial_group(gchar *group_name,
     HazeContactListChannel *group;
     TpHandle group_handle = tp_handle_ensure (handle_repo, group_name, NULL,
         NULL);
-    group = _haze_contact_list_get_channel (contact_list, 
+    group = haze_contact_list_get_channel (contact_list,
         TP_HANDLE_TYPE_GROUP, group_handle, NULL /*created*/);
 
     tp_group_mixin_change_members (G_OBJECT (group), "", handles, NULL,
@@ -545,7 +545,7 @@ _add_initial_buddies (HazeContactList *self)
     g_slist_foreach (buddies, (GFunc) _initial_buddies_foreach, &context);
     g_slist_free (buddies);
 
-    subscribe = _haze_contact_list_get_channel (self, TP_HANDLE_TYPE_LIST,
+    subscribe = haze_contact_list_get_channel (self, TP_HANDLE_TYPE_LIST,
             HAZE_LIST_HANDLE_SUBSCRIBE, NULL /*created*/);
 
     tp_group_mixin_change_members (G_OBJECT (subscribe), "",
@@ -635,7 +635,7 @@ haze_contact_list_factory_iface_request (TpChannelFactoryIface *iface,
 
     channel_name = tp_handle_inspect (handle_repo, handle);
     DEBUG ("grabbing channel '%s'...", channel_name);
-    chan = _haze_contact_list_get_channel (self, handle_type, handle,
+    chan = haze_contact_list_get_channel (self, handle_type, handle,
         &created);
 
     if (chan)

@@ -22,6 +22,8 @@
 
 #include <glib-object.h>
 
+#include "contact-list-channel.h"
+
 G_BEGIN_DECLS
 
 typedef struct _HazeContactList HazeContactList;
@@ -56,5 +58,8 @@ GType haze_contact_list_get_type (void);
                               HazeContactListClass))
 
 G_END_DECLS
+
+HazeContactListChannel *haze_contact_list_get_channel (HazeContactList *self,
+    guint handle_type, TpHandle handle, gboolean *created);
 
 #endif /* #ifndef __HAZE_CONTACT_LIST_H__*/
