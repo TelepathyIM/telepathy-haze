@@ -290,6 +290,10 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
     }
 
     escaped = g_markup_escape_text (message, -1);
+    /* This is a workaround for prpl-yahoo, which in libpurple <= 2.3.1 could
+     * not deal with &apos; and would send it literally.
+     * TODO: When we depend on new enough libpurple, remove this workaround.
+     */
     reapostrophised = purple_strreplace (escaped, "&apos;", "'");
 
     if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY) {
