@@ -267,7 +267,7 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
     HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (self);
     GError *error = NULL;
     PurpleMessageFlags flags = 0;
-    char *message, *escaped;
+    char *message, *escaped, *reapostrophised;
 
     if (type >= NUM_TP_CHANNEL_TEXT_MESSAGE_TYPES) {
         DEBUG ("invalid message type %u", type);
@@ -290,14 +290,16 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
     }
 
     escaped = g_markup_escape_text (message, -1);
+    reapostrophised = purple_strreplace (escaped, "&apos;", "'");
 
     if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY) {
         flags |= PURPLE_MESSAGE_AUTO_RESP;
     }
 
-    purple_conv_im_send_with_flags (PURPLE_CONV_IM (priv->conv), escaped,
-                                    flags);
+    purple_conv_im_send_with_flags (PURPLE_CONV_IM (priv->conv),
+        reapostrophised, flags);
 
+    g_free (reapostrophised);
     g_free (escaped);
     g_free (message);
 
