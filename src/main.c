@@ -43,6 +43,30 @@
 #include <libpurple/dbus-server.h>
 #endif
 
+#ifndef HAVE_PURPLE_VERSION_GET
+extern const guint purple_major_version;
+extern const guint purple_minor_version;
+extern const guint purple_micro_version;
+
+guint
+purple_version_get_major (void)
+{
+    return purple_major_version;
+}
+
+guint
+purple_version_get_minor (void)
+{
+    return purple_minor_version;
+}
+
+guint
+purple_version_get_micro (void)
+{
+    return purple_micro_version;
+}
+#endif
+
 #include <telepathy-glib/run.h>
 #include <telepathy-glib/debug.h>
 
@@ -179,6 +203,11 @@ init_libpurple()
     purple_blist_load();
 
     purple_prefs_load();
+
+    DEBUG ("libpurple %d.%d.%d loaded (compiled against %d.%d.%d)",
+        purple_version_get_major (), purple_version_get_minor (),
+        purple_version_get_micro (), PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION,
+        PURPLE_MICRO_VERSION);
 }
 
 static TpBaseConnectionManager *
