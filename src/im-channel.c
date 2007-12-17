@@ -267,7 +267,7 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
     HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (self);
     GError *error = NULL;
     PurpleMessageFlags flags = 0;
-    char *message, *escaped, *reapostrophised;
+    char *message, *escaped, *line_broken, *reapostrophised;
 
     if (type >= NUM_TP_CHANNEL_TEXT_MESSAGE_TYPES) {
         DEBUG ("invalid message type %u", type);
@@ -290,11 +290,13 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
     }
 
     escaped = g_markup_escape_text (message, -1);
+    /* avoid line breaks being swallowed! */
+    line_broken = purple_strreplace (escaped, "\n", "<br>");
     /* This is a workaround for prpl-yahoo, which in libpurple <= 2.3.1 could
      * not deal with &apos; and would send it literally.
      * TODO: When we depend on new enough libpurple, remove this workaround.
      */
-    reapostrophised = purple_strreplace (escaped, "&apos;", "'");
+    reapostrophised = purple_strreplace (line_broken, "&apos;", "'");
 
     if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY) {
         flags |= PURPLE_MESSAGE_AUTO_RESP;
@@ -304,6 +306,7 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
         reapostrophised, flags);
 
     g_free (reapostrophised);
+    g_free (line_broken);
     g_free (escaped);
     g_free (message);
 

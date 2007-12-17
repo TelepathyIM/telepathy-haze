@@ -419,11 +419,16 @@ haze_write_im (PurpleConversation *conv,
         ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
     TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
     HazeIMChannel *chan = NULL;
-    char *message;
+    char *line_broken, *message;
 
     HazeConversationUiData *ui_data = PURPLE_CONV_GET_HAZE_UI_DATA (conv);
 
-    message = purple_markup_strip_html (xhtml_message);
+    /* Replaces newline characters with <br>, which then get turned back into
+     * newlines by purple_markup_strip_html (which replaces "\n" with " ")...
+     */
+    line_broken = purple_strdup_withhtml (xhtml_message);
+    message = purple_markup_strip_html (line_broken);
+    g_free (line_broken);
 
     if (flags & PURPLE_MESSAGE_AUTO_RESP)
         type = TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY;
