@@ -29,7 +29,9 @@ telepathy_haze_SOURCES = main.c \
                          im-channel.h \
                          im-channel.c \
                          im-channel-factory.c \
-                         im-channel-factory.h
+                         im-channel-factory.h \
+                         request.c \
+                         request.h
 
 AM_CFLAGS = \
 	$(ERROR_CFLAGS) \

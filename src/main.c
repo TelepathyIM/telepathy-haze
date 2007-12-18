@@ -73,6 +73,7 @@ purple_version_get_micro (void)
 #include "defines.h"
 #include "debug.h"
 #include "connection-manager.h"
+#include "request.h"
 
 /* Copied verbatim from nullclient, modulo changing whitespace. */
 #define PURPLE_GLIB_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
@@ -156,6 +157,7 @@ haze_ui_init ()
     purple_accounts_set_ui_ops (haze_get_account_ui_ops ());
     purple_conversations_set_ui_ops (haze_get_conv_ui_ops ());
     purple_connections_set_ui_ops (haze_get_connection_ui_ops ());
+    purple_request_set_ui_ops (haze_request_get_ui_ops ());
 }
 
 static PurpleCoreUiOps haze_core_uiops = 
