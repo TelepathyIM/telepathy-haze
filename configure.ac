@@ -84,11 +84,6 @@ AC_CHECK_LIB(purple, purple_dbus_uninit,
     [Define if purple_dbus_uninit is present in libpurple]) ],
   [], [$PURPLE_LIBS])
 
-AC_CHECK_LIB(purple, purple_version_get_major,
-  [ AC_DEFINE(HAVE_PURPLE_VERSION_GET, [],
-    [Define if purple_version_get_major and pals are present in libpurple]) ],
-  [], [$PURPLE_LIBS])
-
 #AS_AC_EXPAND(DATADIR, $datadir)
 #DBUS_SERVICES_DIR="$DATADIR/dbus-1/services"
 #AC_SUBST(DBUS_SERVICES_DIR)
