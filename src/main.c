@@ -55,6 +55,7 @@ extern const guint purple_micro_version;
 #include "defines.h"
 #include "debug.h"
 #include "connection-manager.h"
+#include "notify.h"
 #include "request.h"
 
 /* Copied verbatim from nullclient, modulo changing whitespace. */
@@ -142,6 +143,7 @@ haze_ui_init ()
 #ifdef ENABLE_LEAKY_REQUEST_STUBS
     purple_request_set_ui_ops (haze_request_get_ui_ops ());
 #endif
+    purple_notify_set_ui_ops (haze_notify_get_ui_ops ());
 }
 
 static PurpleCoreUiOps haze_core_uiops = 
