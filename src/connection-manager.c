@@ -110,6 +110,9 @@ struct _protocol_info_foreach_data
     guint index;
 };
 
+/* Constructs a parameter specification from the prpl's options list, renaming
+ * protocols and parameters according to known_protocol_info.
+ */
 static TpCMParamSpec *
 _build_paramspecs (HazeProtocolInfo *hpi)
 {
@@ -127,7 +130,12 @@ _build_paramspecs (HazeProtocolInfo *hpi)
     GArray *paramspecs = g_array_new (TRUE, TRUE, sizeof (TpCMParamSpec));
     GList *opts;
 
-    /* Mad "deserializing" of "foo:bar,baz:badger" to a hash table */
+    /* Deserialize the hpi->parameter_map string to a hash table;
+     *     "libpurple_name1:telepathy-name1,libpurple_name2:telepathy-name2"
+     * becomes
+     *     "libpurple_name1" => "telepathy-name1"
+     *     "libpurple_name2" => "telepathy-name2"
+     */
     GHashTable *parameter_map = g_hash_table_new (g_str_hash, g_str_equal);
     gchar **map_chunks = g_strsplit_set (hpi->parameter_map, ",:", 0);
     int i;
@@ -137,9 +145,7 @@ _build_paramspecs (HazeProtocolInfo *hpi)
         g_hash_table_insert (parameter_map, map_chunks[i], map_chunks[i+1]);
     }
 
-    /* TODO: Some protocols shouldn't actually have account parameters (I think
-     *       local-xmpp is one example)
-     */
+    /* TODO: local-xmpp shouldn't have an account parameter */
     g_array_append_val (paramspecs, account_spec);
 
     /* Password parameter: */
@@ -155,8 +161,7 @@ _build_paramspecs (HazeProtocolInfo *hpi)
         PurpleAccountOption *option = (PurpleAccountOption *)opts->data;
 
         gchar *name = g_hash_table_lookup (parameter_map, option->pref_name);
-        /* TODO: These are never free'd.  They'd only be free'd when the
-         *       class is unloaded.  Is there any point in freeing them?
+        /* These strings are never free'd, but need to last until exit anyway.
          */
         paramspec.name = g_strdup (name ? name : option->pref_name);
         paramspec.setter_data = option->pref_name;
