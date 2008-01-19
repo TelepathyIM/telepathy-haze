@@ -98,7 +98,7 @@ _haze_cm_set_param (const TpCMParamSpec *paramspec,
 
     g_value_copy (value, value_copy);
 
-    g_debug ("setting parameter %s (telepathy name %s)",
+    DEBUG ("setting parameter %s (telepathy name %s)",
         prpl_param_name, paramspec->name);
 
     g_hash_table_insert (params, prpl_param_name, value_copy);
