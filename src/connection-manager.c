@@ -165,36 +165,50 @@ _build_paramspecs (HazeProtocolInfo *hpi)
          */
         paramspec.name = g_strdup (name ? name : option->pref_name);
         paramspec.setter_data = option->pref_name;
+        /* TODO: does libpurple ever require a parameter besides the username
+         *       and possibly password?
+         */
+        paramspec.flags = 0;
 
         switch (purple_account_option_get_type (option))
         {
             case PURPLE_PREF_BOOLEAN:
                 paramspec.dtype = DBUS_TYPE_BOOLEAN_AS_STRING;
                 paramspec.gtype = G_TYPE_BOOLEAN;
+                paramspec.flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
                 paramspec.def = GINT_TO_POINTER (
                     purple_account_option_get_default_bool (option));
                 break;
             case PURPLE_PREF_INT:
                 paramspec.dtype = DBUS_TYPE_INT32_AS_STRING;
                 paramspec.gtype = G_TYPE_INT;
+                paramspec.flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
                 paramspec.def = GINT_TO_POINTER (
                     purple_account_option_get_default_int (option));
                 break;
             case PURPLE_PREF_STRING:
+            {
+                const gchar *def =
+                    purple_account_option_get_default_string (option);
+
                 paramspec.dtype = DBUS_TYPE_STRING_AS_STRING;
                 paramspec.gtype = G_TYPE_STRING;
-                paramspec.def =
-                    purple_account_option_get_default_string (option);
+                if (def && *def)
+                {
+                    paramspec.def = g_strdup (def);
+                    paramspec.flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
+                }
+                else
+                {
+                    paramspec.def = NULL;
+                }
                 break;
+            }
             default:
                 g_warning ("account option %s has unknown type %u; ignoring",
                     option->pref_name, purple_account_option_get_type (option));
                 continue;
         }
-        /* TODO: does libpurple ever require a parameter besides the username
-         *       and possibly password?
-         */
-        paramspec.flags = 0;
         g_array_append_val (paramspecs, paramspec);
     }
 
