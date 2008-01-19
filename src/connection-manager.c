@@ -34,20 +34,39 @@ G_DEFINE_TYPE(HazeConnectionManager,
     haze_connection_manager,
     TP_TYPE_BASE_CONNECTION_MANAGER)
 
-/** These are protocols for which stripping off the "prpl-" prefix is not
- *  sufficient, or for which special munging has to be done.
+/* For some protocols, removing the "prpl-" prefix from its name in libpurple
+ * doesn't give the right name for Telepathy.  Other protocols need some
+ * parameters renaming to match well-known names in the spec, or to have
+ * hyphens rather than underscores for consistency.
  */
 static HazeProtocolInfo known_protocol_info[] = {
+    { "aim",        "prpl-aim",         NULL,
+        "always_use_rv_proxy:always-use-rv-proxy" },
     { "gadugadu",   "prpl-gg",          NULL, "" },
     { "groupwise",  "prpl-novell",      NULL, "" },
     { "irc",        "prpl-irc",         NULL, "encoding:charset" },
-    { "icq",        "prpl-icq",         NULL, "encoding:charset" },
-    { "sametime",   "prpl-meanwhile",   NULL, "" },
+    { "icq",        "prpl-icq",         NULL,
+        "encoding:charset,always_use_rv_proxy:always-use-rv-proxy" },
+    { "jabber",     "prpl-jabber",      NULL,
+        "connect_server:server,old_ssl:old-ssl,require_tls:require-encryption,"
+        "auth_plain_in_clear:auth-plain-in-clear,ft_proxies:ft-proxies" },
     { "local-xmpp", "prpl-bonjour",     NULL,
         "first:first-name,last:last-name" },
-    { "jabber",     "prpl-jabber",      NULL, "connect_server:server" },
-    { "yahoo",      "prpl-yahoo",       NULL, "local_charset:charset" },
-    { "zephyr",     "prpl-zephyr",      NULL, "encoding:charset" },
+    { "msn",        "prpl-msn",         NULL,
+        "http_method:http-method,http_method_server:http-method-server,"
+        "custom_smileys:custom-smileys" },
+    { "qq",         "prpl-qq",          NULL, "use_tcp:use-tcp" },
+    { "sametime",   "prpl-meanwhile",   NULL,
+        "force_login:force-login,fake_client_id:fake-client-id" },
+    { "yahoo",      "prpl-yahoo",       NULL,
+        "local_charset:charset,xfer_host:xfer-host,xferjp_host:xferjp-host,"
+        "xfer_port:xfer-port,room_list_locale:room-list-locale,"
+        "ignore_invites:ignore-invites" },
+    { "zephyr",     "prpl-zephyr",      NULL,
+        "encoding:charset,use_tzc:use-tzc,tzc_command:tzc-command,"
+        "write_anyone:write-anyone,write_zsubs:write-zsubs,"
+        "read_anyone:read-anyone,read_zsubs:read-zsubs,"
+        "exposure_level:exposure-level" },
     { NULL,         NULL,               NULL, "" }
 };
 

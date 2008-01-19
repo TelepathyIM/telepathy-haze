@@ -7,7 +7,7 @@ param-account=s required
 param-password=s required
 param-server=s
 param-port=i
-param-always_use_rv_proxy=b
+param-always-use-rv-proxy=b
 
 [Protocol gadugadu]
 param-account=s required
@@ -25,7 +25,7 @@ param-account=s required
 param-password=s required
 param-server=s
 param-port=i
-param-always_use_rv_proxy=b
+param-always-use-rv-proxy=b
 param-charset=s
 
 [Protocol irc]
@@ -40,10 +40,12 @@ param-ssl=b
 [Protocol jabber]
 param-account=s required
 param-password=s required
-param-old_ssl=b
-param-auth_plain_in_clear=b
+param-require-encryption=b
+param-old-ssl=b
+param-auth-plain-in-clear=b
 param-port=i
 param-server=s
+param-ft-proxies=s
 
 [Protocol local-xmpp]
 param-account=s required
@@ -58,8 +60,9 @@ param-account=s required
 param-password=s required
 param-server=s
 param-port=i
-param-http_method=b
-param-custom_smileys=b
+param-http-method=b
+param-http-method-server=s
+param-custom-smileys=b
 
 [Protocol myspace]
 param-account=s required
@@ -70,7 +73,7 @@ param-port=i
 [Protocol qq]
 param-account=s required
 param-password=s required
-param-use_tcp=b
+param-use-tcp=b
 param-server=s
 param-port=s
 
@@ -79,8 +82,8 @@ param-account=s required
 param-password=s required
 param-server=s
 param-port=i
-param-force_login=b
-param-fake_client_id=b
+param-force-login=b
+param-fake-client-id=b
 
 [Protocol simple]
 param-account=s required
@@ -106,22 +109,22 @@ param-yahoojp=b
 param-server=s
 param-serverjp=s
 param-port=i
-param-xfer_host=s
-param-xferjp_host=s
-param-xfer_port=i
-param-room_list_locale=s
-param-ignore_invites=b
+param-xfer-host=s
+param-xferjp-host=s
+param-xfer-port=i
+param-room-list-locale=s
+param-ignore-invites=b
 param-charset=s
 
 [Protocol zephyr]
 param-account=s required
-param-use_tzc=b
-param-tzc_command=s
-param-write_anyone=b
-param-write_zsubs=b
-param-read_anyone=b
-param-read_zsubs=b
+param-use-tzc=b
+param-tzc-command=s
+param-write-anyone=b
+param-write-zsubs=b
+param-read-anyone=b
+param-read-zsubs=b
 param-realm=s
-param-exposure_level=s
+param-exposure-level=s
 param-charset=s
 
