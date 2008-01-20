@@ -124,8 +124,6 @@ _build_paramspecs (HazeProtocolInfo *hpi)
         { "password", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
           TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL,
           (gpointer) "password", NULL };
-    TpCMParamSpec paramspec =
-        { NULL, NULL, 0, 0, NULL, 0, NULL, NULL, NULL, NULL};
 
     GArray *paramspecs = g_array_new (TRUE, TRUE, sizeof (TpCMParamSpec));
     GList *opts;
@@ -159,6 +157,8 @@ _build_paramspecs (HazeProtocolInfo *hpi)
     for (opts = hpi->prpl_info->protocol_options; opts; opts = opts->next)
     {
         PurpleAccountOption *option = (PurpleAccountOption *)opts->data;
+        TpCMParamSpec paramspec =
+            { NULL, NULL, 0, 0, NULL, 0, NULL, NULL, NULL, NULL};
 
         gchar *name = g_hash_table_lookup (parameter_map, option->pref_name);
         /* These strings are never free'd, but need to last until exit anyway.
