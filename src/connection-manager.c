@@ -171,10 +171,6 @@ _translate_protocol_option (PurpleAccountOption *option,
                 paramspec->def = g_strdup (def);
                 paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
             }
-            else
-            {
-                paramspec->def = NULL;
-            }
             break;
         }
         default:
