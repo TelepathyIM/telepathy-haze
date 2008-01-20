@@ -115,17 +115,19 @@ _translate_protocol_option (PurpleAccountOption *option,
                             HazeProtocolInfo *hpi,
                             GHashTable *parameter_map)
 {
-    gchar *name = g_hash_table_lookup (parameter_map, option->pref_name);
+    const char *pref_name = purple_account_option_get_setting (option);
+    PurplePrefType pref_type = purple_account_option_get_type (option);
+    gchar *name = g_hash_table_lookup (parameter_map, pref_name);
     /* These strings are never free'd, but need to last until exit anyway.
      */
-    paramspec->name = g_strdup (name ? name : option->pref_name);
+    paramspec->name = g_strdup (name ? name : pref_name);
     paramspec->setter_data = option->pref_name;
     /* TODO: does libpurple ever require a parameter besides the username
      *       and possibly password?
      */
     paramspec->flags = 0;
 
-    switch (purple_account_option_get_type (option))
+    switch (pref_type)
     {
         case PURPLE_PREF_BOOLEAN:
             paramspec->dtype = DBUS_TYPE_BOOLEAN_AS_STRING;
@@ -177,7 +179,7 @@ _translate_protocol_option (PurpleAccountOption *option,
         }
         default:
             g_warning ("account option %s has unknown type %u; ignoring",
-                option->pref_name, purple_account_option_get_type (option));
+                pref_name, pref_type);
             return FALSE;
     }
 
