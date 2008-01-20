@@ -189,13 +189,26 @@ _build_paramspecs (HazeProtocolInfo *hpi)
             case PURPLE_PREF_STRING:
             {
                 const gchar *def;
-                if (!strcmp (paramspec.name, "charset"))
+
+                paramspec.dtype = DBUS_TYPE_STRING_AS_STRING;
+                paramspec.gtype = G_TYPE_STRING;
+
+                /* prpl-bonjour chooses the defaults for these parameters with
+                 * getpwuid(3); but for haze's purposes that's the UI's job.
+                 */
+                if (g_str_equal (hpi->prpl_id, "prpl-bonjour")
+                    && (g_str_equal (paramspec.name, "first-name")
+                        || g_str_equal (paramspec.name, "last-name")))
+                {
+                    paramspec.flags |= TP_CONN_MGR_PARAM_FLAG_REQUIRED;
+                    break;
+                }
+
+                if (g_str_equal (paramspec.name, "charset"))
                     def = "UTF-8";
                 else
                     def = purple_account_option_get_default_string (option);
 
-                paramspec.dtype = DBUS_TYPE_STRING_AS_STRING;
-                paramspec.gtype = G_TYPE_STRING;
                 if (def && *def)
                 {
                     paramspec.def = g_strdup (def);

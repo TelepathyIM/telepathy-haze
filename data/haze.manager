@@ -66,13 +66,11 @@ default-ft-proxies=proxy.jabber.org:7777
 
 [Protocol local-xmpp]
 param-account=s required
-param-first-name=s
-param-last-name=s
+param-first-name=s required
+param-last-name=s required
 param-email=s
 param-AIM=s
 param-jid=s
-default-first-name=Will
-default-last-name=Thompson
 
 [Protocol msn]
 param-account=s required
