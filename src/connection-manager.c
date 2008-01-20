@@ -104,12 +104,6 @@ _haze_cm_set_param (const TpCMParamSpec *paramspec,
     g_hash_table_insert (params, prpl_param_name, value_copy);
 }
 
-struct _protocol_info_foreach_data
-{
-    TpCMProtocolSpec *protocols;
-    guint index;
-};
-
 /* Constructs a parameter specification from the prpl's options list, renaming
  * protocols and parameters according to known_protocol_info.
  */
@@ -233,6 +227,12 @@ _build_paramspecs (HazeProtocolInfo *hpi)
 
     return (TpCMParamSpec *) g_array_free (paramspecs, FALSE);
 }
+
+struct _protocol_info_foreach_data
+{
+    TpCMProtocolSpec *protocols;
+    guint index;
+};
 
 static void
 _protocol_info_foreach (gpointer key,
