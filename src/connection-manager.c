@@ -104,6 +104,86 @@ _haze_cm_set_param (const TpCMParamSpec *paramspec,
     g_hash_table_insert (params, prpl_param_name, value_copy);
 }
 
+/* Populates a TpCMParamSpec from a PurpleAccountOption, possibly renaming the
+ * parameter as specified in parameter_map.  paramspec is assumed to be zeroed out.
+ * Returns TRUE on success, and FALSE if paramspec could not be populated (and
+ * thus should not be used).
+ */
+static gboolean
+_translate_protocol_option (PurpleAccountOption *option,
+                            TpCMParamSpec *paramspec,
+                            HazeProtocolInfo *hpi,
+                            GHashTable *parameter_map)
+{
+    gchar *name = g_hash_table_lookup (parameter_map, option->pref_name);
+    /* These strings are never free'd, but need to last until exit anyway.
+     */
+    paramspec->name = g_strdup (name ? name : option->pref_name);
+    paramspec->setter_data = option->pref_name;
+    /* TODO: does libpurple ever require a parameter besides the username
+     *       and possibly password?
+     */
+    paramspec->flags = 0;
+
+    switch (purple_account_option_get_type (option))
+    {
+        case PURPLE_PREF_BOOLEAN:
+            paramspec->dtype = DBUS_TYPE_BOOLEAN_AS_STRING;
+            paramspec->gtype = G_TYPE_BOOLEAN;
+            paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
+            paramspec->def = GINT_TO_POINTER (
+                purple_account_option_get_default_bool (option));
+            break;
+        case PURPLE_PREF_INT:
+            paramspec->dtype = DBUS_TYPE_INT32_AS_STRING;
+            paramspec->gtype = G_TYPE_INT;
+            paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
+            paramspec->def = GINT_TO_POINTER (
+                purple_account_option_get_default_int (option));
+            break;
+        case PURPLE_PREF_STRING:
+        {
+            const gchar *def;
+
+            paramspec->dtype = DBUS_TYPE_STRING_AS_STRING;
+            paramspec->gtype = G_TYPE_STRING;
+
+            /* prpl-bonjour chooses the defaults for these parameters with
+             * getpwuid(3); but for haze's purposes that's the UI's job.
+             */
+            if (g_str_equal (hpi->prpl_id, "prpl-bonjour")
+                && (g_str_equal (paramspec->name, "first-name")
+                    || g_str_equal (paramspec->name, "last-name")))
+            {
+                paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_REQUIRED;
+                break;
+            }
+
+            if (g_str_equal (paramspec->name, "charset"))
+                def = "UTF-8";
+            else
+                def = purple_account_option_get_default_string (option);
+
+            if (def && *def)
+            {
+                paramspec->def = g_strdup (def);
+                paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
+            }
+            else
+            {
+                paramspec->def = NULL;
+            }
+            break;
+        }
+        default:
+            g_warning ("account option %s has unknown type %u; ignoring",
+                option->pref_name, purple_account_option_get_type (option));
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
 /* Constructs a parameter specification from the prpl's options list, renaming
  * protocols and parameters according to known_protocol_info.
  */
@@ -154,72 +234,8 @@ _build_paramspecs (HazeProtocolInfo *hpi)
         TpCMParamSpec paramspec =
             { NULL, NULL, 0, 0, NULL, 0, NULL, NULL, NULL, NULL};
 
-        gchar *name = g_hash_table_lookup (parameter_map, option->pref_name);
-        /* These strings are never free'd, but need to last until exit anyway.
-         */
-        paramspec.name = g_strdup (name ? name : option->pref_name);
-        paramspec.setter_data = option->pref_name;
-        /* TODO: does libpurple ever require a parameter besides the username
-         *       and possibly password?
-         */
-        paramspec.flags = 0;
-
-        switch (purple_account_option_get_type (option))
-        {
-            case PURPLE_PREF_BOOLEAN:
-                paramspec.dtype = DBUS_TYPE_BOOLEAN_AS_STRING;
-                paramspec.gtype = G_TYPE_BOOLEAN;
-                paramspec.flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
-                paramspec.def = GINT_TO_POINTER (
-                    purple_account_option_get_default_bool (option));
-                break;
-            case PURPLE_PREF_INT:
-                paramspec.dtype = DBUS_TYPE_INT32_AS_STRING;
-                paramspec.gtype = G_TYPE_INT;
-                paramspec.flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
-                paramspec.def = GINT_TO_POINTER (
-                    purple_account_option_get_default_int (option));
-                break;
-            case PURPLE_PREF_STRING:
-            {
-                const gchar *def;
-
-                paramspec.dtype = DBUS_TYPE_STRING_AS_STRING;
-                paramspec.gtype = G_TYPE_STRING;
-
-                /* prpl-bonjour chooses the defaults for these parameters with
-                 * getpwuid(3); but for haze's purposes that's the UI's job.
-                 */
-                if (g_str_equal (hpi->prpl_id, "prpl-bonjour")
-                    && (g_str_equal (paramspec.name, "first-name")
-                        || g_str_equal (paramspec.name, "last-name")))
-                {
-                    paramspec.flags |= TP_CONN_MGR_PARAM_FLAG_REQUIRED;
-                    break;
-                }
-
-                if (g_str_equal (paramspec.name, "charset"))
-                    def = "UTF-8";
-                else
-                    def = purple_account_option_get_default_string (option);
-
-                if (def && *def)
-                {
-                    paramspec.def = g_strdup (def);
-                    paramspec.flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
-                }
-                else
-                {
-                    paramspec.def = NULL;
-                }
-                break;
-            }
-            default:
-                g_warning ("account option %s has unknown type %u; ignoring",
-                    option->pref_name, purple_account_option_get_type (option));
-                continue;
-        }
-        g_array_append_val (paramspecs, paramspec);
+        if (_translate_protocol_option (option, &paramspec, hpi, parameter_map))
+            g_array_append_val (paramspecs, paramspec);
     }
 
     g_hash_table_destroy (parameter_map);
