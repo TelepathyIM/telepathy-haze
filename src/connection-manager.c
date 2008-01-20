@@ -188,8 +188,11 @@ _build_paramspecs (HazeProtocolInfo *hpi)
                 break;
             case PURPLE_PREF_STRING:
             {
-                const gchar *def =
-                    purple_account_option_get_default_string (option);
+                const gchar *def;
+                if (!strcmp (paramspec.name, "charset"))
+                    def = "UTF-8";
+                else
+                    def = purple_account_option_get_default_string (option);
 
                 paramspec.dtype = DBUS_TYPE_STRING_AS_STRING;
                 paramspec.gtype = G_TYPE_STRING;

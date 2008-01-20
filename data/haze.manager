@@ -35,7 +35,7 @@ param-charset=s
 default-server=login.messaging.aol.com
 default-port=5190
 default-always-use-rv-proxy=false
-default-charset=ISO-8859-1
+default-charset=UTF-8
 
 [Protocol irc]
 param-account=s required
@@ -160,7 +160,7 @@ default-xferjp-host=filetransfer.msg.yahoo.co.jp
 default-xfer-port=80
 default-room-list-locale=us
 default-ignore-invites=false
-default-charset=ISO-8859-1
+default-charset=UTF-8
 
 [Protocol zephyr]
 param-account=s required
@@ -180,5 +180,5 @@ default-write-zsubs=false
 default-read-anyone=true
 default-read-zsubs=true
 default-exposure-level=REALM-VISIBLE
-default-charset=ISO-8859-1
+default-charset=UTF-8
 
