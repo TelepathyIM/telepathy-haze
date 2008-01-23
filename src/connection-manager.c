@@ -295,6 +295,21 @@ get_protocols (HazeConnectionManagerClass *klass)
     qsort (protocols, n_protocols, sizeof (TpCMProtocolSpec),
         _compare_protocol_names);
 
+    {
+        GString *debug_string = g_string_new ("");
+        TpCMProtocolSpec *p = protocols;
+        while (p->name != NULL)
+        {
+            g_string_append (debug_string, p->name);
+            p += 1;
+            if (p->name != NULL)
+                g_string_append (debug_string, ", ");
+        }
+
+        DEBUG ("Found protocols %s", debug_string->str);
+        g_string_free (debug_string, TRUE);
+    }
+
     return protocols;
 }
 
@@ -375,27 +390,6 @@ _compare_protocol_id (gpointer key,
     return (!strcmp (info->prpl_id, prpl_id));
 }
 
-static void
-get_values_foreach (gpointer key,
-                    gpointer value,
-                    gpointer data)
-{
-    GList **values = data;
-
-    *values = g_list_prepend (*values, value);
-}
-
-/* Equivalent to g_hash_table_get_values, which only exists in GLib >=2.14. */
-static GList *
-haze_g_hash_table_get_values (GHashTable *table)
-{
-    GList *values = NULL;
-
-    g_hash_table_foreach (table, get_values_foreach, &values);
-
-    return values;
-}
-
 static void _init_protocol_table (HazeConnectionManagerClass *klass)
 {
     GHashTable *table;
@@ -446,25 +440,6 @@ static void _init_protocol_table (HazeConnectionManagerClass *klass)
         info->parameter_map = "";
 
         g_hash_table_insert (table, info->tp_protocol_name, info);
-    }
-
-    {
-        GList *protocols = haze_g_hash_table_get_values (table);
-        GList *l;
-        GString *debug_string = g_string_new ("");
-
-        for (l = protocols; l; l = l->next)
-        {
-            info = l->data;
-            g_string_append (debug_string, info->tp_protocol_name);
-            if (l->next)
-                g_string_append (debug_string, ", ");
-        }
-
-        DEBUG ("Found protocols %s", debug_string->str);
-
-        g_list_free (protocols);
-        g_string_free (debug_string, TRUE);
     }
 
     klass->protocol_info_table = table;
