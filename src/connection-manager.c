@@ -267,6 +267,16 @@ _protocol_info_foreach (gpointer key,
     (data->index)++;
 }
 
+static int
+_compare_protocol_names(gconstpointer a,
+                        gconstpointer b)
+{
+    const TpCMProtocolSpec *protocol_a = a;
+    const TpCMProtocolSpec *protocol_b = b;
+
+    return strcmp(protocol_a->name, protocol_b->name);
+}
+
 static TpCMProtocolSpec *
 get_protocols (HazeConnectionManagerClass *klass)
 {
@@ -281,6 +291,9 @@ get_protocols (HazeConnectionManagerClass *klass)
 
     g_hash_table_foreach (klass->protocol_info_table, _protocol_info_foreach,
         &foreach_data);
+
+    qsort (protocols, n_protocols, sizeof (TpCMProtocolSpec),
+        _compare_protocol_names);
 
     return protocols;
 }
