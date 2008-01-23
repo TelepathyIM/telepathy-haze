@@ -98,6 +98,8 @@ _list_add_member_cb (HazeContactListChannel *chan,
             purple_account_add_buddy(buddy->account, buddy);
 
             return TRUE; /* FIXME: How am I meant to know if it failed? */
+        case HAZE_LIST_HANDLE_PUBLISH:
+            // XXX
         default:
             /* TODO: more list types */
             g_assert_not_reached ();
@@ -201,6 +203,8 @@ _list_remove_member_cb (HazeContactListChannel *chan,
             g_slist_free (buddies);
 
             return TRUE;
+        case HAZE_LIST_HANDLE_PUBLISH:
+            // XXX
         default:
             /* TODO: More list types */
             g_assert_not_reached ();
@@ -330,6 +334,9 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
                             TP_CHANNEL_GROUP_FLAG_CAN_REMOVE |
                             TP_CHANNEL_GROUP_FLAG_CAN_RESCIND,
                             0);
+                    break;
+                case HAZE_LIST_HANDLE_PUBLISH:
+                    /* No flags yet! */
                     break;
                 /* TODO: More magic lists go here */
                 default:
