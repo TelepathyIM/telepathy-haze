@@ -1,3 +1,10 @@
+telepathy-haze 0.2.0 – "I Remember Piano Lessons" (2008-02-07)
+==============================================================
+
+ * Protocols now present the correct parameters, with appropriate
+   defaults, rather than always taking account, password and server.
+ * Send apostrophes correctly on Yahoo! Messenger.
+
 telepathy-haze 0.1.4 – "Watch That Pinkie" (2007-11-21)
 =======================================================
 
