@@ -104,6 +104,32 @@ _haze_cm_set_param (const TpCMParamSpec *paramspec,
     g_hash_table_insert (params, prpl_param_name, value_copy);
 }
 
+static gboolean
+_param_filter_no_blanks (const TpCMParamSpec *paramspec,
+                         GValue *value,
+                         GError **error)
+{
+    const gchar *str = g_value_get_string (value);
+
+    if (*str == '\0')
+    {
+        g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+            "Account parameter '%s' must not be empty",
+            paramspec->name);
+        return FALSE;
+    }
+
+    if (strstr (str, " ") != NULL)
+    {
+        g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+            "Account parameter '%s' may not contain spaces",
+            paramspec->name);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 /* Populates a TpCMParamSpec from a PurpleAccountOption, possibly renaming the
  * parameter as specified in parameter_map.  paramspec is assumed to be zeroed out.
  * Returns TRUE on success, and FALSE if paramspec could not be populated (and
@@ -178,6 +204,9 @@ _translate_protocol_option (PurpleAccountOption *option,
                 pref_name, pref_type);
             return FALSE;
     }
+
+    if (g_str_equal (paramspec->name, "server"))
+        paramspec->filter = _param_filter_no_blanks;
 
     return TRUE;
 }
