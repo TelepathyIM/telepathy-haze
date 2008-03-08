@@ -552,36 +552,13 @@ haze_connection_init (HazeConnection *self)
     haze_connection_presence_init (self);
 }
 
-/* Without the ifdef check, this compiles with warnings.  Except I want
- * -Werror, so...
- */
-static void *
-request_authorize_cb (PurpleAccount *account,
-                      const char *remote_user,
-                      const char *id,
-                      const char *alias,
-                      const char *message,
-                      gboolean on_list,
-                      PurpleAccountRequestAuthorizationCb authorize_cb,
-                      PurpleAccountRequestAuthorizationCb deny_cb,
-                      void *user_data)
-{
-    /* Woo for argument lists which are longer than the function! */
-
-    /* FIXME: Implement the publish list, then deal with this properly. */
-    DEBUG ("[%s] Quietly authorizing presence subscription from '%s'...",
-             account->username, remote_user);
-    authorize_cb (user_data);
-    return NULL;
-}
-
 static PurpleAccountUiOps
 account_ui_ops =
 {
     NULL,                                            /* notify_added */
     haze_connection_presence_account_status_changed, /* status_changed */
     NULL,                                            /* request_add */
-    request_authorize_cb,                            /* request_authorize */
+    NULL,                                            /* request_authorize */
     NULL,                                            /* close_account_request */
 
     NULL, /* purple_reserved1 */
