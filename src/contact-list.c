@@ -469,12 +469,23 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
     tp_handle_set_destroy (rem_handles);
 }
 
+
+/* Objects needed or populated while iterating across the purple buddy list at
+ * login.
+ */
 typedef struct _HandleContext {
     TpHandleRepoIface *contact_repo;
     TpHandleSet *add_handles;
+
+    /* Map from group names (const char *) to (TpIntSet *)s of handles */
     GHashTable *group_handles;
 } HandleContext;
 
+
+/* Called for each buddy on the purple buddy list at login.  Adds them to the
+ * handle set that will become the 'subscribe' list, and to the handle set
+ * which will become their group's channel.
+ */
 static void
 _initial_buddies_foreach (PurpleBuddy *buddy,
                           HandleContext *context)
@@ -501,6 +512,10 @@ _initial_buddies_foreach (PurpleBuddy *buddy,
 
 }
 
+
+/* Creates a group channel on contact_list called group_name, containing the
+ * supplied handles.  Called while traversing the buddy list at login.
+ */
 gboolean
 _create_initial_group(gchar *group_name,
                       TpIntSet *handles,
@@ -521,9 +536,14 @@ _create_initial_group(gchar *group_name,
 
     tp_handle_unref (handle_repo, group_handle); /* reffed by group */
 
+    /* Remove this group from the hash of groups to be constructed. */
     return TRUE;
 }
 
+
+/* Iterates across all buddies on a purple account's buddy list at login,
+ * adding them to subscribe.
+ */
 static void
 _add_initial_buddies (HazeContactList *self)
 {
@@ -531,13 +551,13 @@ _add_initial_buddies (HazeContactList *self)
     HazeContactListChannel *subscribe;
 
     PurpleAccount *account = priv->conn->account;
-
     GSList *buddies = purple_find_buddies(account, NULL);
+
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
     TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
         TP_HANDLE_TYPE_CONTACT);
+
     TpHandleSet *add_handles = tp_handle_set_new (contact_repo);
-    /* Map from group names (const char *) to (TpIntSet *)s of handles */
     GHashTable *group_handles = g_hash_table_new_full (NULL, NULL, NULL,
         (GDestroyNotify) tp_intset_destroy);
     HandleContext context = { contact_repo, add_handles, group_handles };
