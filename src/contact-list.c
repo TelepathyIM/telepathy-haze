@@ -573,6 +573,7 @@ _add_initial_buddies (HazeContactList *self)
 
     g_hash_table_foreach_remove (group_handles, (GHRFunc) _create_initial_group,
         self);
+    g_hash_table_destroy (group_handles);
 
     tp_handle_set_destroy (add_handles);
 }
