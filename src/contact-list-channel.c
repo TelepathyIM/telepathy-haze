@@ -53,6 +53,14 @@ struct _HazeContactListChannelPrivate {
 
     PurpleGroup *group;
 
+    /* Maps TpHandle to PublishRequestData, corresponding to the handles on
+     * local_pending.
+     *
+     * Defined only if handle_type == TP_HANDLE_TYPE_LIST && handle =
+     * HAZE_LIST_HANDLE_PUBLISH; NULL otherwise.
+     */
+    GHashTable *pending_publish_requests;
+
     gboolean closed;
     gboolean dispose_has_run;
 };
@@ -393,6 +401,8 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
                             0);
                     break;
                 case HAZE_LIST_HANDLE_PUBLISH:
+                    priv->pending_publish_requests =
+                        g_hash_table_new (NULL, NULL);
                     /* No flags yet! */
                     break;
                 /* TODO: More magic lists go here */
@@ -425,6 +435,9 @@ haze_contact_list_channel_dispose (GObject *object)
     }
 
     g_free (priv->object_path);
+
+    if (priv->pending_publish_requests)
+        g_hash_table_destroy (priv->pending_publish_requests);
 
     if (G_OBJECT_CLASS (haze_contact_list_channel_parent_class)->dispose)
         G_OBJECT_CLASS (haze_contact_list_channel_parent_class)->dispose (object);
