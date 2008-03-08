@@ -269,6 +269,45 @@ _haze_contact_list_channel_remove_member_cb (GObject *obj,
     }
 }
 
+
+gpointer
+haze_request_authorize (PurpleAccount *account,
+                        const char *remote_user,
+                        const char *id,
+                        const char *alias,
+                        const char *message,
+                        gboolean on_list,
+                        PurpleAccountRequestAuthorizationCb authorize_cb,
+                        PurpleAccountRequestAuthorizationCb deny_cb,
+                        void *user_data)
+{
+    HazeConnection *conn = account->ui_data;
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
+        TP_HANDLE_TYPE_CONTACT);
+
+    HazeContactListChannel *publish =
+        haze_contact_list_get_channel (conn->contact_list,
+            TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_PUBLISH, NULL);
+
+    TpIntSet *add_local_pending = tp_intset_new ();
+    TpHandle remote_handle;
+    gboolean changed;
+
+    remote_handle = tp_handle_ensure (contact_repo, remote_user, NULL, NULL);
+    tp_intset_add (add_local_pending, remote_handle);
+
+    changed = tp_group_mixin_change_members (G_OBJECT (publish), message, NULL,
+        NULL, add_local_pending, NULL, remote_handle,
+        TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
+
+    tp_intset_destroy (add_local_pending);
+    tp_handle_unref (contact_repo, remote_handle);
+
+    return NULL;
+}
+
+
 static void
 haze_contact_list_channel_init (HazeContactListChannel *self)
 {

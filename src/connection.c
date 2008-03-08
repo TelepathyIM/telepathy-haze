@@ -36,6 +36,7 @@
 #include "connection-presence.h"
 #include "connection-aliasing.h"
 #include "connection-avatars.h"
+#include "contact-list-channel.h"
 
 enum
 {
@@ -558,7 +559,7 @@ account_ui_ops =
     NULL,                                            /* notify_added */
     haze_connection_presence_account_status_changed, /* status_changed */
     NULL,                                            /* request_add */
-    NULL,                                            /* request_authorize */
+    haze_request_authorize,                          /* request_authorize */
     NULL,                                            /* close_account_request */
 
     NULL, /* purple_reserved1 */

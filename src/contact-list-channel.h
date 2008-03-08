@@ -21,7 +21,10 @@
  */
 
 #include <glib-object.h>
+
 #include <telepathy-glib/group-mixin.h>
+
+#include <libpurple/account.h>
 
 G_BEGIN_DECLS
 
@@ -42,6 +45,12 @@ struct _HazeContactListChannel {
 };
 
 GType haze_contact_list_channel_get_type (void);
+
+gpointer haze_request_authorize (PurpleAccount *account,
+    const char *remote_user, const char *id, const char *alias,
+    const char *message, gboolean on_list,
+    PurpleAccountRequestAuthorizationCb authorize_cb,
+    PurpleAccountRequestAuthorizationCb deny_cb, void *user_data);
 
 /* TYPE MACROS */
 #define HAZE_TYPE_CONTACT_LIST_CHANNEL \
