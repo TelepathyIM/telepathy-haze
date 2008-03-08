@@ -51,6 +51,8 @@ struct _HazeContactListChannelPrivate {
     TpHandle handle;
     guint handle_type;
 
+    /* Defined only if handle_type == TP_HANDLE_TYPE_GROUP; NULL otherwise.
+     */
     PurpleGroup *group;
 
     /* Maps TpHandle to PublishRequestData, corresponding to the handles on
