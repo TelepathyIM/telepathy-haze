@@ -25,6 +25,24 @@
 #include "contact-list-channel.h"
 #include "connection.h"
 
+
+typedef struct _PublishRequestData PublishRequestData;
+
+/** PublishRequestData:
+ *
+ *  Keeps track of the relevant callbacks to approve or deny a contact's publish
+ *  request.
+ */
+struct _PublishRequestData {
+    HazeContactListChannel *publish;
+    TpHandle handle;
+
+    PurpleAccountRequestAuthorizationCb allow;
+    PurpleAccountRequestAuthorizationCb deny;
+    gpointer data;
+};
+
+
 typedef struct _HazeContactListChannelPrivate HazeContactListChannelPrivate;
 struct _HazeContactListChannelPrivate {
     HazeConnection *conn;
