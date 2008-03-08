@@ -545,10 +545,10 @@ _create_initial_group(gchar *group_name,
  * adding them to subscribe.
  */
 static void
-_add_initial_buddies (HazeContactList *self)
+_add_initial_buddies (HazeContactList *self,
+                      HazeContactListChannel *subscribe)
 {
     HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (self);
-    HazeContactListChannel *subscribe;
 
     PurpleAccount *account = priv->conn->account;
     GSList *buddies = purple_find_buddies(account, NULL);
@@ -565,9 +565,6 @@ _add_initial_buddies (HazeContactList *self)
     g_slist_foreach (buddies, (GFunc) _initial_buddies_foreach, &context);
     g_slist_free (buddies);
 
-    subscribe = haze_contact_list_get_channel (self, TP_HANDLE_TYPE_LIST,
-            HAZE_LIST_HANDLE_SUBSCRIBE, NULL /*created*/);
-
     tp_group_mixin_change_members (G_OBJECT (subscribe), "",
         tp_handle_set_peek (add_handles), NULL, NULL, NULL, 0, 0);
 
@@ -582,9 +579,18 @@ static void
 haze_contact_list_factory_iface_connected (TpChannelFactoryIface *iface)
 {
     HazeContactList *self = HAZE_CONTACT_LIST (iface);
+    HazeContactListChannel *subscribe, *publish;
 
-    _add_initial_buddies (self);
+    /* Ensure contact lists exist before going any further. */
+    subscribe = haze_contact_list_get_channel (self, TP_HANDLE_TYPE_LIST,
+        HAZE_LIST_HANDLE_SUBSCRIBE, NULL /*created*/);
+    g_assert (subscribe != NULL);
 
+    publish = haze_contact_list_get_channel (self, TP_HANDLE_TYPE_LIST,
+            HAZE_LIST_HANDLE_PUBLISH, NULL /*created*/);
+    g_assert (publish != NULL);
+
+    _add_initial_buddies (self, subscribe);
 }
 
 static void
