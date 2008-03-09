@@ -330,22 +330,34 @@ haze_request_authorize (PurpleAccount *account,
     HazeContactListChannel *publish =
         haze_contact_list_get_channel (conn->contact_list,
             TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_PUBLISH, NULL);
+    HazeContactListChannelPrivate *priv =
+        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (publish);
 
     TpIntSet *add_local_pending = tp_intset_new ();
     TpHandle remote_handle;
     gboolean changed;
+    PublishRequestData *request_data = publish_request_data_new ();
 
     remote_handle = tp_handle_ensure (contact_repo, remote_user, NULL, NULL);
-    tp_intset_add (add_local_pending, remote_handle);
+    request_data->publish = publish;
+    /* remote_handle is not unreffed in this function because request_data holds
+     * onto it.
+     */
+    request_data->handle = remote_handle;
+    request_data->allow = authorize_cb;
+    request_data->deny = deny_cb;
+    request_data->data = user_data;
 
+    g_hash_table_insert (priv->pending_publish_requests,
+        GUINT_TO_POINTER (remote_handle), request_data);
+
+    tp_intset_add (add_local_pending, remote_handle);
     changed = tp_group_mixin_change_members (G_OBJECT (publish), message, NULL,
         NULL, add_local_pending, NULL, remote_handle,
         TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
-
     tp_intset_destroy (add_local_pending);
-    tp_handle_unref (contact_repo, remote_handle);
 
-    return NULL;
+    return request_data;
 }
 
 
