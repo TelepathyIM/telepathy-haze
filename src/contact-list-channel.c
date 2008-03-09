@@ -418,7 +418,15 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
                 case HAZE_LIST_HANDLE_PUBLISH:
                     priv->pending_publish_requests =
                         g_hash_table_new (NULL, NULL);
-                    /* No flags yet! */
+                    /* This is kind of a fake publish channel: it's only used
+                     * to accept or reject incoming subscription requests.  So,
+                     * you can't add or remove anyone from it yourself; people
+                     * get onto local_pending when they make a subscribe
+                     * request, and then you can move them to the list proper
+                     * or remove them.
+                     *
+                     * So, we'll leave the channel's flags as 0.
+                     */
                     break;
                 /* TODO: More magic lists go here */
                 default:
