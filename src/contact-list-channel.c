@@ -43,6 +43,19 @@ struct _PublishRequestData {
 };
 
 
+static PublishRequestData *
+publish_request_data_new ()
+{
+    return g_slice_new0 (PublishRequestData);
+}
+
+static void
+publish_request_data_free (PublishRequestData *prd)
+{
+    g_slice_free (PublishRequestData, prd);
+}
+
+
 typedef struct _HazeContactListChannelPrivate HazeContactListChannelPrivate;
 struct _HazeContactListChannelPrivate {
     HazeConnection *conn;
