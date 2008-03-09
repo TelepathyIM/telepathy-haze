@@ -24,6 +24,7 @@
 
 #include "contact-list-channel.h"
 #include "connection.h"
+#include "debug.h"
 
 
 typedef struct _PublishRequestData PublishRequestData;
@@ -115,6 +116,9 @@ _list_add_member_cb (HazeContactListChannel *chan,
     HazeContactListChannelPrivate *priv =
         HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (chan);
     HazeConnection *conn = priv->conn;
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
     const gchar *bname =
         haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
     PurpleBuddy *buddy;
@@ -140,7 +144,29 @@ _list_add_member_cb (HazeContactListChannel *chan,
 
             return TRUE; /* FIXME: How am I meant to know if it failed? */
         case HAZE_LIST_HANDLE_PUBLISH:
-            // XXX
+        {
+            gpointer key = GUINT_TO_POINTER (handle);
+            TpIntSet *add = tp_intset_new ();
+            PublishRequestData *request_data =
+                g_hash_table_lookup (priv->pending_publish_requests, key);
+            g_assert (request_data != NULL);
+
+            DEBUG ("allowing publish request for %s", bname);
+            request_data->allow(request_data->data);
+
+            tp_intset_add (add, handle);
+            tp_group_mixin_change_members (G_OBJECT (chan), message, add,
+                NULL, NULL, NULL, base_conn->self_handle,
+                TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
+            tp_intset_destroy (add);
+
+            g_hash_table_remove (priv->pending_publish_requests, key);
+            /* Get rid of the hash table's ref of the handle. */
+            tp_handle_unref (handle_repo, handle);
+            publish_request_data_free (request_data);
+
+            return TRUE;
+        }
         default:
             /* TODO: more list types */
             g_assert_not_reached ();
@@ -209,6 +235,9 @@ _list_remove_member_cb (HazeContactListChannel *chan,
         HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (chan);
     HazeConnection *conn = priv->conn;
     PurpleAccount *account = conn->account;
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
     const gchar *bname =
         haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
     GSList *buddies, *l;
@@ -245,7 +274,29 @@ _list_remove_member_cb (HazeContactListChannel *chan,
 
             return TRUE;
         case HAZE_LIST_HANDLE_PUBLISH:
-            // XXX
+        {
+            gpointer key = GUINT_TO_POINTER (handle);
+            TpIntSet *remove = tp_intset_new ();
+            PublishRequestData *request_data =
+                g_hash_table_lookup (priv->pending_publish_requests, key);
+            g_assert (request_data != NULL);
+
+            DEBUG ("denying publish request for %s", bname);
+            request_data->deny(request_data->data);
+
+            tp_intset_add (remove, handle);
+            tp_group_mixin_change_members (G_OBJECT (chan), message, NULL,
+                remove, NULL, NULL, base_conn->self_handle,
+                TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
+            tp_intset_destroy (remove);
+
+            g_hash_table_remove (priv->pending_publish_requests, key);
+            /* Get rid of the hash table's ref of the handle. */
+            tp_handle_unref (handle_repo, handle);
+            publish_request_data_free (request_data);
+
+            return TRUE;
+        }
         default:
             /* TODO: More list types */
             g_assert_not_reached ();
