@@ -53,6 +53,7 @@ publish_request_data_new ()
 static void
 publish_request_data_free (PublishRequestData *prd)
 {
+    g_object_unref (prd->publish);
     g_slice_free (PublishRequestData, prd);
 }
 
@@ -390,7 +391,7 @@ haze_request_authorize (PurpleAccount *account,
     PublishRequestData *request_data = publish_request_data_new ();
 
     remote_handle = tp_handle_ensure (contact_repo, remote_user, NULL, NULL);
-    request_data->publish = publish;
+    request_data->publish = g_object_ref (publish);
     /* remote_handle is not unreffed in this function because request_data holds
      * onto it.
      */
