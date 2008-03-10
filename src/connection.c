@@ -560,7 +560,7 @@ account_ui_ops =
     haze_connection_presence_account_status_changed, /* status_changed */
     NULL,                                            /* request_add */
     haze_request_authorize,                          /* request_authorize */
-    NULL,                                            /* close_account_request */
+    haze_close_account_request,                      /* close_account_request */
 
     NULL, /* purple_reserved1 */
     NULL, /* purple_reserved2 */

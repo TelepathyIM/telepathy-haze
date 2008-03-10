@@ -52,6 +52,8 @@ gpointer haze_request_authorize (PurpleAccount *account,
     PurpleAccountRequestAuthorizationCb authorize_cb,
     PurpleAccountRequestAuthorizationCb deny_cb, void *user_data);
 
+void haze_close_account_request (gpointer request_data_);
+
 /* TYPE MACROS */
 #define HAZE_TYPE_CONTACT_LIST_CHANNEL \
   (haze_contact_list_channel_get_type ())

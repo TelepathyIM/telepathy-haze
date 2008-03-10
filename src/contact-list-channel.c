@@ -413,6 +413,39 @@ haze_request_authorize (PurpleAccount *account,
 }
 
 
+void
+haze_close_account_request (gpointer request_data_)
+{
+    PublishRequestData *request_data = request_data_;
+    HazeContactListChannel *publish = request_data->publish;
+    HazeContactListChannelPrivate *priv =
+        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (publish);
+
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+
+    TpIntSet *remove = tp_intset_new ();
+
+    gpointer key = GUINT_TO_POINTER (request_data->handle);
+    gboolean removed;
+
+    DEBUG ("cancelling publish request for handle %u", request_data->handle);
+
+    tp_intset_add (remove, request_data->handle);
+    tp_group_mixin_change_members (G_OBJECT (publish), NULL, NULL, remove, NULL,
+        NULL, base_conn->self_handle, TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
+    tp_intset_destroy (remove);
+
+    removed = g_hash_table_remove (priv->pending_publish_requests, key);
+    g_assert (removed);
+    /* Get rid of the hash table's ref of the handle. */
+    tp_handle_unref (handle_repo, request_data->handle);
+    publish_request_data_free (request_data);
+}
+
+
+
 static void
 haze_contact_list_channel_init (HazeContactListChannel *self)
 {
