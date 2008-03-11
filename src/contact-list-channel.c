@@ -557,7 +557,14 @@ haze_contact_list_channel_dispose (GObject *object)
     g_free (priv->object_path);
 
     if (priv->pending_publish_requests)
+    {
+        if (g_hash_table_size (priv->pending_publish_requests) != 0)
+            g_warning ("haze_contact_list_channel_dispose: "
+                       "pending_publish_requests is not empty!");
+
         g_hash_table_destroy (priv->pending_publish_requests);
+        priv->pending_publish_requests = NULL;
+    }
 
     if (G_OBJECT_CLASS (haze_contact_list_channel_parent_class)->dispose)
         G_OBJECT_CLASS (haze_contact_list_channel_parent_class)->dispose (object);
