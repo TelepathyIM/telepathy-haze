@@ -164,7 +164,6 @@ _list_add_member_cb (HazeContactListChannel *chan,
             g_hash_table_remove (priv->pending_publish_requests, key);
             /* Get rid of the hash table's ref of the handle. */
             tp_handle_unref (handle_repo, handle);
-            publish_request_data_free (request_data);
 
             return TRUE;
         }
@@ -294,7 +293,6 @@ _list_remove_member_cb (HazeContactListChannel *chan,
             g_hash_table_remove (priv->pending_publish_requests, key);
             /* Get rid of the hash table's ref of the handle. */
             tp_handle_unref (handle_repo, handle);
-            publish_request_data_free (request_data);
 
             return TRUE;
         }
@@ -441,7 +439,6 @@ haze_close_account_request (gpointer request_data_)
     g_assert (removed);
     /* Get rid of the hash table's ref of the handle. */
     tp_handle_unref (handle_repo, request_data->handle);
-    publish_request_data_free (request_data);
 }
 
 
@@ -514,7 +511,8 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
                     break;
                 case HAZE_LIST_HANDLE_PUBLISH:
                     priv->pending_publish_requests =
-                        g_hash_table_new (NULL, NULL);
+                        g_hash_table_new_full (NULL, NULL, NULL,
+                            (GDestroyNotify) publish_request_data_free);
                     /* This is kind of a fake publish channel: it's only used
                      * to accept or reject incoming subscription requests.  So,
                      * you can't add or remove anyone from it yourself; people
