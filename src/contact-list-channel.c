@@ -415,7 +415,14 @@ void
 haze_close_account_request (gpointer request_data_)
 {
     PublishRequestData *request_data = request_data_;
-    HazeContactListChannel *publish = request_data->publish;
+
+    /* When 'request_data' is removed from the pending request table, its
+     * reference to 'publish' is dropped.  So, we take our own reference here,
+     * in case the reference in 'request_data' was the last one.  (If we don't,
+     * the channel (including 'pending_publish_requests') is destroyed half-way
+     * through g_hash_table_remove(); cue stack corruption.)
+     */
+    HazeContactListChannel *publish = g_object_ref (request_data->publish);
     HazeContactListChannelPrivate *priv =
         HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (publish);
 
@@ -439,6 +446,8 @@ haze_close_account_request (gpointer request_data_)
     g_assert (removed);
     /* Get rid of the hash table's ref of the handle. */
     tp_handle_unref (handle_repo, request_data->handle);
+
+    g_object_unref (publish);
 }
 
 
