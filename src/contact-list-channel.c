@@ -108,6 +108,31 @@ enum {
     LAST_PROPERTY
 };
 
+
+/* Removes the PublishRequestData for the given handle, from the
+ * pending_publish_requests table, dropping its reference to that handle.
+ */
+static void
+remove_pending_publish_request (HazeContactListChannel *publish,
+                                TpHandle handle)
+{
+    HazeContactListChannelPrivate *priv =
+        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (publish);
+    HazeConnection *conn = priv->conn;
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+
+    gpointer h = GUINT_TO_POINTER (handle);
+    gboolean removed;
+
+    removed = g_hash_table_remove (priv->pending_publish_requests, h);
+    g_assert (removed);
+
+    tp_handle_unref (handle_repo, handle);
+}
+
+
 static gboolean
 _list_add_member_cb (HazeContactListChannel *chan,
                      TpHandle handle,
