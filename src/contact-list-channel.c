@@ -143,8 +143,6 @@ _list_add_member_cb (HazeContactListChannel *chan,
         HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (chan);
     HazeConnection *conn = priv->conn;
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
-    TpHandleRepoIface *handle_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
     const gchar *bname =
         haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
     PurpleBuddy *buddy;
@@ -186,9 +184,7 @@ _list_add_member_cb (HazeContactListChannel *chan,
                 TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
             tp_intset_destroy (add);
 
-            g_hash_table_remove (priv->pending_publish_requests, key);
-            /* Get rid of the hash table's ref of the handle. */
-            tp_handle_unref (handle_repo, handle);
+            remove_pending_publish_request (chan, handle);
 
             return TRUE;
         }
@@ -261,8 +257,6 @@ _list_remove_member_cb (HazeContactListChannel *chan,
     HazeConnection *conn = priv->conn;
     PurpleAccount *account = conn->account;
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
-    TpHandleRepoIface *handle_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
     const gchar *bname =
         haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
     GSList *buddies, *l;
@@ -315,9 +309,7 @@ _list_remove_member_cb (HazeContactListChannel *chan,
                 TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
             tp_intset_destroy (remove);
 
-            g_hash_table_remove (priv->pending_publish_requests, key);
-            /* Get rid of the hash table's ref of the handle. */
-            tp_handle_unref (handle_repo, handle);
+            remove_pending_publish_request (chan, handle);
 
             return TRUE;
         }
@@ -413,11 +405,11 @@ haze_request_authorize (PurpleAccount *account,
     gboolean changed;
     PublishRequestData *request_data = publish_request_data_new ();
 
+    /* This handle is owned by request_data, and is unreffed in
+     * remove_pending_publish_request.
+     */
     remote_handle = tp_handle_ensure (contact_repo, remote_user, NULL, NULL);
     request_data->publish = g_object_ref (publish);
-    /* remote_handle is not unreffed in this function because request_data holds
-     * onto it.
-     */
     request_data->handle = remote_handle;
     request_data->allow = authorize_cb;
     request_data->deny = deny_cb;
@@ -445,20 +437,16 @@ haze_close_account_request (gpointer request_data_)
      * reference to 'publish' is dropped.  So, we take our own reference here,
      * in case the reference in 'request_data' was the last one.  (If we don't,
      * the channel (including 'pending_publish_requests') is destroyed half-way
-     * through g_hash_table_remove(); cue stack corruption.)
+     * through g_hash_table_remove() in remove_pending_publish_request(); cue
+     * stack corruption.)
      */
     HazeContactListChannel *publish = g_object_ref (request_data->publish);
     HazeContactListChannelPrivate *priv =
         HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (publish);
 
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
-    TpHandleRepoIface *handle_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
 
     TpIntSet *remove = tp_intset_new ();
-
-    gpointer key = GUINT_TO_POINTER (request_data->handle);
-    gboolean removed;
 
     DEBUG ("cancelling publish request for handle %u", request_data->handle);
 
@@ -467,10 +455,7 @@ haze_close_account_request (gpointer request_data_)
         NULL, base_conn->self_handle, TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
     tp_intset_destroy (remove);
 
-    removed = g_hash_table_remove (priv->pending_publish_requests, key);
-    g_assert (removed);
-    /* Get rid of the hash table's ref of the handle. */
-    tp_handle_unref (handle_repo, request_data->handle);
+    remove_pending_publish_request (publish, request_data->handle);
 
     g_object_unref (publish);
 }
