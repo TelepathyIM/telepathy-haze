@@ -19,6 +19,8 @@
  *
  */
 
+#include <string.h>
+
 #include <telepathy-glib/svc-connection.h>
 
 #include <libpurple/cipher.h>
@@ -281,12 +283,15 @@ void
 haze_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *self,
                               DBusGMethodInvocation *context)
 {
-    GError *error = NULL;
-    g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-        "Haven't got around to dealing with your own avatar yet");
-    dbus_g_method_return_error (context, error);
-    g_error_free (error);
-/*    tp_svc_connection_interface_avatars_return_from_clear_avatar (context);*/
+    HazeConnection *conn = HAZE_CONNECTION (self);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    PurpleAccount *account = conn->account;
+
+    purple_buddy_icons_set_account_icon (account, NULL, 0);
+
+    tp_svc_connection_interface_avatars_return_from_clear_avatar (context);
+    tp_svc_connection_interface_avatars_emit_avatar_updated (conn,
+        base_conn->self_handle, "");
 }
 
 void
@@ -295,12 +300,29 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
                             const gchar *mime_type,
                             DBusGMethodInvocation *context)
 {
-    GError *error = NULL;
-    g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-        "Haven't got around to dealing with your own avatar yet");
-    dbus_g_method_return_error (context, error);
-    g_error_free (error);
-//  tp_svc_connection_interface_avatars_return_from_set_avatar (context, token);
+    HazeConnection *conn = HAZE_CONNECTION (self);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    PurpleAccount *account = conn->account;
+
+    /* TODO: is 'avatar' guaranteed non-null? */
+    /* TODO: check that the avatar is few enough bytes for the mime type. */
+    guchar *icon_data = NULL;
+    size_t icon_len = avatar->len;
+    gchar *token;
+
+    /* purple_buddy_icons_set_account_icon () takes ownership of the pointer
+     * passed to it, but 'avatar' will be freed soon.
+     */
+    icon_data = g_malloc (avatar->len);
+    memcpy (icon_data, avatar->data, icon_len);
+    purple_buddy_icons_set_account_icon (account, icon_data, icon_len);
+    token = get_token (avatar);
+    DEBUG ("%s", token);
+
+    tp_svc_connection_interface_avatars_return_from_set_avatar (context, token);
+    tp_svc_connection_interface_avatars_emit_avatar_updated (conn,
+        base_conn->self_handle, token);
+    g_free (token);
 }
 
 void
