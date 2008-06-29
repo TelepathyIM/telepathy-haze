@@ -287,7 +287,8 @@ haze_connection_avatars_iface_init (gpointer g_iface,
 }
 
 void
-buddy_icon_changed_cb (PurpleBuddy *buddy, gpointer unused)
+buddy_icon_changed_cb (PurpleBuddy *buddy,
+                       gpointer unused)
 {
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (buddy->account);
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
