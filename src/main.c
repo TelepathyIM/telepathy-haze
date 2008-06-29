@@ -269,9 +269,6 @@ main(int argc,
 
     g_set_prgname(UI_ID);
 
-    signal (SIGCHLD, SIG_IGN);
-    init_libpurple();
-
     tp_debug_set_flags (g_getenv ("HAZE_DEBUG"));
 
     if (g_getenv ("HAZE_PERSIST"))
@@ -280,6 +277,9 @@ main(int argc,
 #ifdef HAVE_TP_DEBUG_DIVERT_MESSAGES
     tp_debug_divert_messages (g_getenv ("HAZE_LOGFILE"));
 #endif
+
+    signal (SIGCHLD, SIG_IGN);
+    init_libpurple();
 
     ret = tp_run_connection_manager (UI_ID, PACKAGE_VERSION, get_cm, argc,
                                      argv);
