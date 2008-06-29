@@ -28,6 +28,10 @@ May be set to "all" for full debug output, or various undocumented options
 \fBHAZE_PERSIST\fR=1
 If set, Haze will not automatically close itself after five seconds without
 any connections.
+.TP
+\fBHAZE_LOGFILE\fR=\fIfilename\fR
+If set, all debugging output will be written to \fIfilename\fR rather than
+to the terminal.
 .SH SEE ALSO
 .IR http://telepathy.freedesktop.org/ ,
 .BR empathy (1),

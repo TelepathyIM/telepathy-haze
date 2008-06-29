@@ -277,6 +277,10 @@ main(int argc,
     if (g_getenv ("HAZE_PERSIST"))
         tp_debug_set_persistent (TRUE);
 
+#ifdef HAVE_TP_DEBUG_DIVERT_MESSAGES
+    tp_debug_divert_messages (g_getenv ("HAZE_LOGFILE"));
+#endif
+
     ret = tp_run_connection_manager (UI_ID, PACKAGE_VERSION, get_cm, argc,
                                      argv);
 
