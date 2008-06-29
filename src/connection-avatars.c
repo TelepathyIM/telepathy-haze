@@ -182,6 +182,41 @@ haze_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
 }
 
 void
+haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
+                                         const GArray *contacts,
+                                         DBusGMethodInvocation *context)
+{
+    HazeConnection *conn = HAZE_CONNECTION (self);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    GHashTable *tokens = g_hash_table_new_full (NULL, NULL, NULL, g_free);
+    guint i;
+    GError *err = NULL;
+
+    TpHandleRepoIface *contact_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+
+    if (!tp_handles_are_valid (contact_repo, contacts, FALSE, &err))
+    {
+        dbus_g_method_return_error (context, err);
+        g_error_free (err);
+        return;
+    }
+
+    for (i = 0; i < contacts->len; i++)
+    {
+        TpHandle handle = g_array_index (contacts, TpHandle, i);
+        gchar *token = get_handle_token (conn, handle);
+
+        g_hash_table_insert (tokens, GUINT_TO_POINTER (handle), token);
+    }
+
+    tp_svc_connection_interface_avatars_return_from_get_known_avatar_tokens (
+        context, tokens);
+
+    g_hash_table_unref (tokens);
+}
+
+void
 haze_connection_request_avatar (TpSvcConnectionInterfaceAvatars *self,
                                 guint contact,
                                 DBusGMethodInvocation *context)
@@ -279,6 +314,7 @@ haze_connection_avatars_iface_init (gpointer g_iface,
     klass, haze_connection_##x)
     IMPLEMENT(get_avatar_requirements);
     IMPLEMENT(get_avatar_tokens);
+    IMPLEMENT(get_known_avatar_tokens);
     IMPLEMENT(request_avatar);
     IMPLEMENT(request_avatars);
     IMPLEMENT(set_avatar);
