@@ -74,11 +74,6 @@ PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.7])
 AC_SUBST(TP_GLIB_CFLAGS)
 AC_SUBST(TP_GLIB_LIBS)
 
-AC_CHECK_LIB(telepathy-glib, tp_debug_set_flags,
-  [ AC_DEFINE(HAVE_TP_DEBUG_SET_FLAGS, [],
-    [Define if tp_debug_set_flags() function is provided by telepathy-glib]) ],
-  [], [$TP_GLIB_LIBS])
-
 AC_CHECK_LIB(purple, purple_dbus_uninit,
   [ AC_DEFINE(HAVE_PURPLE_DBUS_UNINIT, [],
     [Define if purple_dbus_uninit is present in libpurple]) ],

@@ -272,22 +272,10 @@ main(int argc,
     signal (SIGCHLD, SIG_IGN);
     init_libpurple();
 
-#ifdef HAVE_TP_DEBUG_SET_FLAGS
     tp_debug_set_flags (g_getenv ("HAZE_DEBUG"));
-#else
-    tp_debug_set_flags_from_env ("HAZE_DEBUG");
-#endif
 
     if (g_getenv ("HAZE_PERSIST"))
-    {
-#ifdef HAVE_TP_DEBUG_SET_FLAGS
-      /* tp-glib >= 0.6.1: persist is no longer a flag in quite the same way */
-      tp_debug_set_persistent (TRUE);
-#else
-      /* tp-glib < 0.6.1: persist is a flag, of sorts */
-      tp_debug_set_flags_from_string ("persist");
-#endif
-    }
+        tp_debug_set_persistent (TRUE);
 
     ret = tp_run_connection_manager (UI_ID, PACKAGE_VERSION, get_cm, argc,
                                      argv);
