@@ -205,9 +205,35 @@ haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
     for (i = 0; i < contacts->len; i++)
     {
         TpHandle handle = g_array_index (contacts, TpHandle, i);
-        gchar *token = get_handle_token (conn, handle);
+        gchar *token = NULL;
 
-        g_hash_table_insert (tokens, GUINT_TO_POINTER (handle), token);
+        /* Purple doesn't provide any way to distinguish between a contact with
+         * no avatar and a contact whose avatar we haven't retrieved yet,
+         * mainly because it always automatically downloads all avatars.  So in
+         * general, we assume no avatar means the former, so that clients don't
+         * repeatedly call RequestAvatar hoping eventually to get the avatar.
+         *
+         * But on protocols where avatars aren't saved server-side, we should
+         * report that it's unknown, so that the UI (aka. mcd) can re-set the
+         * avatar you last used.  So we special-case self_handle here.
+         */
+
+        if (handle == base_conn->self_handle)
+        {
+            GArray *avatar = get_avatar (conn, handle);
+            if (avatar != NULL)
+            {
+                token = get_token (avatar);
+                g_array_free (avatar, TRUE);
+            }
+        }
+        else
+        {
+            token = get_handle_token (conn, handle);
+        }
+
+        if (token != NULL)
+            g_hash_table_insert (tokens, GUINT_TO_POINTER (handle), token);
     }
 
     tp_svc_connection_interface_avatars_return_from_get_known_avatar_tokens (
