@@ -111,39 +111,28 @@ get_token (const GArray *avatar)
 {
     gchar *token;
 
-    if (avatar)
+    PurpleCipherContext *context;
+    gchar digest[41];
+
+    g_assert (avatar != NULL);
+
+    context = purple_cipher_context_new_by_name("sha1", NULL);
+    if (context == NULL)
     {
-        /* Taken mostly verbatim from purple_util_get_image_filename; this copy
-         * does not append a file extension to the hash, and also works with
-         * libpurple 2.0
-         */
-        PurpleCipherContext *context;
-        gchar digest[41];
-
-        context = purple_cipher_context_new_by_name("sha1", NULL);
-        if (context == NULL)
-        {
-            g_error ("Could not find libpurple's sha1 cipher");
-        }
-
-        /* Hash the image data */
-        purple_cipher_context_append(context, (const guchar *) avatar->data,
-                                     avatar->len);
-        if (!purple_cipher_context_digest_to_str(context, sizeof(digest),
-                                                 digest, NULL))
-        {
-            g_error ("Failed to get SHA-1 digest");
-        }
-        purple_cipher_context_destroy(context);
-
-        token = g_strdup (digest);
-    }
-    else
-    {
-        token = g_strdup ("");
+        g_error ("Could not find libpurple's sha1 cipher");
     }
 
-    g_assert (token);
+    /* Hash the image data */
+    purple_cipher_context_append(context, (const guchar *) avatar->data,
+            avatar->len);
+    if (!purple_cipher_context_digest_to_str(context, sizeof(digest),
+                digest, NULL))
+    {
+        g_error ("Failed to get SHA-1 digest");
+    }
+    purple_cipher_context_destroy(context);
+
+    token = g_strdup (digest);
 
     return token;
 }
@@ -153,9 +142,18 @@ get_handle_token (HazeConnection *conn,
                   TpHandle handle)
 {
     GArray *avatar = get_avatar (conn, handle);
-    gchar *token = get_token (avatar);
-    if (avatar)
+    gchar *token;
+
+    if (avatar != NULL)
+    {
+        token = get_token (avatar);
         g_array_free (avatar, TRUE);
+    }
+    else
+    {
+        token = g_strdup ("");
+    }
+
     return token;
 }
 
@@ -266,7 +264,7 @@ haze_connection_request_avatars (TpSvcConnectionInterfaceAvatars *self,
     {
         TpHandle handle = g_array_index (contacts, TpHandle, i);
         GArray *avatar = get_avatar (conn, handle);
-        if (avatar)
+        if (avatar != NULL)
         {
             gchar *token = get_token (avatar);
             tp_svc_connection_interface_avatars_emit_avatar_retrieved (
