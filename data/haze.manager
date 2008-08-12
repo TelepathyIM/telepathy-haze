@@ -128,14 +128,6 @@ default-port=0
 default-udp=false
 default-useproxy=false
 
-[Protocol snpp]
-param-account=s required
-param-password=s
-param-server=s
-param-port=i
-default-server=localhost
-default-port=444
-
 [Protocol yahoo]
 param-account=s required
 param-password=s required
