@@ -18,10 +18,13 @@
  *
  */
 
+#include "debug.h"
+
 #include <string.h>
 #include <stdarg.h>
 
 #include <libpurple/debug.h>
+#include <telepathy-glib/debug.h>
 
 static char *debug_level_names[] =
 {
@@ -123,4 +126,17 @@ haze_debug (const gchar *format,
     g_logv (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, format, args);
 
     va_end (args);
+}
+
+void
+haze_debug_set_flags_from_env ()
+{
+    tp_debug_set_flags (g_getenv ("HAZE_DEBUG"));
+
+    if (g_getenv ("HAZE_PERSIST"))
+        tp_debug_set_persistent (TRUE);
+
+#ifdef HAVE_TP_DEBUG_DIVERT_MESSAGES
+    tp_debug_divert_messages (g_getenv ("HAZE_LOGFILE"));
+#endif
 }

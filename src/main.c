@@ -50,7 +50,6 @@ extern const guint purple_micro_version;
 #endif
 
 #include <telepathy-glib/run.h>
-#include <telepathy-glib/debug.h>
 
 #include "defines.h"
 #include "debug.h"
@@ -269,14 +268,7 @@ main(int argc,
 
     g_set_prgname(UI_ID);
 
-    tp_debug_set_flags (g_getenv ("HAZE_DEBUG"));
-
-    if (g_getenv ("HAZE_PERSIST"))
-        tp_debug_set_persistent (TRUE);
-
-#ifdef HAVE_TP_DEBUG_DIVERT_MESSAGES
-    tp_debug_divert_messages (g_getenv ("HAZE_LOGFILE"));
-#endif
+    haze_debug_set_flags_from_env ();
 
     signal (SIGCHLD, SIG_IGN);
     init_libpurple();

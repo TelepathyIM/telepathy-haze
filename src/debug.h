@@ -25,5 +25,7 @@ void haze_debug_init(void);
 void haze_debug (const gchar *format, ...)
     G_GNUC_PRINTF (1,2);
 
+void haze_debug_set_flags_from_env ();
+
 #define DEBUG(format, ...) \
     haze_debug ("%s: " format, G_STRFUNC, ##__VA_ARGS__)
