@@ -161,7 +161,21 @@ static PurpleCoreUiOps haze_core_uiops =
 };
 
 static void
-init_libpurple()
+set_libpurple_preferences (void)
+{
+    /* Out of the box, libpurple tracks your idle time based on when you last
+     * sent a message or similar, and auto-aways you after 5 minutes of
+     * inactivity, and sends auto-reply messages on protocols that have such a
+     * concept natively when you're away.  Let's disable all that.
+     */
+    purple_prefs_set_string ("/purple/away/idle_reporting", "none");
+    purple_prefs_set_bool ("/purple/away/away_when_idle", FALSE);
+    purple_prefs_set_string ("/purple/away/auto_reply", "never");
+
+}
+
+static void
+init_libpurple (void)
 {
     user_dir = g_strconcat (g_get_tmp_dir (), G_DIR_SEPARATOR_S,
                                   "haze-XXXXXX", NULL);
@@ -195,6 +209,8 @@ init_libpurple()
     DEBUG ("libpurple %d.%d.%d loaded (compiled against %d.%d.%d)",
         purple_major_version, purple_minor_version, purple_micro_version,
         PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, PURPLE_MICRO_VERSION);
+
+    set_libpurple_preferences ();
 }
 
 static TpBaseConnectionManager *
