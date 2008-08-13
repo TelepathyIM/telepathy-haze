@@ -161,7 +161,7 @@ static PurpleCoreUiOps haze_core_uiops =
 };
 
 static void
-set_libpurple_preferences ()
+set_libpurple_preferences (void)
 {
     /* Out of the box, libpurple tracks your idle time based on when you last
      * sent a message or similar, and auto-aways you after 5 minutes of
@@ -175,7 +175,7 @@ set_libpurple_preferences ()
 }
 
 static void
-init_libpurple()
+init_libpurple (void)
 {
     user_dir = g_strconcat (g_get_tmp_dir (), G_DIR_SEPARATOR_S,
                                   "haze-XXXXXX", NULL);
