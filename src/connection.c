@@ -63,6 +63,11 @@ typedef struct _HazeConnectionPrivate
 
     HazeProtocolInfo *protocol_info;
 
+    /* Set if purple_account_disconnect has been called or is scheduled to be
+     * called, so should not be called again.
+     */
+    gboolean disconnecting;
+
     gboolean dispose_has_run;
 } HazeConnectionPrivate;
 
@@ -115,9 +120,16 @@ haze_report_disconnect_reason (PurpleConnection *gc,
                                const char *text)
 {
     PurpleAccount *account = purple_connection_get_account (gc);
+    HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
+    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (conn);
     TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
 
     TpConnectionStatusReason tp_reason;
+
+    /* When a connection error is reported by libpurple, an idle callback to
+     * purple_account_disconnect is added.
+     */
+    priv->disconnecting = TRUE;
 
     switch (reason)
     {
@@ -196,7 +208,11 @@ void
 disconnected_cb (PurpleConnection *pc)
 {
     PurpleAccount *account = purple_connection_get_account (pc);
+    HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
+    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (conn);
     TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
+
+    priv->disconnecting = TRUE;
 
     if(base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
     {
@@ -326,8 +342,12 @@ static void
 _haze_connection_shut_down (TpBaseConnection *base)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
-    if(!self->account->disconnecting)
+    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (self);
+    if(!priv->disconnecting)
+    {
+        priv->disconnecting = TRUE;
         purple_account_disconnect(self->account);
+    }
 }
 
 /* Must be in the same order as HazeListHandle in connection.h */
@@ -451,6 +471,8 @@ haze_connection_constructor (GType type,
     DEBUG ("Post-construction: (HazeConnection *)%p", self);
 
     priv->dispose_has_run = FALSE;
+
+    priv->disconnecting = FALSE;
 
     _create_account (self);
 
