@@ -18,10 +18,52 @@
  *
  */
 
+#include "debug.h"
+
 #include <string.h>
 #include <stdarg.h>
 
 #include <libpurple/debug.h>
+#include <telepathy-glib/debug.h>
+
+
+typedef enum
+{
+    HAZE_DEBUG_HAZE   = 1 << 0,
+    HAZE_DEBUG_PURPLE = 1 << 1,
+} HazeDebugFlags;
+
+
+static GDebugKey keys[] =
+{
+    { "haze",   HAZE_DEBUG_HAZE },
+    { "purple", HAZE_DEBUG_PURPLE },
+};
+
+
+static HazeDebugFlags flags = 0;
+
+
+void
+haze_debug_set_flags_from_env ()
+{
+    const gchar *env = g_getenv ("HAZE_DEBUG");
+
+    if (env)
+    {
+       flags |= g_parse_debug_string (env, keys, 2);
+    }
+
+    tp_debug_set_flags (env);
+
+    if (g_getenv ("HAZE_PERSIST"))
+        tp_debug_set_persistent (TRUE);
+
+#ifdef HAVE_TP_DEBUG_DIVERT_MESSAGES
+    tp_debug_divert_messages (g_getenv ("HAZE_LOGFILE"));
+#endif
+}
+
 
 static char *debug_level_names[] =
 {
@@ -65,6 +107,9 @@ static gboolean
 haze_debug_is_enabled (PurpleDebugLevel level,
                        const char *category)
 {
+    if (!(flags & HAZE_DEBUG_PURPLE))
+        return FALSE;
+
     if (level == PURPLE_DEBUG_MISC)
         return FALSE;
     /* oscar and yahoo, among others, supply a NULL category for some of their
@@ -117,10 +162,13 @@ void
 haze_debug (const gchar *format,
             ...)
 {
-    va_list args;
-    va_start (args, format);
+    if (flags & HAZE_DEBUG_HAZE)
+    {
+        va_list args;
+        va_start (args, format);
 
-    g_logv (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, format, args);
+        g_logv (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, format, args);
 
-    va_end (args);
+        va_end (args);
+    }
 }
