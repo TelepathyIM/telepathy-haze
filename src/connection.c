@@ -66,9 +66,9 @@ typedef struct _HazeConnectionPrivate
     /* Set if purple_account_disconnect has been called or is scheduled to be
      * called, so should not be called again.
      */
-    gboolean disconnecting;
+    gboolean disconnecting : 1;
 
-    gboolean dispose_has_run;
+    gboolean dispose_has_run : 1;
 } HazeConnectionPrivate;
 
 #define HAZE_CONNECTION_GET_PRIVATE(o) \
