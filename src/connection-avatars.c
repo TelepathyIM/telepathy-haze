@@ -188,7 +188,7 @@ haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
 {
     HazeConnection *conn = HAZE_CONNECTION (self);
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
-    GHashTable *tokens = g_hash_table_new_full (NULL, NULL, NULL, g_free);
+    GHashTable *tokens;
     guint i;
     GError *err = NULL;
 
@@ -201,6 +201,8 @@ haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
         g_error_free (err);
         return;
     }
+
+    tokens = g_hash_table_new_full (NULL, NULL, NULL, g_free);
 
     for (i = 0; i < contacts->len; i++)
     {
