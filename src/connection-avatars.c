@@ -330,7 +330,6 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
     PurpleAccount *account = conn->account;
 
-    /* TODO: is 'avatar' guaranteed non-null? */
     /* TODO: check that the avatar is few enough bytes for the mime type. */
     guchar *icon_data = NULL;
     size_t icon_len = avatar->len;
