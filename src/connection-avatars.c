@@ -116,21 +116,21 @@ get_token (const GArray *avatar)
 
     g_assert (avatar != NULL);
 
-    context = purple_cipher_context_new_by_name("sha1", NULL);
+    context = purple_cipher_context_new_by_name ("sha1", NULL);
     if (context == NULL)
     {
         g_error ("Could not find libpurple's sha1 cipher");
     }
 
     /* Hash the image data */
-    purple_cipher_context_append(context, (const guchar *) avatar->data,
+    purple_cipher_context_append (context, (const guchar *) avatar->data,
             avatar->len);
-    if (!purple_cipher_context_digest_to_str(context, sizeof(digest),
+    if (!purple_cipher_context_digest_to_str (context, sizeof (digest),
                 digest, NULL))
     {
         g_error ("Failed to get SHA-1 digest");
     }
-    purple_cipher_context_destroy(context);
+    purple_cipher_context_destroy (context);
 
     token = g_strdup (digest);
 
