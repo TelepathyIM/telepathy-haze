@@ -329,11 +329,28 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
     HazeConnection *conn = HAZE_CONNECTION (self);
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
     PurpleAccount *account = conn->account;
+    PurplePluginProtocolInfo *prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
 
-    /* TODO: check that the avatar is few enough bytes for the mime type. */
     guchar *icon_data = NULL;
     size_t icon_len = avatar->len;
     gchar *token;
+
+    const size_t max_filesize = prpl_info->icon_spec.max_filesize;
+
+    if (max_filesize > 0 && icon_len > max_filesize)
+    {
+        GError *error = NULL;
+        gchar *message = g_strdup_printf ("avatar is %uB, but the limit is %uB",
+            icon_len, max_filesize);
+        g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, message);
+
+        dbus_g_method_return_error (context, error);
+
+        g_error_free (error);
+        g_free (message);
+
+        return;
+    }
 
     /* purple_buddy_icons_set_account_icon () takes ownership of the pointer
      * passed to it, but 'avatar' will be freed soon.
