@@ -194,7 +194,7 @@ _translate_protocol_option (PurpleAccountOption *option,
 
             if (def && *def)
             {
-                paramspec->def = g_strdup (def);
+                paramspec->def = def;
                 paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
             }
             break;
