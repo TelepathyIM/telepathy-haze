@@ -36,6 +36,7 @@ enum
   PROP_CHANNEL_TYPE,
   PROP_HANDLE_TYPE,
   PROP_HANDLE,
+  PROP_INTERFACES,
 
   LAST_PROPERTY
 };
@@ -116,17 +117,27 @@ _chat_state_available (HazeIMChannel *chan)
     return (prpl_info->send_typing != NULL);
 }
 
+static const char **
+_haze_im_channel_interfaces (HazeIMChannel *chan)
+{
+    static const char *no_interfaces[] = { NULL };
+    static const char *chat_state_ifaces[] = {
+        TP_IFACE_CHANNEL_INTERFACE_CHAT_STATE,
+        NULL
+    };
+
+    if (_chat_state_available (chan))
+        return chat_state_ifaces;
+    else
+        return no_interfaces;
+}
+
 static void
 haze_im_channel_get_interfaces (TpSvcChannel *iface,
                                 DBusGMethodInvocation *context)
 {
-    const char *no_interfaces[] = { NULL };
-    const char *chat_state_ifaces[] =
-        { TP_IFACE_CHANNEL_INTERFACE_CHAT_STATE, NULL };
-    if (_chat_state_available (HAZE_IM_CHANNEL (iface)))
-        tp_svc_channel_return_from_get_interfaces (context, chat_state_ifaces);
-    else
-        tp_svc_channel_return_from_get_interfaces (context, no_interfaces);
+    tp_svc_channel_return_from_get_interfaces (context,
+        _haze_im_channel_interfaces (HAZE_IM_CHANNEL (iface)));
 }
 
 static void
@@ -353,6 +364,9 @@ haze_im_channel_get_property (GObject    *object,
         case PROP_CONNECTION:
             g_value_set_object (value, priv->conn);
             break;
+        case PROP_INTERFACES:
+            g_value_set_boxed (value, _haze_im_channel_interfaces (chan));
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             break;
@@ -484,6 +498,13 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
                                       G_PARAM_STATIC_NICK |
                                       G_PARAM_STATIC_BLURB);
     g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
+
+    param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
+        "Additional Channel.Interface.* interfaces",
+        G_TYPE_STRV,
+        G_PARAM_READABLE |
+        G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+    g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
 
     tp_text_mixin_class_init (object_class,
