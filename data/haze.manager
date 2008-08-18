@@ -113,6 +113,32 @@ default-port=1533
 default-force-login=false
 default-fake-client-id=false
 
+[Protocol silc]
+param-account=s required
+param-password=s
+param-server=s
+param-port=i
+param-public-key=s
+param-private-key=s
+param-cipher=s
+param-hmac=s
+param-pfs=b
+param-pubkey-auth=b
+param-block-ims=b
+param-block-wb=b
+param-open-wb=b
+param-sign-verify=b
+default-server=silc.silcnet.org
+default-port=706
+default-cipher=aes-256-ctr
+default-hmac=hmac-sha256-96
+default-pfs=false
+default-pubkey-auth=false
+default-block-ims=false
+default-block-wb=false
+default-open-wb=false
+default-sign-verify=false
+
 [Protocol simple]
 param-account=s required
 param-password=s required

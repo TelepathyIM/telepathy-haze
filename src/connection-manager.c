@@ -130,6 +130,29 @@ _param_filter_no_blanks (const TpCMParamSpec *paramspec,
     return TRUE;
 }
 
+/* Checks whether the supplied string equals one of those in the GList
+ * paramspec->filter_data.
+ */
+static gboolean
+_param_filter_string_list (const TpCMParamSpec *paramspec,
+                           GValue *value,
+                           GError **error)
+{
+    const gchar *str = g_value_get_string (value);
+    const GList *valid_values = paramspec->filter_data;
+
+    for (; valid_values != NULL; valid_values = valid_values->next)
+    {
+        const gchar *value = valid_values->data;
+        if (!tp_strdiff (value, str))
+            return TRUE;
+    }
+
+    g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+        "'%s' is not a valid value for parameter '%s'", str, paramspec->name);
+    return FALSE;
+}
+
 /* Populates a TpCMParamSpec from a PurpleAccountOption, possibly renaming the
  * parameter as specified in parameter_map.  paramspec is assumed to be zeroed out.
  * Returns TRUE on success, and FALSE if paramspec could not be populated (and
@@ -194,7 +217,37 @@ _translate_protocol_option (PurpleAccountOption *option,
 
             if (def && *def)
             {
-                paramspec->def = g_strdup (def);
+                paramspec->def = def;
+                paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
+            }
+            break;
+        }
+        case PURPLE_PREF_STRING_LIST:
+        {
+            const gchar *def;
+            const GList *option_tuples;
+            GList *valid_strings = NULL;
+            /* tuple->key is human-readable description, tuple->value is the
+             * value's ID and is secretly a (const char *).
+             */
+            const PurpleKeyValuePair *tuple;
+
+            paramspec->dtype = DBUS_TYPE_STRING_AS_STRING;
+            paramspec->gtype = G_TYPE_STRING;
+
+            option_tuples = purple_account_option_get_list (option);
+            for (; option_tuples != NULL; option_tuples = option_tuples->next)
+            {
+                tuple = option_tuples->data;
+                valid_strings = g_list_prepend (valid_strings, tuple->value);
+            }
+            paramspec->filter = _param_filter_string_list;
+            paramspec->filter_data = valid_strings;
+
+            def = purple_account_option_get_default_list_value (option);
+            if (def && *def)
+            {
+                paramspec->def = def;
                 paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
             }
             break;

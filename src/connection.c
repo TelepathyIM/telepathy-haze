@@ -268,6 +268,7 @@ _set_option (const PurpleAccountOption *option,
                 g_value_get_int (value));
             break;
         case PURPLE_PREF_STRING:
+        case PURPLE_PREF_STRING_LIST:
             g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
             purple_account_set_string (context->account, option->pref_name,
                 g_value_get_string (value));
