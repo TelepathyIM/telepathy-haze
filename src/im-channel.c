@@ -453,9 +453,6 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     GParamSpec *param_spec;
 
-    tp_text_mixin_class_init (object_class,
-                              G_STRUCT_OFFSET(HazeIMChannelClass, text_class));
-
     g_type_class_add_private (klass, sizeof (HazeIMChannelPrivate));
 
     object_class->get_property = haze_im_channel_get_property;
@@ -481,6 +478,10 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
                                       G_PARAM_STATIC_NICK |
                                       G_PARAM_STATIC_BLURB);
     g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
+
+
+    tp_text_mixin_class_init (object_class,
+                              G_STRUCT_OFFSET(HazeIMChannelClass, text_class));
 }
 
 static void
