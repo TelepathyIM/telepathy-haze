@@ -19,6 +19,8 @@
  *
  */
 
+#include <string.h>
+
 #include <telepathy-glib/svc-connection.h>
 
 #include <libpurple/cipher.h>
@@ -109,39 +111,28 @@ get_token (const GArray *avatar)
 {
     gchar *token;
 
-    if (avatar)
+    PurpleCipherContext *context;
+    gchar digest[41];
+
+    g_assert (avatar != NULL);
+
+    context = purple_cipher_context_new_by_name ("sha1", NULL);
+    if (context == NULL)
     {
-        /* Taken mostly verbatim from purple_util_get_image_filename; this copy
-         * does not append a file extension to the hash, and also works with
-         * libpurple 2.0
-         */
-        PurpleCipherContext *context;
-        gchar digest[41];
-
-        context = purple_cipher_context_new_by_name("sha1", NULL);
-        if (context == NULL)
-        {
-            g_error ("Could not find libpurple's sha1 cipher");
-        }
-
-        /* Hash the image data */
-        purple_cipher_context_append(context, (const guchar *) avatar->data,
-                                     avatar->len);
-        if (!purple_cipher_context_digest_to_str(context, sizeof(digest),
-                                                 digest, NULL))
-        {
-            g_error ("Failed to get SHA-1 digest");
-        }
-        purple_cipher_context_destroy(context);
-
-        token = g_strdup (digest);
-    }
-    else
-    {
-        token = g_strdup ("");
+        g_error ("Could not find libpurple's sha1 cipher");
     }
 
-    g_assert (token);
+    /* Hash the image data */
+    purple_cipher_context_append (context, (const guchar *) avatar->data,
+            avatar->len);
+    if (!purple_cipher_context_digest_to_str (context, sizeof (digest),
+                digest, NULL))
+    {
+        g_error ("Failed to get SHA-1 digest");
+    }
+    purple_cipher_context_destroy (context);
+
+    token = g_strdup (digest);
 
     return token;
 }
@@ -151,9 +142,18 @@ get_handle_token (HazeConnection *conn,
                   TpHandle handle)
 {
     GArray *avatar = get_avatar (conn, handle);
-    gchar *token = get_token (avatar);
-    if (avatar)
+    gchar *token;
+
+    if (avatar != NULL)
+    {
+        token = get_token (avatar);
         g_array_free (avatar, TRUE);
+    }
+    else
+    {
+        token = g_strdup ("");
+    }
+
     return token;
 }
 
@@ -179,6 +179,69 @@ haze_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
     tp_svc_connection_interface_avatars_return_from_get_avatar_tokens (
         context, (const gchar **) icons);
     g_strfreev (icons);
+}
+
+void
+haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
+                                         const GArray *contacts,
+                                         DBusGMethodInvocation *context)
+{
+    HazeConnection *conn = HAZE_CONNECTION (self);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    GHashTable *tokens;
+    guint i;
+    GError *err = NULL;
+
+    TpHandleRepoIface *contact_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+
+    if (!tp_handles_are_valid (contact_repo, contacts, FALSE, &err))
+    {
+        dbus_g_method_return_error (context, err);
+        g_error_free (err);
+        return;
+    }
+
+    tokens = g_hash_table_new_full (NULL, NULL, NULL, g_free);
+
+    for (i = 0; i < contacts->len; i++)
+    {
+        TpHandle handle = g_array_index (contacts, TpHandle, i);
+        gchar *token = NULL;
+
+        /* Purple doesn't provide any way to distinguish between a contact with
+         * no avatar and a contact whose avatar we haven't retrieved yet,
+         * mainly because it always automatically downloads all avatars.  So in
+         * general, we assume no avatar means the former, so that clients don't
+         * repeatedly call RequestAvatar hoping eventually to get the avatar.
+         *
+         * But on protocols where avatars aren't saved server-side, we should
+         * report that it's unknown, so that the UI (aka. mcd) can re-set the
+         * avatar you last used.  So we special-case self_handle here.
+         */
+
+        if (handle == base_conn->self_handle)
+        {
+            GArray *avatar = get_avatar (conn, handle);
+            if (avatar != NULL)
+            {
+                token = get_token (avatar);
+                g_array_free (avatar, TRUE);
+            }
+        }
+        else
+        {
+            token = get_handle_token (conn, handle);
+        }
+
+        if (token != NULL)
+            g_hash_table_insert (tokens, GUINT_TO_POINTER (handle), token);
+    }
+
+    tp_svc_connection_interface_avatars_return_from_get_known_avatar_tokens (
+        context, tokens);
+
+    g_hash_table_unref (tokens);
 }
 
 void
@@ -229,7 +292,7 @@ haze_connection_request_avatars (TpSvcConnectionInterfaceAvatars *self,
     {
         TpHandle handle = g_array_index (contacts, TpHandle, i);
         GArray *avatar = get_avatar (conn, handle);
-        if (avatar)
+        if (avatar != NULL)
         {
             gchar *token = get_token (avatar);
             tp_svc_connection_interface_avatars_emit_avatar_retrieved (
@@ -246,12 +309,15 @@ void
 haze_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *self,
                               DBusGMethodInvocation *context)
 {
-    GError *error = NULL;
-    g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-        "Haven't got around to dealing with your own avatar yet");
-    dbus_g_method_return_error (context, error);
-    g_error_free (error);
-/*    tp_svc_connection_interface_avatars_return_from_clear_avatar (context);*/
+    HazeConnection *conn = HAZE_CONNECTION (self);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    PurpleAccount *account = conn->account;
+
+    purple_buddy_icons_set_account_icon (account, NULL, 0);
+
+    tp_svc_connection_interface_avatars_return_from_clear_avatar (context);
+    tp_svc_connection_interface_avatars_emit_avatar_updated (conn,
+        base_conn->self_handle, "");
 }
 
 void
@@ -260,12 +326,45 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
                             const gchar *mime_type,
                             DBusGMethodInvocation *context)
 {
-    GError *error = NULL;
-    g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-        "Haven't got around to dealing with your own avatar yet");
-    dbus_g_method_return_error (context, error);
-    g_error_free (error);
-//  tp_svc_connection_interface_avatars_return_from_set_avatar (context, token);
+    HazeConnection *conn = HAZE_CONNECTION (self);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    PurpleAccount *account = conn->account;
+    PurplePluginProtocolInfo *prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
+
+    guchar *icon_data = NULL;
+    size_t icon_len = avatar->len;
+    gchar *token;
+
+    const size_t max_filesize = prpl_info->icon_spec.max_filesize;
+
+    if (max_filesize > 0 && icon_len > max_filesize)
+    {
+        GError *error = NULL;
+        gchar *message = g_strdup_printf ("avatar is %uB, but the limit is %uB",
+            icon_len, max_filesize);
+        g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, message);
+
+        dbus_g_method_return_error (context, error);
+
+        g_error_free (error);
+        g_free (message);
+
+        return;
+    }
+
+    /* purple_buddy_icons_set_account_icon () takes ownership of the pointer
+     * passed to it, but 'avatar' will be freed soon.
+     */
+    icon_data = g_malloc (avatar->len);
+    memcpy (icon_data, avatar->data, icon_len);
+    purple_buddy_icons_set_account_icon (account, icon_data, icon_len);
+    token = get_token (avatar);
+    DEBUG ("%s", token);
+
+    tp_svc_connection_interface_avatars_return_from_set_avatar (context, token);
+    tp_svc_connection_interface_avatars_emit_avatar_updated (conn,
+        base_conn->self_handle, token);
+    g_free (token);
 }
 
 void
@@ -279,6 +378,7 @@ haze_connection_avatars_iface_init (gpointer g_iface,
     klass, haze_connection_##x)
     IMPLEMENT(get_avatar_requirements);
     IMPLEMENT(get_avatar_tokens);
+    IMPLEMENT(get_known_avatar_tokens);
     IMPLEMENT(request_avatar);
     IMPLEMENT(request_avatars);
     IMPLEMENT(set_avatar);
@@ -287,7 +387,8 @@ haze_connection_avatars_iface_init (gpointer g_iface,
 }
 
 void
-buddy_icon_changed_cb (PurpleBuddy *buddy, gpointer unused)
+buddy_icon_changed_cb (PurpleBuddy *buddy,
+                       gpointer unused)
 {
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (buddy->account);
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
