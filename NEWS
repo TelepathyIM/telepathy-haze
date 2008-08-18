@@ -1,3 +1,20 @@
+telepathy-haze 0.2.1 – “DUM DE DUM DE DIDDLE IDDLE DE DUM‼” (2008-08-18)
+========================================================================
+
+ * A publish channel now exists, which allows you to accept or decline incoming
+   subscription requests (but nothing else yet; it's not possible to later
+   remove someone from the list, for instance).
+ * Add support for setting your avatar (fd.o #13123).
+ * Stop your accounts auto-awaying themselves (fd.o #14335).
+ * Don't crash when the UI passes an empty or otherwise invalid host name as
+   the server parameter for a new connection (fd.o #14445).
+ * Don't sporadically crash on connection errors, such as an incorrect password
+   (fd.o #14933).
+ * Debugging output from Haze and libpurple is now silenced unless you set
+   HAZE_DEBUG appropriately ("haze" and "purple", respectively).
+
+ * Haze now requires telepathy-glib >= 0.7.0.
+
 telepathy-haze 0.2.0 – "I Remember Piano Lessons" (2008-02-07)
 ==============================================================
 
