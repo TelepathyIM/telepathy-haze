@@ -512,6 +512,8 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
     tp_group_mixin_init (obj, G_STRUCT_OFFSET (HazeContactListChannel, group),
                          contact_repo, self_handle);
 
+    tp_group_mixin_change_flags (obj, TP_CHANNEL_GROUP_FLAG_PROPERTIES, 0);
+
     switch (handle_type) {
         case TP_HANDLE_TYPE_GROUP:
             tp_group_mixin_change_flags (obj,
@@ -684,6 +686,8 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
         klass->properties_class.interfaces = NULL;
         tp_dbus_properties_mixin_class_init (object_class,
             G_STRUCT_OFFSET (HazeContactListChannelClass, properties_class));
+
+        tp_group_mixin_init_dbus_properties (object_class);
     }
 
     object_class->constructor = haze_contact_list_channel_constructor;
