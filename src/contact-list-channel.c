@@ -675,20 +675,8 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
     GParamSpec *param_spec;
     static gboolean properties_mixin_initialized = FALSE;
 
-    tp_group_mixin_class_init (object_class,
-        G_STRUCT_OFFSET (HazeContactListChannelClass, group_class),
-        _haze_contact_list_channel_add_member_cb,
-        _haze_contact_list_channel_remove_member_cb);
-
-    if (!properties_mixin_initialized)
-    {
-        properties_mixin_initialized = TRUE;
-        klass->properties_class.interfaces = NULL;
-        tp_dbus_properties_mixin_class_init (object_class,
-            G_STRUCT_OFFSET (HazeContactListChannelClass, properties_class));
-
-        tp_group_mixin_init_dbus_properties (object_class);
-    }
+    g_type_class_add_private (object_class,
+                              sizeof(HazeContactListChannelPrivate));
 
     object_class->constructor = haze_contact_list_channel_constructor;
 
@@ -697,6 +685,7 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
 
     object_class->get_property = haze_contact_list_channel_get_property;
     object_class->set_property = haze_contact_list_channel_set_property;
+
 
     param_spec = g_param_spec_object ("connection", "HazeConnection object",
                                       "Haze connection object that owns this "
@@ -716,8 +705,21 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
             "handle-type");
     g_object_class_override_property (object_class, PROP_HANDLE, "handle");
 
-    g_type_class_add_private (object_class,
-                              sizeof(HazeContactListChannelPrivate));
+
+    tp_group_mixin_class_init (object_class,
+        G_STRUCT_OFFSET (HazeContactListChannelClass, group_class),
+        _haze_contact_list_channel_add_member_cb,
+        _haze_contact_list_channel_remove_member_cb);
+
+    if (!properties_mixin_initialized)
+    {
+        properties_mixin_initialized = TRUE;
+        klass->properties_class.interfaces = NULL;
+        tp_dbus_properties_mixin_class_init (object_class,
+            G_STRUCT_OFFSET (HazeContactListChannelClass, properties_class));
+
+        tp_group_mixin_init_dbus_properties (object_class);
+    }
 }
 
 static void
