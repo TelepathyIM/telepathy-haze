@@ -100,6 +100,12 @@ G_DEFINE_TYPE_WITH_CODE (HazeContactListChannel,
         tp_dbus_properties_mixin_iface_init);
     )
 
+const char *haze_contact_list_channel_interfaces[] = {
+    TP_IFACE_CHANNEL_INTERFACE_GROUP,
+    NULL
+};
+
+
 /* properties: */
 enum {
     PROP_CONNECTION = 1,
@@ -107,6 +113,7 @@ enum {
     PROP_CHANNEL_TYPE,
     PROP_HANDLE_TYPE,
     PROP_HANDLE,
+    PROP_INTERFACES,
 
     LAST_PROPERTY
 };
@@ -628,6 +635,9 @@ haze_contact_list_channel_get_property (GObject    *object,
         case PROP_CONNECTION:
             g_value_set_object (value, priv->conn);
             break;
+        case PROP_INTERFACES:
+            g_value_set_boxed (value, haze_contact_list_channel_interfaces);
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             break;
@@ -696,6 +706,13 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
                                       G_PARAM_STATIC_NICK |
                                       G_PARAM_STATIC_BLURB);
     g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
+
+    param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
+        "Additional Channel.Interface.* interfaces",
+        G_TYPE_STRV,
+        G_PARAM_READABLE |
+        G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+    g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
     g_object_class_override_property (object_class, PROP_OBJECT_PATH,
             "object-path");
@@ -779,13 +796,13 @@ haze_contact_list_channel_get_handle (TpSvcChannel *iface,
     tp_svc_channel_return_from_get_handle (context, priv->handle_type,
         priv->handle);
 }
+
 static void
 haze_contact_list_channel_get_interfaces (TpSvcChannel *self,
                                           DBusGMethodInvocation *context)
 {
-    const char *interfaces[] = { TP_IFACE_CHANNEL_INTERFACE_GROUP, NULL };
-
-    tp_svc_channel_return_from_get_interfaces (context, interfaces);
+    tp_svc_channel_return_from_get_interfaces (context,
+        haze_contact_list_channel_interfaces);
 }
 
 static void
