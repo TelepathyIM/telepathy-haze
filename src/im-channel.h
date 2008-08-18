@@ -36,6 +36,7 @@ struct _HazeIMChannelClass {
     GObjectClass parent_class;
 
     TpTextMixinClass text_class;
+    TpDBusPropertiesMixinClass properties_class;
 };
 
 struct _HazeIMChannel {

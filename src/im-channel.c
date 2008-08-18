@@ -22,6 +22,7 @@
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/svc-generic.h>
 
 #include "im-channel.h"
 #include "connection.h"
@@ -64,6 +65,8 @@ G_DEFINE_TYPE_WITH_CODE(HazeIMChannel, haze_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_CHAT_STATE,
         chat_state_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
+        tp_dbus_properties_mixin_iface_init);
     )
 
 static void
@@ -453,6 +456,9 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     GParamSpec *param_spec;
 
+    static gboolean properties_mixin_initialized = FALSE;
+
+
     g_type_class_add_private (klass, sizeof (HazeIMChannelPrivate));
 
     object_class->get_property = haze_im_channel_get_property;
@@ -482,6 +488,14 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
 
     tp_text_mixin_class_init (object_class,
                               G_STRUCT_OFFSET(HazeIMChannelClass, text_class));
+
+    if (!properties_mixin_initialized)
+    {
+        properties_mixin_initialized = TRUE;
+        klass->properties_class.interfaces = NULL;
+        tp_dbus_properties_mixin_class_init (object_class,
+            G_STRUCT_OFFSET (HazeIMChannelClass, properties_class));
+    }
 }
 
 static void
