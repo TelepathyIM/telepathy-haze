@@ -23,6 +23,7 @@
 #include <glib-object.h>
 
 #include <telepathy-glib/group-mixin.h>
+#include <telepathy-glib/dbus-properties-mixin.h>
 
 #include <libpurple/account.h>
 
@@ -34,6 +35,7 @@ typedef struct _HazeContactListChannelClass HazeContactListChannelClass;
 struct _HazeContactListChannelClass {
     GObjectClass parent_class;
     TpGroupMixinClass group_class;
+    TpDBusPropertiesMixinClass properties_class;
 };
 
 struct _HazeContactListChannel {

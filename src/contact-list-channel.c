@@ -21,6 +21,7 @@
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/channel-iface.h>
+#include <telepathy-glib/svc-generic.h>
 
 #include "contact-list-channel.h"
 #include "connection.h"
@@ -94,7 +95,9 @@ G_DEFINE_TYPE_WITH_CODE (HazeContactListChannel,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_CONTACT_LIST, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_GROUP,
-      tp_group_mixin_iface_init);
+        tp_group_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
+        tp_dbus_properties_mixin_iface_init);
     )
 
 /* properties: */
@@ -668,11 +671,20 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     GParamSpec *param_spec;
+    static gboolean properties_mixin_initialized = FALSE;
 
     tp_group_mixin_class_init (object_class,
         G_STRUCT_OFFSET (HazeContactListChannelClass, group_class),
         _haze_contact_list_channel_add_member_cb,
         _haze_contact_list_channel_remove_member_cb);
+
+    if (!properties_mixin_initialized)
+    {
+        properties_mixin_initialized = TRUE;
+        klass->properties_class.interfaces = NULL;
+        tp_dbus_properties_mixin_class_init (object_class,
+            G_STRUCT_OFFSET (HazeContactListChannelClass, properties_class));
+    }
 
     object_class->constructor = haze_contact_list_channel_constructor;
 
