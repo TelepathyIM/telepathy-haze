@@ -215,7 +215,7 @@ _translate_protocol_option (PurpleAccountOption *option,
             else
                 def = purple_account_option_get_default_string (option);
 
-            if (def && *def)
+            if (def != NULL && *def != '\0')
             {
                 paramspec->def = def;
                 paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
@@ -245,7 +245,7 @@ _translate_protocol_option (PurpleAccountOption *option,
             paramspec->filter_data = valid_strings;
 
             def = purple_account_option_get_default_list_value (option);
-            if (def && *def)
+            if (def != NULL && *def != '\0')
             {
                 paramspec->def = def;
                 paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
