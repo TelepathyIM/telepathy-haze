@@ -683,7 +683,23 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     GParamSpec *param_spec;
+
     static gboolean properties_mixin_initialized = FALSE;
+    static TpDBusPropertiesMixinPropImpl channel_props[] = {
+        { "TargetHandleType", "handle-type", NULL },
+        { "TargetHandle", "handle", NULL },
+        { "ChannelType", "channel-type", NULL },
+        { "Interfaces", "interfaces", NULL },
+        { NULL }
+    };
+    static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+        { TP_IFACE_CHANNEL,
+          tp_dbus_properties_mixin_getter_gobject_properties,
+          NULL,
+          channel_props,
+        },
+        { NULL }
+    };
 
     g_type_class_add_private (object_class,
                               sizeof(HazeContactListChannelPrivate));
@@ -731,7 +747,7 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
     if (!properties_mixin_initialized)
     {
         properties_mixin_initialized = TRUE;
-        klass->properties_class.interfaces = NULL;
+        klass->properties_class.interfaces = prop_interfaces;
         tp_dbus_properties_mixin_class_init (object_class,
             G_STRUCT_OFFSET (HazeContactListChannelClass, properties_class));
 
