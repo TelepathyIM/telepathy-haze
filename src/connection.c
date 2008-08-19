@@ -480,6 +480,8 @@ haze_connection_constructor (GType type,
 
     DEBUG ("Post-construction: (HazeConnection *)%p", self);
 
+    self->acceptable_avatar_mime_types = NULL;
+
     priv->dispose_has_run = FALSE;
 
     priv->disconnecting = FALSE;
@@ -520,8 +522,12 @@ haze_connection_dispose (GObject *object)
 static void
 haze_connection_finalize (GObject *object)
 {
+    HazeConnection *self = HAZE_CONNECTION (object);
+
     tp_contacts_mixin_finalize (object);
     tp_presence_mixin_finalize (object);
+
+    g_strfreev (self->acceptable_avatar_mime_types);
 
     G_OBJECT_CLASS (haze_connection_parent_class)->finalize (object);
 }
