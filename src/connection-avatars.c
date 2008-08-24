@@ -374,6 +374,15 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
         return;
     }
 
+    /* FIXME: This is a work-around for mission control passing an empty
+     *        mime_type when it re-sets your avatar on connection.  Since it
+     *        only caches the avatar if it was set correctly by Empathy, it's
+     *        most likely actually acceptable, but the work-around should
+     *        probably go away when MC is fixed.
+     */
+    if (*mime_type == '\0')
+        acceptable_mime_type = TRUE;
+
     while (!acceptable_mime_type && *mime_types != NULL)
     {
         if (!tp_strdiff (*mime_types, mime_type))
