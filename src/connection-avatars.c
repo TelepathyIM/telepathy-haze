@@ -349,15 +349,20 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
     PurpleAccount *account = conn->account;
     PurplePluginProtocolInfo *prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
 
+    GError *error = NULL;
+    gchar *message;
+
     guchar *icon_data = NULL;
     size_t icon_len = avatar->len;
     gchar *token;
+    gchar **mime_types = _get_acceptable_mime_types (conn);
+
+    gboolean acceptable_mime_type = FALSE;
 
     const size_t max_filesize = prpl_info->icon_spec.max_filesize;
 
     if (max_filesize > 0 && icon_len > max_filesize)
     {
-        GError *error = NULL;
         g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
                      "avatar is %" G_GSIZE_FORMAT "B, "
                      "but the limit is %" G_GSIZE_FORMAT "B",
@@ -368,6 +373,28 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
         g_error_free (error);
         return;
     }
+
+    while (!acceptable_mime_type && *mime_types != NULL)
+    {
+        if (!tp_strdiff (*mime_types, mime_type))
+            acceptable_mime_type = TRUE;
+        mime_types++;
+    }
+
+    if (!acceptable_mime_type)
+    {
+        message = g_strdup_printf ("'%s' is not a supported MIME type",
+            mime_type);
+        g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, message);
+
+        dbus_g_method_return_error (context, error);
+
+        g_error_free (error);
+        g_free (message);
+
+        return;
+    }
+
 
     /* purple_buddy_icons_set_account_icon () takes ownership of the pointer
      * passed to it, but 'avatar' will be freed soon.
