@@ -113,6 +113,7 @@ enum {
     PROP_CHANNEL_TYPE,
     PROP_HANDLE_TYPE,
     PROP_HANDLE,
+    PROP_TARGET_ID,
     PROP_INTERFACES,
 
     LAST_PROPERTY
@@ -618,6 +619,7 @@ haze_contact_list_channel_get_property (GObject    *object,
 {
     HazeContactListChannel *self = HAZE_CONTACT_LIST_CHANNEL (object);
     HazeContactListChannelPrivate *priv = HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE(self);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
 
     switch (property_id) {
         case PROP_OBJECT_PATH:
@@ -632,6 +634,14 @@ haze_contact_list_channel_get_property (GObject    *object,
         case PROP_HANDLE:
             g_value_set_uint (value, priv->handle);
             break;
+        case PROP_TARGET_ID:
+        {
+            TpHandleRepoIface *repo = tp_base_connection_get_handles (base_conn,
+                priv->handle_type);
+
+            g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
+            break;
+        }
         case PROP_CONNECTION:
             g_value_set_object (value, priv->conn);
             break;
@@ -688,6 +698,7 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
     static TpDBusPropertiesMixinPropImpl channel_props[] = {
         { "TargetHandleType", "handle-type", NULL },
         { "TargetHandle", "handle", NULL },
+        { "TargetID", "target-id", NULL },
         { "ChannelType", "channel-type", NULL },
         { "Interfaces", "interfaces", NULL },
         { NULL }
@@ -729,6 +740,13 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
         G_PARAM_READABLE |
         G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
     g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+    param_spec = g_param_spec_string ("target-id", "Contact list name",
+        "The stringy name of the contact list (\"subscribe\" etc.)",
+        NULL,
+        G_PARAM_READABLE |
+        G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+    g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
 
     g_object_class_override_property (object_class, PROP_OBJECT_PATH,
             "object-path");
