@@ -36,6 +36,7 @@ enum
   PROP_CHANNEL_TYPE,
   PROP_HANDLE_TYPE,
   PROP_HANDLE,
+  PROP_TARGET_ID,
   PROP_INTERFACES,
 
   LAST_PROPERTY
@@ -347,6 +348,7 @@ haze_im_channel_get_property (GObject    *object,
 {
     HazeIMChannel *chan = HAZE_IM_CHANNEL (object);
     HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (chan);
+    TpBaseConnection *base_conn = (TpBaseConnection *) priv->conn;
 
     switch (property_id) {
         case PROP_OBJECT_PATH:
@@ -361,6 +363,14 @@ haze_im_channel_get_property (GObject    *object,
         case PROP_HANDLE:
             g_value_set_uint (value, priv->handle);
             break;
+        case PROP_TARGET_ID:
+        {
+            TpHandleRepoIface *repo = tp_base_connection_get_handles (base_conn,
+                TP_HANDLE_TYPE_CONTACT);
+
+            g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
+            break;
+        }
         case PROP_CONNECTION:
             g_value_set_object (value, priv->conn);
             break;
@@ -474,6 +484,7 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
     static TpDBusPropertiesMixinPropImpl channel_props[] = {
         { "TargetHandleType", "handle-type", NULL },
         { "TargetHandle", "handle", NULL },
+        { "TargetID", "target-id", NULL },
         { "ChannelType", "channel-type", NULL },
         { "Interfaces", "interfaces", NULL },
         { NULL }
@@ -520,6 +531,13 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
         G_PARAM_READABLE |
         G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
     g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
+
+    param_spec = g_param_spec_string ("target-id", "Other person's username",
+        "The username of the other person in the conversation",
+        NULL,
+        G_PARAM_READABLE |
+        G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+    g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
 
 
     tp_text_mixin_class_init (object_class,
