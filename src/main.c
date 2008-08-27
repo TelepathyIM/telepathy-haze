@@ -216,6 +216,8 @@ static TpBaseConnectionManager *
 get_cm (void)
 {
     GLogLevelFlags fatal_mask;
+    gboolean fatal_purple_criticals =
+        (g_getenv ("THIS_PIDGIN_IS_NO_MORE") != NULL);
 
     /* libpurple has a tendency to throw critical errors from
      * g_return_val_if_fail(), particularly in MSN code.  We really don't want
@@ -226,13 +228,16 @@ get_cm (void)
      * G_LOG_DOMAIN="haze" for itself so that we can assume the NULL domain is
      * libpurple.
      */
-    fatal_mask = g_log_set_fatal_mask (NULL, G_LOG_FATAL_MASK);
-    fatal_mask &= ~G_LOG_LEVEL_CRITICAL;
-    g_log_set_fatal_mask (NULL, fatal_mask);
+    if (!fatal_purple_criticals)
+    {
+        fatal_mask = g_log_set_fatal_mask (NULL, G_LOG_FATAL_MASK);
+        fatal_mask &= ~G_LOG_LEVEL_CRITICAL;
+        g_log_set_fatal_mask (NULL, fatal_mask);
 
-    fatal_mask = g_log_set_fatal_mask ("purple", G_LOG_FATAL_MASK);
-    fatal_mask &= ~G_LOG_LEVEL_CRITICAL;
-    g_log_set_fatal_mask ("purple", fatal_mask);
+        fatal_mask = g_log_set_fatal_mask ("purple", G_LOG_FATAL_MASK);
+        fatal_mask &= ~G_LOG_LEVEL_CRITICAL;
+        g_log_set_fatal_mask ("purple", fatal_mask);
+    }
 
     return (TpBaseConnectionManager *) haze_connection_manager_get ();
 }
