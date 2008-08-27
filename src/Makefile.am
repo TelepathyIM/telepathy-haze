@@ -36,6 +36,7 @@ telepathy_haze_SOURCES = main.c \
                          request.h
 
 AM_CFLAGS = \
+	-DG_LOG_DOMAIN=\"haze\" \
 	$(ERROR_CFLAGS) \
 	@PURPLE_CFLAGS@ \
 	@TP_GLIB_CFLAGS@
