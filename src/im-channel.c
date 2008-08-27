@@ -118,11 +118,11 @@ _chat_state_available (HazeIMChannel *chan)
     return (prpl_info->send_typing != NULL);
 }
 
-static const char **
+static const char * const*
 _haze_im_channel_interfaces (HazeIMChannel *chan)
 {
-    static const char *no_interfaces[] = { NULL };
-    static const char *chat_state_ifaces[] = {
+    static const char * const no_interfaces[] = { NULL };
+    static const char * const chat_state_ifaces[] = {
         TP_IFACE_CHANNEL_INTERFACE_CHAT_STATE,
         NULL
     };
@@ -138,7 +138,7 @@ haze_im_channel_get_interfaces (TpSvcChannel *iface,
                                 DBusGMethodInvocation *context)
 {
     tp_svc_channel_return_from_get_interfaces (context,
-        _haze_im_channel_interfaces (HAZE_IM_CHANNEL (iface)));
+        (const char **)_haze_im_channel_interfaces (HAZE_IM_CHANNEL (iface)));
 }
 
 static void
