@@ -169,10 +169,16 @@ set_aliases_foreach (gpointer key,
     {
         PurpleBuddy *buddy = purple_find_buddy (data->conn->account, bname);
 
-        g_assert (buddy != NULL);
-
-        purple_blist_alias_buddy (buddy, new_alias);
-        serv_alias_buddy (buddy);
+        if (buddy == NULL)
+        {
+            g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+                "You can't set the alias of someone not on your contact list");
+        }
+        else
+        {
+            purple_blist_alias_buddy (buddy, new_alias);
+            serv_alias_buddy (buddy);
+        }
     }
 
     if (error) {
