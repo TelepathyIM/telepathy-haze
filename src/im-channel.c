@@ -38,6 +38,9 @@ enum
   PROP_HANDLE,
   PROP_TARGET_ID,
   PROP_INTERFACES,
+  PROP_INITIATOR_HANDLE,
+  PROP_INITIATOR_ID,
+  PROP_REQUESTED,
 
   LAST_PROPERTY
 };
@@ -46,7 +49,8 @@ typedef struct _HazeIMChannelPrivate
 {
     HazeConnection *conn;
     char *object_path;
-    guint handle;
+    TpHandle handle;
+    TpHandle initiator;
 
     PurpleConversation *conv;
 
@@ -371,6 +375,21 @@ haze_im_channel_get_property (GObject    *object,
             g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
             break;
         }
+        case PROP_INITIATOR_HANDLE:
+            g_value_set_uint (value, priv->initiator);
+            break;
+        case PROP_INITIATOR_ID:
+        {
+            TpHandleRepoIface *repo = tp_base_connection_get_handles (base_conn,
+                TP_HANDLE_TYPE_CONTACT);
+
+            g_value_set_string (value, tp_handle_inspect (repo, priv->initiator));
+            break;
+        }
+        case PROP_REQUESTED:
+            g_value_set_boolean (value,
+                (priv->initiator == base_conn->self_handle));
+            break;
         case PROP_CONNECTION:
             g_value_set_object (value, priv->conn);
             break;
@@ -402,6 +421,10 @@ haze_im_channel_set_property (GObject     *object,
              * contact repo yet - instead we ref it in the constructor.
              */
             priv->handle = g_value_get_uint (value);
+            break;
+        case PROP_INITIATOR_HANDLE:
+            /* similarly we can't ref this yet */
+            priv->initiator = g_value_get_uint (value);
             break;
         case PROP_CHANNEL_TYPE:
         case PROP_HANDLE_TYPE:
@@ -437,6 +460,9 @@ haze_im_channel_constructor (GType type, guint n_props,
     contact_handles = tp_base_connection_get_handles (conn,
         TP_HANDLE_TYPE_CONTACT);
     tp_handle_ref (contact_handles, priv->handle);
+    g_assert (priv->initiator != 0);
+    tp_handle_ref (contact_handles, priv->initiator);
+
     tp_text_mixin_init (obj, G_STRUCT_OFFSET (HazeIMChannel, text),
                         contact_handles);
 
@@ -469,6 +495,9 @@ haze_im_channel_dispose (GObject *obj)
     if (priv->handle != 0)
         tp_handle_unref (contact_handles, priv->handle);
 
+    if (priv->initiator != 0)
+        tp_handle_unref (contact_handles, priv->initiator);
+
     if (!priv->closed)
     {
         purple_conversation_destroy (priv->conv);
@@ -493,6 +522,9 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
         { "TargetID", "target-id", NULL },
         { "ChannelType", "channel-type", NULL },
         { "Interfaces", "interfaces", NULL },
+        { "Requested", "requested", NULL },
+        { "InitiatorHandle", "initiator-handle", NULL },
+        { "InitiatorID", "initiator-id", NULL },
         { NULL }
     };
     static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
@@ -522,28 +554,42 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
         "handle");
 
     param_spec = g_param_spec_object ("connection", "HazeConnection object",
-                                      "Haze connection object that owns this "
-                                      "IM channel object.",
-                                      HAZE_TYPE_CONNECTION,
-                                      G_PARAM_CONSTRUCT_ONLY |
-                                      G_PARAM_READWRITE |
-                                      G_PARAM_STATIC_NICK |
-                                      G_PARAM_STATIC_BLURB);
+        "Haze connection object that owns this IM channel object.",
+        HAZE_TYPE_CONNECTION,
+        G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
     param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
         "Additional Channel.Interface.* interfaces",
         G_TYPE_STRV,
-        G_PARAM_READABLE |
-        G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
     param_spec = g_param_spec_string ("target-id", "Other person's username",
         "The username of the other person in the conversation",
         NULL,
-        G_PARAM_READABLE |
-        G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
+
+    param_spec = g_param_spec_boolean ("requested", "Requested?",
+        "True if this channel was requested by the local user",
+        FALSE,
+        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
+
+    param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
+        "The contact who initiated the channel",
+        0, G_MAXUINT32, 0,
+        G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (object_class, PROP_INITIATOR_HANDLE,
+        param_spec);
+
+    param_spec = g_param_spec_string ("initiator-id", "Initiator's bare JID",
+        "The string obtained by inspecting the initiator-handle",
+        NULL,
+        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (object_class, PROP_INITIATOR_ID,
+        param_spec);
 
 
     tp_text_mixin_class_init (object_class,

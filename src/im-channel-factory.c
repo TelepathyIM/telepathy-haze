@@ -57,10 +57,8 @@ enum {
     LAST_PROPERTY
 };
 
-static HazeIMChannel *
-get_im_channel (HazeImChannelFactory *self,
-                TpHandle handle,
-                gboolean *created);
+static HazeIMChannel *get_im_channel (HazeImChannelFactory *self,
+    TpHandle handle, TpHandle initiator, gboolean *created);
 
 static void
 conversation_updated_cb (PurpleConversation *conv,
@@ -103,7 +101,8 @@ conversation_updated_cb (PurpleConversation *conv,
             g_assert_not_reached ();
     }
 
-    chan = get_im_channel (im_factory, ui_data->contact_handle, NULL);
+    chan = get_im_channel (im_factory, ui_data->contact_handle,
+        ui_data->contact_handle, NULL);
 
     tp_svc_channel_interface_chat_state_emit_chat_state_changed (
         (TpSvcChannelInterfaceChatState*)chan, ui_data->contact_handle, state);
@@ -229,7 +228,8 @@ im_channel_closed_cb (HazeIMChannel *chan, gpointer user_data)
 
 static HazeIMChannel *
 new_im_channel (HazeImChannelFactory *self,
-                guint handle)
+                TpHandle handle,
+                TpHandle initiator)
 {
     HazeImChannelFactoryPrivate *priv;
     TpBaseConnection *conn;
@@ -249,6 +249,7 @@ new_im_channel (HazeImChannelFactory *self,
                          "connection", priv->conn,
                          "object-path", object_path,
                          "handle", handle,
+                         "initiator-handle", initiator,
                          NULL);
 
     DEBUG ("Created IM channel with object path %s", object_path);
@@ -268,6 +269,7 @@ new_im_channel (HazeImChannelFactory *self,
 static HazeIMChannel *
 get_im_channel (HazeImChannelFactory *self,
                 TpHandle handle,
+                TpHandle initiator,
                 gboolean *created)
 {
     HazeImChannelFactoryPrivate *priv =
@@ -282,7 +284,7 @@ get_im_channel (HazeImChannelFactory *self,
     }
     else
     {
-        chan = new_im_channel (self, handle);
+        chan = new_im_channel (self, handle, initiator);
         if (created)
             *created = TRUE;
     }
@@ -363,8 +365,9 @@ haze_im_channel_factory_iface_request (TpChannelFactoryIface *iface,
     HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface);
     HazeImChannelFactoryPrivate *priv =
         HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (self);
+    TpBaseConnection *base_conn = (TpBaseConnection *) priv->conn;
     TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-            (TpBaseConnection *)priv->conn, TP_HANDLE_TYPE_CONTACT);
+            base_conn, TP_HANDLE_TYPE_CONTACT);
     HazeIMChannel *chan;
     TpChannelFactoryRequestStatus status;
     gboolean created;
@@ -378,7 +381,7 @@ haze_im_channel_factory_iface_request (TpChannelFactoryIface *iface,
     if (!tp_handle_is_valid (contact_repo, handle, error))
         return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
 
-    chan = get_im_channel (self, handle, &created);
+    chan = get_im_channel (self, handle, base_conn->self_handle, &created);
     if (created)
     {
         status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
@@ -435,7 +438,8 @@ haze_write_im (PurpleConversation *conv,
     else if (purple_message_meify(message, -1))
         type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
 
-    chan = get_im_channel (im_factory, ui_data->contact_handle, NULL);
+    chan = get_im_channel (im_factory, ui_data->contact_handle,
+        ui_data->contact_handle, NULL);
 
     if (flags & PURPLE_MESSAGE_RECV)
         tp_text_mixin_receive (G_OBJECT (chan), type, ui_data->contact_handle,
