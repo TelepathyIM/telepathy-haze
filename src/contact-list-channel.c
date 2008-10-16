@@ -764,7 +764,7 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
     g_object_class_install_property (object_class, PROP_INITIATOR_HANDLE,
         param_spec);
 
-    param_spec = g_param_spec_string ("initiator-id", "Initiator's bare JID",
+    param_spec = g_param_spec_string ("initiator-id", "Initiator's ID",
         "The string obtained by inspecting the initiator-handle",
         NULL,
         G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
