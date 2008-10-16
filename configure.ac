@@ -70,14 +70,9 @@ PKG_CHECK_MODULES(PURPLE,[purple >= 2.1.1])
 AC_SUBST(PURPLE_CFLAGS)
 AC_SUBST(PURPLE_LIBS)
 
-PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.7.14])
+PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.7.17])
 AC_SUBST(TP_GLIB_CFLAGS)
 AC_SUBST(TP_GLIB_LIBS)
-
-AC_CHECK_LIB(telepathy-glib, tp_debug_divert_messages,
-  [ AC_DEFINE(HAVE_TP_DEBUG_DIVERT_MESSAGES, [],
-    [Define if tp_debug_divert_messages() is provided by telepathy-glib]) ],
-  [], [$TP_GLIB_LIBS])
 
 AC_CHECK_LIB(purple, purple_dbus_uninit,
   [ AC_DEFINE(HAVE_PURPLE_DBUS_UNINIT, [],
