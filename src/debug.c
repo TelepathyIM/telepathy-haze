@@ -58,6 +58,8 @@ haze_debug_set_flags_from_env ()
 
     if (g_getenv ("HAZE_PERSIST"))
         tp_debug_set_persistent (TRUE);
+
+    tp_debug_divert_messages (g_getenv ("HAZE_LOGFILE"));
 }
 
 
