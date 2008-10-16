@@ -115,6 +115,9 @@ enum {
     PROP_HANDLE,
     PROP_TARGET_ID,
     PROP_INTERFACES,
+    PROP_REQUESTED,
+    PROP_INITIATOR_HANDLE,
+    PROP_INITIATOR_ID,
 
     LAST_PROPERTY
 };
@@ -642,6 +645,15 @@ haze_contact_list_channel_get_property (GObject    *object,
             g_value_set_string (value, tp_handle_inspect (repo, priv->handle));
             break;
         }
+        case PROP_INITIATOR_HANDLE:
+            g_value_set_uint (value, 0);
+            break;
+        case PROP_INITIATOR_ID:
+            g_value_set_static_string (value, "");
+            break;
+        case PROP_REQUESTED:
+            g_value_set_boolean (value, FALSE);
+            break;
         case PROP_CONNECTION:
             g_value_set_object (value, priv->conn);
             break;
@@ -701,6 +713,9 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
         { "TargetID", "target-id", NULL },
         { "ChannelType", "channel-type", NULL },
         { "Interfaces", "interfaces", NULL },
+        { "Requested", "requested", NULL },
+        { "InitiatorHandle", "initiator-handle", NULL },
+        { "InitiatorID", "initiator-id", NULL },
         { NULL }
     };
     static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
@@ -725,28 +740,42 @@ haze_contact_list_channel_class_init (HazeContactListChannelClass *klass)
 
 
     param_spec = g_param_spec_object ("connection", "HazeConnection object",
-                                      "Haze connection object that owns this "
-                                      "contact list channel object.",
-                                      HAZE_TYPE_CONNECTION,
-                                      G_PARAM_CONSTRUCT_ONLY |
-                                      G_PARAM_READWRITE |
-                                      G_PARAM_STATIC_NICK |
-                                      G_PARAM_STATIC_BLURB);
+        "Haze connection object that owns this contact list channel object.",
+        HAZE_TYPE_CONNECTION,
+        G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property (object_class, PROP_CONNECTION, param_spec);
 
     param_spec = g_param_spec_boxed ("interfaces", "Extra D-Bus interfaces",
         "Additional Channel.Interface.* interfaces",
         G_TYPE_STRV,
-        G_PARAM_READABLE |
-        G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
     param_spec = g_param_spec_string ("target-id", "Contact list name",
         "The stringy name of the contact list (\"subscribe\" etc.)",
         NULL,
-        G_PARAM_READABLE |
-        G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB | G_PARAM_STATIC_NAME);
+        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property (object_class, PROP_TARGET_ID, param_spec);
+
+    param_spec = g_param_spec_uint ("initiator-handle", "Initiator's handle",
+        "The contact who initiated the channel",
+        0, G_MAXUINT32, 0,
+        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (object_class, PROP_INITIATOR_HANDLE,
+        param_spec);
+
+    param_spec = g_param_spec_string ("initiator-id", "Initiator's bare JID",
+        "The string obtained by inspecting the initiator-handle",
+        NULL,
+        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (object_class, PROP_INITIATOR_ID,
+        param_spec);
+
+    param_spec = g_param_spec_boolean ("requested", "Requested?",
+        "True if this channel was requested by the local user",
+        FALSE,
+        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (object_class, PROP_REQUESTED, param_spec);
 
     g_object_class_override_property (object_class, PROP_OBJECT_PATH,
             "object-path");
