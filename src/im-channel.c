@@ -458,10 +458,16 @@ haze_im_channel_dispose (GObject *obj)
 {
     HazeIMChannel *chan = HAZE_IM_CHANNEL (obj);
     HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (chan);
+    TpBaseConnection *conn = (TpBaseConnection *) priv->conn;
+    TpHandleRepoIface *contact_handles = tp_base_connection_get_handles (conn,
+        TP_HANDLE_TYPE_CONTACT);
 
     if (priv->dispose_has_run)
         return;
     priv->dispose_has_run = TRUE;
+
+    if (priv->handle != 0)
+        tp_handle_unref (contact_handles, priv->handle);
 
     if (!priv->closed)
     {
