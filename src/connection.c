@@ -21,10 +21,12 @@
 
 #include <string.h>
 
+#include <telepathy-glib/dbus-properties-mixin.h>
+#include <telepathy-glib/errors.h>
 #include <telepathy-glib/handle-repo-dynamic.h>
 #include <telepathy-glib/handle-repo-static.h>
 #include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/errors.h>
+#include <telepathy-glib/svc-generic.h>
 
 #include <libpurple/accountopt.h>
 #include <libpurple/version.h>
@@ -49,6 +51,8 @@ enum
 G_DEFINE_TYPE_WITH_CODE(HazeConnection,
     haze_connection,
     TP_TYPE_BASE_CONNECTION,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
+        tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE,
         tp_presence_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING,
@@ -560,6 +564,8 @@ haze_connection_class_init (HazeConnectionClass *klass)
                                        G_PARAM_STATIC_BLURB);
     g_object_class_install_property (object_class, PROP_PROTOCOL_INFO,
                                      param_spec);
+
+    tp_dbus_properties_mixin_class_init (object_class, 0);
 
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);
