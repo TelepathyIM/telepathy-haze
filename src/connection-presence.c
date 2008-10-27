@@ -319,6 +319,8 @@ haze_connection_presence_class_init (GObjectClass *object_class)
     tp_presence_mixin_class_init (object_class,
         G_STRUCT_OFFSET (HazeConnectionClass, presence_class),
         _status_available, _get_contact_statuses, _set_own_status, statuses);
+
+    tp_presence_mixin_simple_presence_init_dbus_properties (object_class);
 }
 
 void
