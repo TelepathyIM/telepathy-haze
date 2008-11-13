@@ -267,13 +267,13 @@ haze_connection_request_avatar (TpSvcConnectionInterfaceAvatars *self,
     else
     {
         DEBUG ("handle %u has no avatar", contact);
-        gchar *message = g_strdup_printf ("handle %u has no avatar", contact);
-        g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE, message);
+        g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+                     "handle %u has no avatar", contact);
+
 
         dbus_g_method_return_error (context, error);
 
         g_error_free (error);
-        g_free (message);
     }
 }
 
@@ -340,15 +340,14 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
     if (max_filesize > 0 && icon_len > max_filesize)
     {
         GError *error = NULL;
-        gchar *message = g_strdup_printf ("avatar is %uB, but the limit is %uB",
-            icon_len, max_filesize);
-        g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, message);
+        g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                     "avatar is %" G_GSIZE_FORMAT "B, "
+                     "but the limit is %" G_GSIZE_FORMAT "B",
+                     icon_len, max_filesize);
 
         dbus_g_method_return_error (context, error);
 
         g_error_free (error);
-        g_free (message);
-
         return;
     }
 
