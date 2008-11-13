@@ -76,7 +76,7 @@ haze_notify_emails (PurpleConnection *gc,
                     const char **tos,
                     const char **urls)
 {
-    DEBUG ("[%s] %d new emails", _account_name (gc), count);
+    DEBUG ("[%s] %" G_GSIZE_FORMAT " new emails", _account_name (gc), count);
     return NULL;
 }
 
