@@ -309,7 +309,7 @@ _list_remove_member_cb (HazeContactListChannel *chan,
         case HAZE_LIST_HANDLE_PUBLISH:
         {
             gpointer key = GUINT_TO_POINTER (handle);
-            TpIntSet *remove = tp_intset_new ();
+            TpIntSet *to_remove = tp_intset_new ();
             PublishRequestData *request_data =
                 g_hash_table_lookup (priv->pending_publish_requests, key);
             g_assert (request_data != NULL);
@@ -317,11 +317,11 @@ _list_remove_member_cb (HazeContactListChannel *chan,
             DEBUG ("denying publish request for %s", bname);
             request_data->deny(request_data->data);
 
-            tp_intset_add (remove, handle);
+            tp_intset_add (to_remove, handle);
             tp_group_mixin_change_members (G_OBJECT (chan), message, NULL,
-                remove, NULL, NULL, base_conn->self_handle,
+                to_remove, NULL, NULL, base_conn->self_handle,
                 TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
-            tp_intset_destroy (remove);
+            tp_intset_destroy (to_remove);
 
             remove_pending_publish_request (chan, handle);
 
@@ -460,14 +460,15 @@ haze_close_account_request (gpointer request_data_)
 
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
 
-    TpIntSet *remove = tp_intset_new ();
+    TpIntSet *to_remove = tp_intset_new ();
 
     DEBUG ("cancelling publish request for handle %u", request_data->handle);
 
-    tp_intset_add (remove, request_data->handle);
-    tp_group_mixin_change_members (G_OBJECT (publish), NULL, NULL, remove, NULL,
-        NULL, base_conn->self_handle, TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
-    tp_intset_destroy (remove);
+    tp_intset_add (to_remove, request_data->handle);
+    tp_group_mixin_change_members (G_OBJECT (publish), NULL, NULL, to_remove,
+        NULL, NULL, base_conn->self_handle,
+        TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
+    tp_intset_destroy (to_remove);
 
     remove_pending_publish_request (publish, request_data->handle);
 
