@@ -25,7 +25,6 @@
 #include <string.h>
 
 #include <telepathy-glib/base-connection.h>
-#include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/handle-repo.h>
@@ -42,15 +41,11 @@ struct _HazeImChannelFactoryPrivate {
     gboolean dispose_has_run;
 };
 
-static void haze_im_channel_factory_iface_init (gpointer g_iface,
-                                                gpointer iface_data);
 static void channel_manager_iface_init (gpointer, gpointer);
 
 G_DEFINE_TYPE_WITH_CODE(HazeImChannelFactory,
     haze_im_channel_factory,
     G_TYPE_OBJECT,
-    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
-      haze_im_channel_factory_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
       channel_manager_iface_init))
 
@@ -284,9 +279,6 @@ new_im_channel (HazeImChannelFactory *self,
 
     g_hash_table_insert (self->priv->channels, GINT_TO_POINTER (handle), chan);
 
-    tp_channel_factory_iface_emit_new_channel (self, (TpChannelIface *)chan,
-            NULL);
-
     if (request_token != NULL)
         requests = g_slist_prepend (requests, request_token);
 
@@ -346,18 +338,6 @@ close_all (HazeImChannelFactory *self)
     }
 }
 
-static void
-haze_im_channel_factory_iface_connecting (TpChannelFactoryIface *iface)
-{
-    /* HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface); */
-}
-
-static void
-haze_im_channel_factory_iface_disconnected (TpChannelFactoryIface *iface)
-{
-    /* HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface); */
-}
-
 struct _ForeachData
 {
     TpExportableChannelFunc foreach;
@@ -385,62 +365,6 @@ haze_im_channel_factory_foreach (TpChannelManager *iface,
     data.foreach = foreach;
 
     g_hash_table_foreach (self->priv->channels, _foreach_slave, &data);
-}
-
-static TpChannelFactoryRequestStatus
-haze_im_channel_factory_iface_request (TpChannelFactoryIface *iface,
-                                       const gchar *chan_type,
-                                       TpHandleType handle_type,
-                                       guint handle,
-                                       gpointer request,
-                                       TpChannelIface **ret,
-                                       GError **error)
-{
-    HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface);
-    TpBaseConnection *base_conn = (TpBaseConnection *) self->priv->conn;
-    TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-            base_conn, TP_HANDLE_TYPE_CONTACT);
-    HazeIMChannel *chan;
-    TpChannelFactoryRequestStatus status;
-    gboolean created;
-
-    if (strcmp (chan_type, TP_IFACE_CHANNEL_TYPE_TEXT))
-        return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
-
-    if (handle_type != TP_HANDLE_TYPE_CONTACT)
-        return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
-
-    if (!tp_handle_is_valid (contact_repo, handle, error))
-        return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
-
-    chan = get_im_channel (self, handle, base_conn->self_handle,
-        NULL, &created);
-    if (created)
-    {
-        status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
-    }
-    else
-    {
-        status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
-    }
-
-    *ret = TP_CHANNEL_IFACE (chan);
-    return status;
-}
-
-static void
-haze_im_channel_factory_iface_init (gpointer g_iface,
-                                    gpointer iface_data)
-{
-    TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *) g_iface;
-
-    klass->close_all = (TpChannelFactoryIfaceProc) close_all;
-    klass->connecting = haze_im_channel_factory_iface_connecting;
-    klass->connected = NULL; //haze_im_channel_factory_iface_connected;
-    klass->disconnected = haze_im_channel_factory_iface_disconnected;
-    klass->foreach = (TpChannelFactoryIfaceForeachImpl)
-        haze_im_channel_factory_foreach;
-    klass->request = haze_im_channel_factory_iface_request;
 }
 
 static void
