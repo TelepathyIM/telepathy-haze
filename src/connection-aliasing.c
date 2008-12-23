@@ -99,6 +99,41 @@ get_alias (HazeConnection *self,
 }
 
 static void
+haze_connection_get_aliases (TpSvcConnectionInterfaceAliasing *self,
+                             const GArray *contacts,
+                             DBusGMethodInvocation *context)
+{
+    HazeConnection *conn = HAZE_CONNECTION (self);
+    TpBaseConnection *base = TP_BASE_CONNECTION (conn);
+    TpHandleRepoIface *contact_handles =
+        tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+    guint i;
+    GError *error = NULL;
+    GHashTable *aliases;
+
+    if (!tp_handles_are_valid (contact_handles, contacts, FALSE, &error))
+    {
+        dbus_g_method_return_error (context, error);
+        g_error_free (error);
+        return;
+    }
+
+    aliases = g_hash_table_new (NULL, NULL);
+
+    for (i = 0; i < contacts->len; i++)
+    {
+        TpHandle handle = g_array_index (contacts, TpHandle, i);
+
+        g_hash_table_insert (aliases, GUINT_TO_POINTER (handle),
+            (gchar *) get_alias (conn, handle));
+    }
+
+    tp_svc_connection_interface_aliasing_return_from_get_aliases (
+        context, aliases);
+    g_hash_table_destroy (aliases);
+}
+
+static void
 haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
                                  const GArray *contacts,
                                  DBusGMethodInvocation *context)
@@ -241,6 +276,7 @@ haze_connection_aliasing_iface_init (gpointer g_iface,
 #define IMPLEMENT(x) tp_svc_connection_interface_aliasing_implement_##x (\
     klass, haze_connection_##x)
     IMPLEMENT(get_alias_flags);
+    IMPLEMENT(get_aliases);
     IMPLEMENT(request_aliases);
     IMPLEMENT(set_aliases);
 #undef IMPLEMENT
