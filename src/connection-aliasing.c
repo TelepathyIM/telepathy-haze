@@ -83,7 +83,7 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
     for (i = 0; i < contacts->len; i++)
     {
         TpHandle handle = g_array_index (contacts, TpHandle, i);
-        const gchar *bname = tp_handle_inspect (contact_handles, handle);;
+        const gchar *bname = tp_handle_inspect (contact_handles, handle);
         PurpleBuddy *buddy;
         const gchar *alias;
 
