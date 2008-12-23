@@ -109,7 +109,7 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
     guint i;
     GError *error = NULL;
-    const gchar **aliases = g_new0 (const gchar *, contacts->len + 1);
+    const gchar **aliases;
 
     if (!tp_handles_are_valid (contact_handles, contacts, FALSE, &error))
     {
@@ -117,6 +117,8 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
         g_error_free (error);
         return;
     }
+
+    aliases = g_new0 (const gchar *, contacts->len + 1);
 
     for (i = 0; i < contacts->len; i++)
     {
