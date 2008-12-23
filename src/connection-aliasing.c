@@ -92,25 +92,23 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
             alias = purple_connection_get_display_name (conn->account->gc);
             if (!alias)
             {
-                DEBUG ("%s has no display_name, throwing NotAvailable", bname);
-                g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-                    "%u has no alias", handle);
-                break;
+                DEBUG ("self (%s) has no display_name", bname);
+                alias = bname;
             }
         }
         else
         {
             buddy = purple_find_buddy (conn->account, bname);
 
-            if (!buddy)
+            if (buddy)
             {
-                DEBUG ("%s not on blist; throwing NotAvailable", bname);
-                g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-                    "Alias for %u unknown; subscribe to them first", handle);
-                break;
+                alias = purple_buddy_get_alias (buddy);
             }
-
-            alias = purple_buddy_get_alias (buddy);
+            else
+            {
+                DEBUG ("%s not on blist", bname);
+                alias = bname;
+            }
         }
         DEBUG ("%s has alias \"%s\"", bname, alias);
 
