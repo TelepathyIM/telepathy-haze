@@ -73,8 +73,8 @@ struct _HazeConnection {
 #define HAZE_CONNECTION_GET_PRPL_INFO(conn) \
     (PURPLE_PLUGIN_PROTOCOL_INFO (conn->account->gc->prpl))
 
-PurpleAccountUiOps *haze_get_account_ui_ops ();
-PurpleConnectionUiOps *haze_get_connection_ui_ops ();
+PurpleAccountUiOps *haze_get_account_ui_ops (void);
+PurpleConnectionUiOps *haze_get_connection_ui_ops (void);
 
 const gchar *
 haze_connection_handle_inspect (HazeConnection *conn,
