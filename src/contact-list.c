@@ -80,14 +80,38 @@ haze_contact_list_init (HazeContactList *self)
 
 static void haze_contact_list_close_all (HazeContactList *self);
 
+static void _add_initial_buddies (HazeContactList *self,
+    HazeContactListChannel *subscribe);
+
 static void
 status_changed_cb (HazeConnection *conn,
                    guint status,
                    guint reason,
                    HazeContactList *self)
 {
-    if (status == TP_CONNECTION_STATUS_DISCONNECTED)
+    switch (status)
+    {
+    case TP_CONNECTION_STATUS_DISCONNECTED:
         haze_contact_list_close_all (self);
+        break;
+    case TP_CONNECTION_STATUS_CONNECTED:
+        {
+            HazeContactListChannel *subscribe, *publish;
+
+            /* Ensure contact lists exist before going any further. */
+            subscribe = haze_contact_list_get_channel (self,
+                TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_SUBSCRIBE,
+                NULL, NULL /*created*/);
+            g_assert (subscribe != NULL);
+
+            publish = haze_contact_list_get_channel (self, TP_HANDLE_TYPE_LIST,
+                    HAZE_LIST_HANDLE_PUBLISH, NULL, NULL /*created*/);
+            g_assert (publish != NULL);
+
+            _add_initial_buddies (self, subscribe);
+        }
+        break;
+    }
 }
 
 static GObject *
