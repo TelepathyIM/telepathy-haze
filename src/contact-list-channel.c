@@ -1,6 +1,7 @@
 /*
  * contact-list-channel.c - HazeContactListChannel source
  * Copyright (C) 2007 Will Thompson
+ * Copyright (C) 2007-2008 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
