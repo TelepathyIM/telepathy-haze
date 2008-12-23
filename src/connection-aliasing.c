@@ -18,10 +18,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-
-#include <telepathy-glib/handle.h>
-
 #include "connection-aliasing.h"
+
+#include <telepathy-glib/contacts-mixin.h>
+#include <telepathy-glib/handle.h>
+#include <telepathy-glib/interfaces.h>
+
 #include "connection.h"
 #include "debug.h"
 
@@ -330,4 +332,33 @@ haze_connection_aliasing_class_init (GObjectClass *object_class)
 
     purple_signal_connect (blist_handle, "blist-node-aliased", object_class,
         PURPLE_CALLBACK (blist_node_aliased_cb), NULL);
+}
+
+static void
+fill_contact_attributes (GObject *object,
+                         const GArray *contacts,
+                         GHashTable *attributes_hash)
+{
+    HazeConnection *self = HAZE_CONNECTION (object);
+    guint i;
+
+    for (i = 0; i < contacts->len; i++)
+    {
+        TpHandle handle = g_array_index (contacts, guint, i);
+        GValue *value = tp_g_value_slice_new (G_TYPE_STRING);
+
+        g_value_set_string (value, get_alias (self, handle));
+
+        /* this steals the GValue */
+        tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
+            TP_IFACE_CONNECTION_INTERFACE_ALIASING "/alias", value);
+    }
+}
+
+void
+haze_connection_aliasing_init (GObject *object)
+{
+    tp_contacts_mixin_add_contact_attributes_iface (object,
+        TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+        fill_contact_attributes);
 }
