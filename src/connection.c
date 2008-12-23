@@ -582,7 +582,7 @@ haze_connection_init (HazeConnection *self)
     self->priv = G_TYPE_INSTANCE_GET_PRIVATE (self, HAZE_TYPE_CONNECTION,
                                               HazeConnectionPrivate);
 
-    haze_connection_presence_init (self);
+    haze_connection_presence_init ((GObject *) self);
 }
 
 static PurpleAccountUiOps
