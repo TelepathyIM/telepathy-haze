@@ -28,6 +28,7 @@ G_BEGIN_DECLS
 
 typedef struct _HazeContactList HazeContactList;
 typedef struct _HazeContactListClass HazeContactListClass;
+typedef struct _HazeContactListPrivate HazeContactListPrivate;
 
 struct _HazeContactListClass {
     GObjectClass parent_class;
@@ -35,7 +36,7 @@ struct _HazeContactListClass {
 
 struct _HazeContactList {
     GObject parent;
-    gpointer priv;
+    HazeContactListPrivate *priv;
 };
 
 GType haze_contact_list_get_type (void);
