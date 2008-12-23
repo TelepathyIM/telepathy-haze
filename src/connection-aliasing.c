@@ -127,16 +127,8 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
         aliases[i] = get_alias (conn, handle);
     }
 
-    if (error)
-    {
-        dbus_g_method_return_error (context, error);
-        g_error_free (error);
-    }
-    else
-    {
-        tp_svc_connection_interface_aliasing_return_from_request_aliases (
-            context, aliases);
-    }
+    tp_svc_connection_interface_aliasing_return_from_request_aliases (
+        context, aliases);
     g_free (aliases);
 }
 
