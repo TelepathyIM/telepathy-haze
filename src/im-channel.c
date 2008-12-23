@@ -21,6 +21,7 @@
 
 #include <telepathy-glib/channel-iface.h>
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/exportable-channel.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/svc-generic.h>
 
@@ -41,6 +42,8 @@ enum
   PROP_INITIATOR_HANDLE,
   PROP_INITIATOR_ID,
   PROP_REQUESTED,
+  PROP_CHANNEL_PROPERTIES,
+  PROP_CHANNEL_DESTROYED,
 
   LAST_PROPERTY
 };
@@ -73,7 +76,7 @@ G_DEFINE_TYPE_WITH_CODE(HazeIMChannel, haze_im_channel, G_TYPE_OBJECT,
         chat_state_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
         tp_dbus_properties_mixin_iface_init);
-    )
+    G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL))
 
 static void
 haze_im_channel_close (TpSvcChannel *iface,
@@ -82,14 +85,42 @@ haze_im_channel_close (TpSvcChannel *iface,
     HazeIMChannel *self = HAZE_IM_CHANNEL (iface);
     HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (self);
 
-    if (!priv->closed)
+    if (priv->closed)
+    {
+        DEBUG ("Already closed");
+        goto out;
+    }
+
+#if 0
+    /* requires support from TpChannelManager */
+    if (tp_text_mixin_has_pending_messages ((GObject *) self, NULL))
+    {
+        if (priv->initiator != priv->handle)
+        {
+            TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
+                (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
+
+            g_assert (priv->initiator != 0);
+            g_assert (priv->handle != 0);
+
+            tp_handle_unref (contact_repo, priv->initiator);
+            priv->initiator = priv->handle;
+            tp_handle_ref (contact_repo, priv->initiator);
+        }
+
+        tp_text_mixin_set_rescued ((GObject *) self);
+    }
+    else
+#endif
     {
         purple_conversation_destroy (priv->conv);
         priv->conv = NULL;
-        tp_svc_channel_emit_closed (iface);
         priv->closed = TRUE;
     }
 
+    tp_svc_channel_emit_closed (iface);
+
+out:
     tp_svc_channel_return_from_close(context);
 }
 
@@ -396,6 +427,22 @@ haze_im_channel_get_property (GObject    *object,
         case PROP_INTERFACES:
             g_value_set_boxed (value, _haze_im_channel_interfaces (chan));
             break;
+        case PROP_CHANNEL_DESTROYED:
+            g_value_set_boolean (value, priv->closed);
+            break;
+        case PROP_CHANNEL_PROPERTIES:
+            g_value_take_boxed (value,
+                tp_dbus_properties_mixin_make_properties_hash (object,
+                    TP_IFACE_CHANNEL, "TargetHandle",
+                    TP_IFACE_CHANNEL, "TargetHandleType",
+                    TP_IFACE_CHANNEL, "ChannelType",
+                    TP_IFACE_CHANNEL, "TargetID",
+                    TP_IFACE_CHANNEL, "InitiatorHandle",
+                    TP_IFACE_CHANNEL, "InitiatorID",
+                    TP_IFACE_CHANNEL, "Requested",
+                    TP_IFACE_CHANNEL, "Interfaces",
+                    NULL));
+            break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             break;
@@ -552,6 +599,10 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
         "handle-type");
     g_object_class_override_property (object_class, PROP_HANDLE,
         "handle");
+    g_object_class_override_property (object_class, PROP_CHANNEL_DESTROYED,
+        "channel-destroyed");
+    g_object_class_override_property (object_class, PROP_CHANNEL_PROPERTIES,
+        "channel-properties");
 
     param_spec = g_param_spec_object ("connection", "HazeConnection object",
         "Haze connection object that owns this IM channel object.",
