@@ -1,7 +1,7 @@
 /*
  * main.c - entry point and libpurple boilerplate for telepathy-haze
  * Copyright (C) 2007 Will Thompson
- * Copyright (C) 2007 Collabora Ltd.
+ * Copyright (C) 2007-2008 Collabora Ltd.
  * Portions taken from libpurple/examples/nullclient.c:
  *   Copyright (C) 2007 Sadrul Habib Chowdhury, Sean Egan, Gary Kramlich,
  *                      Mark Doliner, Richard Laager
