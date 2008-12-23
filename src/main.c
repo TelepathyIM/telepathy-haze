@@ -134,7 +134,7 @@ static PurpleEventLoopUiOps glib_eventloops =
 static char *user_dir = NULL;
 
 static void
-haze_ui_init ()
+haze_ui_init (void)
 {
     purple_accounts_set_ui_ops (haze_get_account_ui_ops ());
     purple_conversations_set_ui_ops (haze_get_conv_ui_ops ());

@@ -46,7 +46,7 @@ struct _PublishRequestData {
 
 
 static PublishRequestData *
-publish_request_data_new ()
+publish_request_data_new (void)
 {
     return g_slice_new0 (PublishRequestData);
 }
