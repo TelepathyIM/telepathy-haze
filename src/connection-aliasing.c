@@ -40,7 +40,7 @@ can_alias (HazeConnection *conn)
     return (prpl->alias_buddy != NULL);
 }
 
-void
+static void
 haze_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
                                  DBusGMethodInvocation *context)
 {
@@ -60,7 +60,7 @@ haze_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
             context, flags);
 }
 
-void
+static void
 haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
                                  const GArray *contacts,
                                  DBusGMethodInvocation *context)
@@ -139,7 +139,7 @@ struct _g_hash_table_foreach_all_in_my_brain
     GError **error;
 };
 
-void
+static void
 set_aliases_foreach (gpointer key,
                      gpointer value,
                      gpointer user_data)
@@ -196,7 +196,7 @@ set_aliases_foreach (gpointer key,
     return;
 }
 
-void
+static void
 haze_connection_set_aliases (TpSvcConnectionInterfaceAliasing *self,
                              GHashTable *aliases,
                              DBusGMethodInvocation *context)
@@ -246,7 +246,7 @@ haze_connection_aliasing_iface_init (gpointer g_iface,
 #undef IMPLEMENT
 }
 
-void
+static void
 blist_node_aliased_cb (PurpleBlistNode *node,
                        const char *old_alias,
                        gpointer unused)

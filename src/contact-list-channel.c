@@ -600,7 +600,7 @@ haze_contact_list_channel_dispose (GObject *object)
         G_OBJECT_CLASS (haze_contact_list_channel_parent_class)->dispose (object);
 }
 
-void
+static void
 haze_contact_list_channel_finalize (GObject *object)
 {
 /*

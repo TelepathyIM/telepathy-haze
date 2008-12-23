@@ -276,7 +276,7 @@ chat_state_iface_init (gpointer g_iface, gpointer iface_data)
 #undef IMPLEMENT
 }
 
-void
+static void
 haze_im_channel_send (TpSvcChannelTypeText *channel,
                       guint type,
                       const gchar *text,

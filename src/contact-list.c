@@ -110,7 +110,7 @@ haze_contact_list_dispose (GObject *object)
         G_OBJECT_CLASS (haze_contact_list_parent_class)->dispose (object);
 }
 
-void
+static void
 haze_contact_list_finalize (GObject *object)
 {
 /*
@@ -516,7 +516,7 @@ _initial_buddies_foreach (PurpleBuddy *buddy,
 /* Creates a group channel on contact_list called group_name, containing the
  * supplied handles.  Called while traversing the buddy list at login.
  */
-gboolean
+static gboolean
 _create_initial_group(gchar *group_name,
                       TpIntSet *handles,
                       HazeContactList *contact_list)

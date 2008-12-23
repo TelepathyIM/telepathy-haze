@@ -29,7 +29,7 @@
 #include "connection.h"
 #include "debug.h"
 
-void
+static void
 haze_connection_get_avatar_requirements (TpSvcConnectionInterfaceAvatars *self,
                                          DBusGMethodInvocation *context)
 {
@@ -157,7 +157,7 @@ get_handle_token (HazeConnection *conn,
     return token;
 }
 
-void
+static void
 haze_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
                                    const GArray *contacts,
                                    DBusGMethodInvocation *context)
@@ -181,7 +181,7 @@ haze_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
     g_strfreev (icons);
 }
 
-void
+static void
 haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
                                          const GArray *contacts,
                                          DBusGMethodInvocation *context)
@@ -244,7 +244,7 @@ haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
     g_hash_table_unref (tokens);
 }
 
-void
+static void
 haze_connection_request_avatar (TpSvcConnectionInterfaceAvatars *self,
                                 guint contact,
                                 DBusGMethodInvocation *context)
@@ -277,7 +277,7 @@ haze_connection_request_avatar (TpSvcConnectionInterfaceAvatars *self,
     }
 }
 
-void
+static void
 haze_connection_request_avatars (TpSvcConnectionInterfaceAvatars *self,
                                  const GArray *contacts,
                                  DBusGMethodInvocation *context)
@@ -305,7 +305,7 @@ haze_connection_request_avatars (TpSvcConnectionInterfaceAvatars *self,
     tp_svc_connection_interface_avatars_return_from_request_avatars (context);
 }
 
-void
+static void
 haze_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *self,
                               DBusGMethodInvocation *context)
 {
@@ -320,7 +320,7 @@ haze_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *self,
         base_conn->self_handle, "");
 }
 
-void
+static void
 haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
                             const GArray *avatar,
                             const gchar *mime_type,
@@ -385,7 +385,7 @@ haze_connection_avatars_iface_init (gpointer g_iface,
 #undef IMPLEMENT
 }
 
-void
+static void
 buddy_icon_changed_cb (PurpleBuddy *buddy,
                        gpointer unused)
 {

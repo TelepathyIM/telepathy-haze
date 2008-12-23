@@ -99,7 +99,7 @@ _get_param_string (GHashTable *parameters,
     }
 }
 
-void
+static void
 connected_cb (PurpleConnection *pc)
 {
     TpBaseConnection *base_conn = PC_GET_BASE_CONN (pc);
@@ -210,7 +210,7 @@ idle_disconnected_cb(gpointer data)
     return FALSE;
 }
 
-void
+static void
 disconnected_cb (PurpleConnection *pc)
 {
     PurpleAccount *account = purple_connection_get_account (pc);
@@ -412,7 +412,7 @@ _haze_connection_create_channel_factories (TpBaseConnection *base)
     return channel_factories;
 }
 
-gchar *
+static gchar *
 haze_connection_get_unique_connection_name(TpBaseConnection *base)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
