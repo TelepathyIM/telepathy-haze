@@ -61,6 +61,8 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_aliasing_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
         haze_connection_avatars_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
+        tp_contacts_mixin_iface_init);
     );
 
 typedef struct _HazeConnectionPrivate
@@ -473,6 +475,7 @@ haze_connection_constructor (GType type,
     HazeConnection *self = HAZE_CONNECTION (
             G_OBJECT_CLASS (haze_connection_parent_class)->constructor (
                 type, n_construct_properties, construct_params));
+    GObject *object = (GObject *) self;
     HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (self);
 
     DEBUG ("Post-construction: (HazeConnection *)%p", self);
@@ -482,6 +485,15 @@ haze_connection_constructor (GType type,
     priv->disconnecting = FALSE;
 
     _create_account (self);
+
+    tp_contacts_mixin_init (object,
+        G_STRUCT_OFFSET (HazeConnection, contacts));
+    tp_base_connection_register_with_contacts_mixin (
+        TP_BASE_CONNECTION (self));
+
+    haze_connection_aliasing_init (object);
+    haze_connection_avatars_init (object);
+    haze_connection_presence_init (object);
 
     return (GObject *)self;
 }
@@ -508,6 +520,7 @@ haze_connection_dispose (GObject *object)
 static void
 haze_connection_finalize (GObject *object)
 {
+    tp_contacts_mixin_finalize (object);
     tp_presence_mixin_finalize (object);
 
     G_OBJECT_CLASS (haze_connection_parent_class)->finalize (object);
@@ -522,6 +535,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
     static const gchar *interfaces_always_present[] = {
         TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
         TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+        TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
         /* TODO: This is a lie.  Not all protocols supported by libpurple
          *       actually have the concept of a user-settable alias, but
          *       there's no way for the UI to know (yet).
@@ -570,6 +584,9 @@ haze_connection_class_init (HazeConnectionClass *klass)
 
     tp_dbus_properties_mixin_class_init (object_class, 0);
 
+    tp_contacts_mixin_class_init (object_class,
+        G_STRUCT_OFFSET (HazeConnectionClass, contacts_class));
+
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);
     haze_connection_avatars_class_init (object_class);
@@ -581,8 +598,6 @@ haze_connection_init (HazeConnection *self)
     DEBUG ("Initializing (HazeConnection *)%p", self);
     self->priv = G_TYPE_INSTANCE_GET_PRIVATE (self, HAZE_TYPE_CONNECTION,
                                               HazeConnectionPrivate);
-
-    haze_connection_presence_init ((GObject *) self);
 }
 
 static PurpleAccountUiOps
