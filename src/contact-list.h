@@ -61,6 +61,7 @@ GType haze_contact_list_get_type (void);
 G_END_DECLS
 
 HazeContactListChannel *haze_contact_list_get_channel (HazeContactList *self,
-    guint handle_type, TpHandle handle, gboolean *created);
+    guint handle_type, TpHandle handle, gpointer request_token,
+    gboolean *created);
 
 #endif /* #ifndef __HAZE_CONTACT_LIST_H__*/

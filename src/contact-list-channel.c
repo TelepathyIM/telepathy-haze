@@ -414,7 +414,7 @@ haze_request_authorize (PurpleAccount *account,
 
     HazeContactListChannel *publish =
         haze_contact_list_get_channel (conn->contact_list,
-            TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_PUBLISH, NULL);
+            TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_PUBLISH, NULL, NULL);
     HazeContactListChannelPrivate *priv =
         HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (publish);
 
