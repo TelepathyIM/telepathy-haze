@@ -60,13 +60,51 @@ haze_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
             context, flags);
 }
 
+static const gchar *
+get_alias (HazeConnection *self,
+           TpHandle handle)
+{
+    TpBaseConnection *base = TP_BASE_CONNECTION (self);
+    TpHandleRepoIface *contact_handles =
+        tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+    const gchar *bname = tp_handle_inspect (contact_handles, handle);
+    const gchar *alias;
+
+    if (handle == base->self_handle)
+    {
+        alias = purple_connection_get_display_name (self->account->gc);
+
+        if (alias == NULL)
+        {
+            DEBUG ("self (%s) has no display_name", bname);
+            alias = bname;
+        }
+    }
+    else
+    {
+        PurpleBuddy *buddy = purple_find_buddy (self->account, bname);
+
+        if (buddy != NULL)
+        {
+            alias = purple_buddy_get_alias (buddy);
+        }
+        else
+        {
+            DEBUG ("%s not on blist", bname);
+            alias = bname;
+        }
+    }
+    DEBUG ("%s has alias \"%s\"", bname, alias);
+    return alias;
+}
+
 static void
 haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
                                  const GArray *contacts,
                                  DBusGMethodInvocation *context)
 {
     HazeConnection *conn = HAZE_CONNECTION (self);
-    TpBaseConnection *base = TP_BASE_CONNECTION (self);
+    TpBaseConnection *base = TP_BASE_CONNECTION (conn);
     TpHandleRepoIface *contact_handles =
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
     guint i;
@@ -83,36 +121,8 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
     for (i = 0; i < contacts->len; i++)
     {
         TpHandle handle = g_array_index (contacts, TpHandle, i);
-        const gchar *bname = tp_handle_inspect (contact_handles, handle);
-        PurpleBuddy *buddy;
-        const gchar *alias;
 
-        if (handle == base->self_handle)
-        {
-            alias = purple_connection_get_display_name (conn->account->gc);
-            if (!alias)
-            {
-                DEBUG ("self (%s) has no display_name", bname);
-                alias = bname;
-            }
-        }
-        else
-        {
-            buddy = purple_find_buddy (conn->account, bname);
-
-            if (buddy)
-            {
-                alias = purple_buddy_get_alias (buddy);
-            }
-            else
-            {
-                DEBUG ("%s not on blist", bname);
-                alias = bname;
-            }
-        }
-        DEBUG ("%s has alias \"%s\"", bname, alias);
-
-        aliases[i] = alias;
+        aliases[i] = get_alias (conn, handle);
     }
 
     if (error)
