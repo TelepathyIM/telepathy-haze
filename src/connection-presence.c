@@ -94,8 +94,9 @@ _get_tp_status (PurpleStatus *p_status)
     xhtml_message = purple_status_get_attr_string (p_status, "message");
     if (xhtml_message)
     {
-        message = purple_markup_strip_html (xhtml_message);
         GValue *message_v = g_slice_new0 (GValue);
+
+        message = purple_markup_strip_html (xhtml_message);
         g_value_init (message_v, G_TYPE_STRING);
         g_value_set_string (message_v, message);
         g_hash_table_insert (arguments, "message", message_v);
