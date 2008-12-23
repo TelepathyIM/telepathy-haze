@@ -71,7 +71,7 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
     guint i;
     GError *error = NULL;
-    gchar **aliases = g_new0 (gchar *, contacts->len + 1);
+    const gchar **aliases = g_new0 (const gchar *, contacts->len + 1);
 
     if (!tp_handles_are_valid (contact_handles, contacts, FALSE, &error))
     {
@@ -114,8 +114,7 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
         }
         DEBUG ("%s has alias \"%s\"", bname, alias);
 
-        /* They'll be made const again shortly */
-        aliases[i] = (gchar *) alias;
+        aliases[i] = alias;
     }
 
     if (error)
@@ -125,9 +124,8 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
     }
     else
     {
-        /* Hrm, why do I need to cast up to const? */
         tp_svc_connection_interface_aliasing_return_from_request_aliases (
-            context, (const gchar **)aliases);
+            context, aliases);
     }
     g_free (aliases);
 }
