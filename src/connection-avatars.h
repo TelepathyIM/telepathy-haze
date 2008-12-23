@@ -21,7 +21,7 @@
  */
 
 
-#include <glib.h>
+#include <glib-object.h>
 
 void haze_connection_avatars_iface_init (gpointer g_iface, gpointer iface_data);
 void haze_connection_avatars_class_init (GObjectClass *object_class);
