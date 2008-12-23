@@ -143,8 +143,9 @@ _param_filter_string_list (const TpCMParamSpec *paramspec,
 
     for (; valid_values != NULL; valid_values = valid_values->next)
     {
-        const gchar *value = valid_values->data;
-        if (!tp_strdiff (value, str))
+        const gchar *valid = valid_values->data;
+
+        if (!tp_strdiff (valid, str))
             return TRUE;
     }
 
