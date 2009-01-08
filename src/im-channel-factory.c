@@ -235,6 +235,9 @@ im_channel_closed_cb (HazeIMChannel *chan, gpointer user_data)
     HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (user_data);
     TpHandle contact_handle;
 
+    tp_channel_manager_emit_channel_closed_for_object (self,
+        TP_EXPORTABLE_CHANNEL (chan));
+
     if (self->priv->channels)
     {
         g_object_get (chan, "handle", &contact_handle, NULL);
