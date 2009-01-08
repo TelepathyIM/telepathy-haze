@@ -560,7 +560,7 @@ haze_im_channel_factory_foreach_channel_class (TpChannelManager *manager,
     GValue *value;
 
     value = tp_g_value_slice_new (G_TYPE_STRING);
-    g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_CONTACT_LIST);
+    g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_TEXT);
     g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType", value);
 
     value = tp_g_value_slice_new (G_TYPE_UINT);
