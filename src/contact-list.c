@@ -234,6 +234,9 @@ contact_list_channel_closed_cb (HazeContactListChannel *chan,
     guint handle_type;
     GHashTable *channels;
 
+    tp_channel_manager_emit_channel_closed_for_object (self,
+        TP_EXPORTABLE_CHANNEL (chan));
+
     g_object_get (chan, "handle", &handle, "handle-type", &handle_type, NULL);
     g_assert (handle_type == TP_HANDLE_TYPE_LIST ||
               handle_type == TP_HANDLE_TYPE_GROUP);
