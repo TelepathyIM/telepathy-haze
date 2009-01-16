@@ -1,4 +1,5 @@
-TWISTED_TESTS =
+TWISTED_TESTS = \
+	connect/success.py
 
 TESTS =
 
