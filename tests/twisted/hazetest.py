@@ -5,6 +5,7 @@ Infrastructure code for testing Haze by pretending to be a Jabber server.
 
 import base64
 import os
+import random
 import sha
 import sys
 import time
@@ -99,7 +100,7 @@ class JabberAuthenticator(xmlstream.Authenticator):
 
     def streamStarted(self, root=None):
         if root:
-            self.xmlstream.sid = root.getAttribute('id')
+            self.xmlstream.sid = '%x' % random.randint(1, sys.maxint)
 
         self.xmlstream.sendHeader()
         self.xmlstream.addOnetimeObserver(
