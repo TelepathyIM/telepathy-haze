@@ -20,9 +20,12 @@ missing
 .libs
 src/telepathy-haze
 src/telepathy-haze.8
+/tests/haze-testing.log
+/tests/org.freedesktop.Telepathy.ConnectionManager.haze.service
+/tests/tmp-session-bus.conf
 
 *.o
 *.swp
 *~
+*.pyc
 autom4te.cache
-

@@ -75,6 +75,22 @@ AC_CHECK_LIB(purple, purple_dbus_uninit,
     [Define if purple_dbus_uninit is present in libpurple]) ],
   [], [$PURPLE_LIBS])
 
+# Check for a Python >= 2.5 with Twisted, to run the tests
+AC_MSG_CHECKING([for Python >= 2.5 with Twisted and XMPP protocol support])
+for TEST_PYTHON in python2.5 python2.6 python; do
+  if $TEST_PYTHON -c "from sys import version_info; import dbus, dbus.mainloop.glib; raise SystemExit(version_info < (2, 5, 0, 'final', 0))" >/dev/null 2>&1; then
+    if $TEST_PYTHON -c "import twisted.words.xish.domish, twisted.words.protocols.jabber, twisted.internet.reactor" >/dev/null 2>&1; then
+      AC_MSG_RESULT([$TEST_PYTHON])
+      AM_CONDITIONAL([WANT_TWISTED_TESTS], true)
+      break
+    else
+      TEST_PYTHON=false
+    fi
+  fi
+done
+AC_SUBST(TEST_PYTHON)
+AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
+
 #AS_AC_EXPAND(DATADIR, $datadir)
 #DBUS_SERVICES_DIR="$DATADIR/dbus-1/services"
 #AC_SUBST(DBUS_SERVICES_DIR)
@@ -84,4 +100,7 @@ AC_OUTPUT([Makefile
            src/Makefile
            data/Makefile
            m4/Makefile
+	   tests/Makefile
+	   tests/twisted/Makefile
+	   tools/Makefile
            ])
