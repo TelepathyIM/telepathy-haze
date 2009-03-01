@@ -118,7 +118,7 @@ connected_cb (PurpleConnection *pc)
 
     tp_base_connection_change_status (base_conn,
         TP_CONNECTION_STATUS_CONNECTED,
-        TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED);
+        TP_CONNECTION_STATUS_REASON_REQUESTED);
 }
 
 #if PURPLE_VERSION_CHECK(2,3,0)
