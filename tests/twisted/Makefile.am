@@ -1,6 +1,7 @@
 TWISTED_TESTS = \
 	connect/success.py \
 	connect/fail.py \
+	presence/presence.py \
 	text/initiate.py
 
 TESTS =
