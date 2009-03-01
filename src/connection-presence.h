@@ -25,7 +25,7 @@
 #include "connection.h"
 
 void haze_connection_presence_class_init (GObjectClass *object_class);
-void haze_connection_presence_init (HazeConnection *self);
+void haze_connection_presence_init (GObject *object);
 
 void
 haze_connection_presence_account_status_changed (PurpleAccount *account,

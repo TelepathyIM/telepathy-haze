@@ -23,6 +23,7 @@
 
 #include <glib-object.h>
 #include <telepathy-glib/base-connection.h>
+#include <telepathy-glib/contacts-mixin.h>
 #include <telepathy-glib/presence-mixin.h>
 
 #include <libpurple/account.h>
@@ -50,6 +51,7 @@ typedef struct _HazeConnectionClass HazeConnectionClass;
 
 struct _HazeConnectionClass {
     TpBaseConnectionClass parent_class;
+    TpContactsMixinClass contacts_class;
     TpPresenceMixinClass presence_class;
 };
 
@@ -61,6 +63,7 @@ struct _HazeConnection {
     HazeContactList *contact_list;
     HazeImChannelFactory *im_factory;
 
+    TpContactsMixin contacts;
     TpPresenceMixin presence;
 
     gpointer priv;

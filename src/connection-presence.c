@@ -325,8 +325,9 @@ haze_connection_presence_class_init (GObjectClass *object_class)
 }
 
 void
-haze_connection_presence_init (HazeConnection *self)
+haze_connection_presence_init (GObject *object)
 {
-    tp_presence_mixin_init (G_OBJECT (self), G_STRUCT_OFFSET (HazeConnection,
+    tp_presence_mixin_init (object, G_STRUCT_OFFSET (HazeConnection,
         presence));
+    tp_presence_mixin_simple_presence_register_with_contacts_mixin (object);
 }

@@ -19,13 +19,16 @@
  *
  */
 
+#include "connection-avatars.h"
+
 #include <string.h>
 
+#include <telepathy-glib/contacts-mixin.h>
+#include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/svc-connection.h>
 
 #include <libpurple/cipher.h>
 
-#include "connection-avatars.h"
 #include "connection.h"
 #include "debug.h"
 
@@ -414,4 +417,35 @@ haze_connection_avatars_class_init (GObjectClass *object_class)
 
     purple_signal_connect (blist_handle, "buddy-icon-changed", object_class,
         PURPLE_CALLBACK (buddy_icon_changed_cb), NULL);
+}
+
+static void
+fill_contact_attributes (GObject *object,
+                         const GArray *contacts,
+                         GHashTable *attributes_hash)
+{
+    HazeConnection *self = HAZE_CONNECTION (object);
+    guint i;
+
+    for (i = 0; i < contacts->len; i++)
+    {
+        TpHandle handle = g_array_index (contacts, guint, i);
+        gchar *token = get_handle_token (self, handle);
+        GValue *value = tp_g_value_slice_new (G_TYPE_STRING);
+
+        g_assert (token != NULL);
+        g_value_set_string (value, token);
+
+        /* this steals the GValue */
+        tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
+            TP_IFACE_CONNECTION_INTERFACE_AVATARS "/token", value);
+    }
+}
+
+void
+haze_connection_avatars_init (GObject *object)
+{
+    tp_contacts_mixin_add_contact_attributes_iface (object,
+        TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+        fill_contact_attributes);
 }

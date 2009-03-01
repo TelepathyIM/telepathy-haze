@@ -24,11 +24,9 @@
 
 #include <glib-object.h>
 
-void
-haze_connection_aliasing_iface_init (gpointer g_iface,
-                                     gpointer iface_data);
-
-void
-haze_connection_aliasing_class_init (GObjectClass *object_class);
+void haze_connection_aliasing_iface_init (gpointer g_iface,
+    gpointer iface_data);
+void haze_connection_aliasing_class_init (GObjectClass *object_class);
+void haze_connection_aliasing_init (GObject *object);
 
 #endif
