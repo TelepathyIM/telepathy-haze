@@ -10,6 +10,7 @@ TESTS_ENVIRONMENT = \
 check-local: check-twisted
 
 check-twisted:
+	rm -f ../haze-testing.log
 	sh $(top_srcdir)/tools/with-session-bus.sh \
 		--config-file=$(top_builddir)/tests/tmp-session-bus.conf \
 		-- $(MAKE) check-TESTS \
