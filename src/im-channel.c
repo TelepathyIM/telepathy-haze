@@ -654,3 +654,45 @@ haze_im_channel_init (HazeIMChannel *self)
     self->priv = G_TYPE_INSTANCE_GET_PRIVATE (self, HAZE_TYPE_IM_CHANNEL,
                                               HazeIMChannelPrivate);
 }
+
+void
+haze_im_channel_receive (HazeIMChannel *self,
+                         const char *xhtml_message,
+                         PurpleMessageFlags flags,
+                         time_t mtime)
+{
+    TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
+    char *line_broken, *message;
+
+    /* Replaces newline characters with <br>, which then get turned back into
+     * newlines by purple_markup_strip_html (which replaces "\n" with " ")...
+     */
+    line_broken = purple_strdup_withhtml (xhtml_message);
+    message = purple_markup_strip_html (line_broken);
+    g_free (line_broken);
+
+    if (flags & PURPLE_MESSAGE_AUTO_RESP)
+        type = TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY;
+    else if (purple_message_meify (message, -1))
+        type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
+
+    if (flags & PURPLE_MESSAGE_RECV)
+        tp_text_mixin_receive (G_OBJECT (self), type, self->priv->handle,
+                               mtime, message);
+    else if (flags & PURPLE_MESSAGE_SEND)
+        tp_svc_channel_type_text_emit_sent (self, mtime, type, message);
+    else if (flags & PURPLE_MESSAGE_ERROR)
+        /* This is wrong.  The mtime, type and message are of the error message
+         * (such as "Unable to send message: The message is too large.") not of
+         * the message causing the error, and the ChannelTextSendError parameter
+         * shouldn't always be unknown.  But this is the best that can be done
+         * until I fix libpurple.
+         */
+        tp_svc_channel_type_text_emit_send_error (self,
+            TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, mtime, type, message);
+    else
+        DEBUG ("channel %u: ignoring message %s with flags %u",
+            self->priv->handle, message, flags);
+
+    g_free (message);
+}
