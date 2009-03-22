@@ -48,7 +48,7 @@ enum
   LAST_PROPERTY
 };
 
-typedef struct _HazeIMChannelPrivate
+struct _HazeIMChannelPrivate
 {
     HazeConnection *conn;
     char *object_path;
@@ -59,10 +59,7 @@ typedef struct _HazeIMChannelPrivate
 
     gboolean closed;
     gboolean dispose_has_run;
-} HazeIMChannelPrivate;
-
-#define HAZE_IM_CHANNEL_GET_PRIVATE(o) \
-  ((HazeIMChannelPrivate *)o->priv)
+};
 
 static void channel_iface_init (gpointer, gpointer);
 static void text_iface_init (gpointer, gpointer);
@@ -83,7 +80,7 @@ haze_im_channel_close (TpSvcChannel *iface,
                        DBusGMethodInvocation *context)
 {
     HazeIMChannel *self = HAZE_IM_CHANNEL (iface);
-    HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (self);
+    HazeIMChannelPrivate *priv = self->priv;
 
     if (priv->closed)
     {
@@ -135,18 +132,16 @@ haze_im_channel_get_handle (TpSvcChannel *iface,
                             DBusGMethodInvocation *context)
 {
     HazeIMChannel *self = HAZE_IM_CHANNEL (iface);
-    HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (self);
 
     tp_svc_channel_return_from_get_handle (context, TP_HANDLE_TYPE_CONTACT,
-        priv->handle);
+        self->priv->handle);
 }
 
 static gboolean
 _chat_state_available (HazeIMChannel *chan)
 {
-    HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (chan);
     PurplePluginProtocolInfo *prpl_info =
-        PURPLE_PLUGIN_PROTOCOL_INFO (priv->conn->account->gc->prpl);
+        PURPLE_PLUGIN_PROTOCOL_INFO (chan->priv->conn->account->gc->prpl);
 
     return (prpl_info->send_typing != NULL);
 }
@@ -223,9 +218,8 @@ haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
                                 DBusGMethodInvocation *context)
 {
     HazeIMChannel *chan = HAZE_IM_CHANNEL (self);
-    HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (chan);
 
-    PurpleConversation *conv = priv->conv;
+    PurpleConversation *conv = chan->priv->conv;
     HazeConversationUiData *ui_data = PURPLE_CONV_GET_HAZE_UI_DATA (conv);
     PurpleConnection *gc = purple_conversation_get_gc (conv);
     const gchar *who = purple_conversation_get_name (conv);
@@ -312,7 +306,6 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
                       DBusGMethodInvocation *context)
 {
     HazeIMChannel *self = HAZE_IM_CHANNEL (channel);
-    HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (self);
     GError *error = NULL;
     PurpleMessageFlags flags = 0;
     char *message, *escaped, *line_broken, *reapostrophised;
@@ -350,7 +343,7 @@ haze_im_channel_send (TpSvcChannelTypeText *channel,
         flags |= PURPLE_MESSAGE_AUTO_RESP;
     }
 
-    purple_conv_im_send_with_flags (PURPLE_CONV_IM (priv->conv),
+    purple_conv_im_send_with_flags (PURPLE_CONV_IM (self->priv->conv),
         reapostrophised, flags);
 
     g_free (reapostrophised);
@@ -380,7 +373,7 @@ haze_im_channel_get_property (GObject    *object,
                               GParamSpec *pspec)
 {
     HazeIMChannel *chan = HAZE_IM_CHANNEL (object);
-    HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (chan);
+    HazeIMChannelPrivate *priv = chan->priv;
     TpBaseConnection *base_conn = (TpBaseConnection *) priv->conn;
 
     switch (property_id) {
@@ -454,7 +447,7 @@ haze_im_channel_set_property (GObject     *object,
                               GParamSpec   *pspec)
 {
     HazeIMChannel *chan = HAZE_IM_CHANNEL (object);
-    HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (chan);
+    HazeIMChannelPrivate *priv = chan->priv;
 
     switch (property_id) {
         case PROP_OBJECT_PATH:
@@ -491,16 +484,18 @@ haze_im_channel_constructor (GType type, guint n_props,
                              GObjectConstructParam *props)
 {
     GObject *obj;
+    HazeIMChannel *chan;
+    HazeIMChannelPrivate *priv;
     TpHandleRepoIface *contact_handles;
     TpBaseConnection *conn;
-    HazeIMChannelPrivate *priv;
     const char *recipient;
     DBusGConnection *bus;
 
     obj = G_OBJECT_CLASS (haze_im_channel_parent_class)->
         constructor (type, n_props, props);
-    priv = HAZE_IM_CHANNEL_GET_PRIVATE(HAZE_IM_CHANNEL(obj));
-    conn = TP_BASE_CONNECTION(priv->conn);
+    chan = HAZE_IM_CHANNEL (obj);
+    priv = chan->priv;
+    conn = (TpBaseConnection *) (priv->conn);
 
     contact_handles = tp_base_connection_get_handles (conn,
         TP_HANDLE_TYPE_CONTACT);
@@ -528,7 +523,7 @@ static void
 haze_im_channel_dispose (GObject *obj)
 {
     HazeIMChannel *chan = HAZE_IM_CHANNEL (obj);
-    HazeIMChannelPrivate *priv = HAZE_IM_CHANNEL_GET_PRIVATE (chan);
+    HazeIMChannelPrivate *priv = chan->priv;
     TpBaseConnection *conn = (TpBaseConnection *) priv->conn;
     TpHandleRepoIface *contact_handles = tp_base_connection_get_handles (conn,
         TP_HANDLE_TYPE_CONTACT);

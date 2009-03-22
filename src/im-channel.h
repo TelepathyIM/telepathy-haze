@@ -30,7 +30,9 @@
 G_BEGIN_DECLS
 
 typedef struct _HazeIMChannel HazeIMChannel;
+typedef struct _HazeIMChannelPrivate HazeIMChannelPrivate;
 typedef struct _HazeIMChannelClass HazeIMChannelClass;
+
 
 struct _HazeIMChannelClass {
     GObjectClass parent_class;
@@ -44,7 +46,7 @@ struct _HazeIMChannel {
 
     TpTextMixin text;
 
-    gpointer priv;
+    HazeIMChannelPrivate *priv;
 };
 
 GType haze_im_channel_get_type (void);
