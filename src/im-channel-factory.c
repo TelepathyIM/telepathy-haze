@@ -234,18 +234,31 @@ im_channel_closed_cb (HazeIMChannel *chan, gpointer user_data)
 {
     HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (user_data);
     TpHandle contact_handle;
+    guint really_destroyed;
 
     tp_channel_manager_emit_channel_closed_for_object (self,
         TP_EXPORTABLE_CHANNEL (chan));
 
     if (self->priv->channels)
     {
-        g_object_get (chan, "handle", &contact_handle, NULL);
+        g_object_get (chan,
+            "handle", &contact_handle,
+            "channel-destroyed", &really_destroyed,
+            NULL);
 
-        DEBUG ("removing channel with handle %d", contact_handle);
-
-        g_hash_table_remove (self->priv->channels,
-            GUINT_TO_POINTER (contact_handle));
+        if (really_destroyed)
+        {
+            DEBUG ("removing channel with handle %u", contact_handle);
+            g_hash_table_remove (self->priv->channels,
+                GUINT_TO_POINTER (contact_handle));
+        }
+        else
+        {
+            DEBUG ("reopening channel with handle %u due to pending messages",
+                contact_handle);
+            tp_channel_manager_emit_new_channel (self,
+                (TpExportableChannel *) chan, NULL);
+        }
     }
 }
 
