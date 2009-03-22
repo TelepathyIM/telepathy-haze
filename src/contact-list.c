@@ -21,8 +21,9 @@
 
 #include <string.h>
 
+#include <telepathy-glib/channel-manager.h>
+#include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/channel-factory-iface.h>
 #include <telepathy-glib/intset.h>
 
 #include "connection.h"
@@ -30,27 +31,23 @@
 #include "contact-list-channel.h"
 #include "debug.h"
 
-typedef struct _HazeContactListPrivate HazeContactListPrivate;
 struct _HazeContactListPrivate {
     HazeConnection *conn;
 
     GHashTable *list_channels;
     GHashTable *group_channels;
+    gulong status_changed_id;
 
     gboolean dispose_has_run;
 };
 
-#define HAZE_CONTACT_LIST_GET_PRIVATE(o) \
-    ((HazeContactListPrivate *) ((o)->priv))
-
-static void
-haze_contact_list_factory_iface_init (gpointer g_iface, gpointer iface_data);
+static void channel_manager_iface_init (gpointer, gpointer);
 
 G_DEFINE_TYPE_WITH_CODE(HazeContactList,
     haze_contact_list,
     G_TYPE_OBJECT,
-    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
-      haze_contact_list_factory_iface_init));
+    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
+      channel_manager_iface_init))
 
 /* properties: */
 enum {
@@ -76,16 +73,55 @@ haze_contact_list_init (HazeContactList *self)
     priv->dispose_has_run = FALSE;
 }
 
+static void haze_contact_list_close_all (HazeContactList *self);
+
+static void _add_initial_buddies (HazeContactList *self,
+    HazeContactListChannel *subscribe);
+
+static void
+status_changed_cb (HazeConnection *conn,
+                   guint status,
+                   guint reason,
+                   HazeContactList *self)
+{
+    switch (status)
+    {
+    case TP_CONNECTION_STATUS_DISCONNECTED:
+        haze_contact_list_close_all (self);
+        break;
+    case TP_CONNECTION_STATUS_CONNECTED:
+        {
+            HazeContactListChannel *subscribe, *publish;
+
+            /* Ensure contact lists exist before going any further. */
+            subscribe = haze_contact_list_get_channel (self,
+                TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_SUBSCRIBE,
+                NULL, NULL /*created*/);
+            g_assert (subscribe != NULL);
+
+            publish = haze_contact_list_get_channel (self, TP_HANDLE_TYPE_LIST,
+                    HAZE_LIST_HANDLE_PUBLISH, NULL, NULL /*created*/);
+            g_assert (publish != NULL);
+
+            _add_initial_buddies (self, subscribe);
+        }
+        break;
+    }
+}
+
 static GObject *
 haze_contact_list_constructor (GType type, guint n_props,
                                GObjectConstructParam *props)
 {
     GObject *obj;
-    /* HazeContactListPrivate *priv; */
+    HazeContactList *self;
 
     obj = G_OBJECT_CLASS (haze_contact_list_parent_class)->
         constructor (type, n_props, props);
-    /* priv = HAZE_CONTACT_LIST_GET_PRIVATE (HAZE_CONTACT_LIST (obj)); */
+
+    self = HAZE_CONTACT_LIST (obj);
+    self->priv->status_changed_id = g_signal_connect (self->priv->conn,
+        "status-changed", (GCallback) status_changed_cb, self);
 
     return obj;
 }
@@ -94,15 +130,14 @@ static void
 haze_contact_list_dispose (GObject *object)
 {
     HazeContactList *self = HAZE_CONTACT_LIST (object);
-    HazeContactListPrivate *priv =
-        HAZE_CONTACT_LIST_GET_PRIVATE(self);
+    HazeContactListPrivate *priv = self->priv;
 
     if (priv->dispose_has_run)
         return;
 
     priv->dispose_has_run = TRUE;
 
-    tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
+    haze_contact_list_close_all (self);
     g_assert (priv->list_channels == NULL);
     g_assert (priv->group_channels == NULL);
 
@@ -113,12 +148,6 @@ haze_contact_list_dispose (GObject *object)
 static void
 haze_contact_list_finalize (GObject *object)
 {
-/*
-    HazeContactList *self = HAZE_CONTACT_LIST (object);
-    HazeContactListPrivate *priv =
-        HAZE_CONTACT_LIST_GET_PRIVATE(self);
-*/
-
     G_OBJECT_CLASS (haze_contact_list_parent_class)->finalize (object);
 }
 
@@ -129,8 +158,7 @@ haze_contact_list_get_property (GObject    *object,
                                 GParamSpec *pspec)
 {
     HazeContactList *self = HAZE_CONTACT_LIST (object);
-    HazeContactListPrivate *priv =
-        HAZE_CONTACT_LIST_GET_PRIVATE(self);
+    HazeContactListPrivate *priv = self->priv;
 
     switch (property_id) {
         case PROP_CONNECTION:
@@ -149,7 +177,7 @@ haze_contact_list_set_property (GObject      *object,
                                 GParamSpec   *pspec)
 {
     HazeContactList *self = HAZE_CONTACT_LIST (object);
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE(self);
+    HazeContactListPrivate *priv = self->priv;
 
     switch (property_id) {
         case PROP_CONNECTION:
@@ -201,10 +229,13 @@ contact_list_channel_closed_cb (HazeContactListChannel *chan,
                                 gpointer user_data)
 {
     HazeContactList *contact_list = HAZE_CONTACT_LIST (user_data);
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (contact_list);
+    HazeContactListPrivate *priv = contact_list->priv;
     TpHandle handle;
     guint handle_type;
     GHashTable *channels;
+
+    tp_channel_manager_emit_channel_closed_for_object (contact_list,
+        TP_EXPORTABLE_CHANNEL (chan));
 
     g_object_get (chan, "handle", &handle, "handle-type", &handle_type, NULL);
     g_assert (handle_type == TP_HANDLE_TYPE_LIST ||
@@ -228,9 +259,10 @@ contact_list_channel_closed_cb (HazeContactListChannel *chan,
 static HazeContactListChannel *
 _haze_contact_list_create_channel (HazeContactList *contact_list,
                                    guint handle_type,
-                                   TpHandle handle)
+                                   TpHandle handle,
+                                   gpointer request_token)
 {
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE(contact_list);
+    HazeContactListPrivate *priv = contact_list->priv;
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
     GHashTable *channels = (handle_type == TP_HANDLE_TYPE_LIST
                            ? priv->list_channels
@@ -240,6 +272,7 @@ _haze_contact_list_create_channel (HazeContactList *contact_list,
     const char *name;
     char *mangled_name;
     char *object_path;
+    GSList *requests = NULL;
 
     g_assert (handle_type == TP_HANDLE_TYPE_LIST ||
             handle_type == TP_HANDLE_TYPE_GROUP);
@@ -271,20 +304,94 @@ _haze_contact_list_create_channel (HazeContactList *contact_list,
 
     g_hash_table_insert (channels, GINT_TO_POINTER (handle), chan);
 
-    tp_channel_factory_iface_emit_new_channel (contact_list,
-                                               (TpChannelIface *)chan, NULL);
+    if (request_token != NULL)
+        requests = g_slist_prepend (requests, request_token);
+
+    tp_channel_manager_emit_new_channel (contact_list,
+        TP_EXPORTABLE_CHANNEL (chan), requests);
+    g_slist_free (requests);
+
     g_free (object_path);
 
     return chan;
+}
+
+struct foreach_data {
+    TpExportableChannelFunc func;
+    gpointer data;
+};
+
+static void
+foreach_helper (gpointer k,
+                gpointer v,
+                gpointer data)
+{
+  struct foreach_data *foreach = data;
+
+  foreach->func (TP_EXPORTABLE_CHANNEL (v), foreach->data);
+}
+
+static void
+haze_contact_list_foreach_channel (TpChannelManager *manager,
+                                   TpExportableChannelFunc func,
+                                   gpointer data)
+{
+    HazeContactList *self = HAZE_CONTACT_LIST (manager);
+    struct foreach_data foreach = { func, data };
+
+    g_hash_table_foreach (self->priv->group_channels, foreach_helper,
+        &foreach);
+    g_hash_table_foreach (self->priv->list_channels, foreach_helper,
+        &foreach);
+}
+
+static const gchar * const list_fixed_properties[] = {
+    TP_IFACE_CHANNEL ".ChannelType",
+    TP_IFACE_CHANNEL ".TargetHandleType",
+    NULL
+};
+static const gchar * const list_allowed_properties[] = {
+    TP_IFACE_CHANNEL ".TargetHandle",
+    TP_IFACE_CHANNEL ".TargetID",
+    NULL
+};
+static const gchar * const *group_fixed_properties = list_fixed_properties;
+static const gchar * const *group_allowed_properties = list_allowed_properties;
+
+static void
+haze_contact_list_foreach_channel_class (TpChannelManager *manager,
+                                         TpChannelManagerChannelClassFunc func,
+                                         gpointer user_data)
+{
+    GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal,
+        NULL, (GDestroyNotify) tp_g_value_slice_free);
+    GValue *value, *handle_type_value;
+
+    value = tp_g_value_slice_new (G_TYPE_STRING);
+    g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_CONTACT_LIST);
+    g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType", value);
+
+    handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+    g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType",
+        handle_type_value);
+
+    g_value_set_uint (handle_type_value, TP_HANDLE_TYPE_LIST);
+    func (manager, table, list_allowed_properties, user_data);
+
+    g_value_set_uint (handle_type_value, TP_HANDLE_TYPE_GROUP);
+    func (manager, table, group_allowed_properties, user_data);
+
+    g_hash_table_destroy (table);
 }
 
 HazeContactListChannel *
 haze_contact_list_get_channel (HazeContactList *contact_list,
                                guint handle_type,
                                TpHandle handle,
+                               gpointer request_token,
                                gboolean *created)
 {
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (contact_list);
+    HazeContactListPrivate *priv = contact_list->priv;
     TpBaseConnection *conn = TP_BASE_CONNECTION (priv->conn);
     TpHandleRepoIface *handle_repo =
         tp_base_connection_get_handles (conn, handle_type);
@@ -308,7 +415,7 @@ haze_contact_list_get_channel (HazeContactList *contact_list,
     else
     {
         chan = _haze_contact_list_create_channel (contact_list, handle_type,
-            handle);
+            handle, request_token);
         if (created)
             *created = TRUE;
     }
@@ -321,7 +428,7 @@ _haze_contact_list_get_group (HazeContactList *contact_list,
                               const char *group_name,
                               gboolean *created)
 {
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (contact_list);
+    HazeContactListPrivate *priv = contact_list->priv;
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
     TpHandleRepoIface *group_repo = tp_base_connection_get_handles (base_conn,
         TP_HANDLE_TYPE_GROUP);
@@ -330,7 +437,7 @@ _haze_contact_list_get_group (HazeContactList *contact_list,
     HazeContactListChannel *group;
 
     group = haze_contact_list_get_channel (contact_list, TP_HANDLE_TYPE_GROUP,
-        group_handle, created);
+        group_handle, NULL, created);
 
     tp_handle_unref (group_repo, group_handle);
 
@@ -338,10 +445,9 @@ _haze_contact_list_get_group (HazeContactList *contact_list,
 }
 
 static void
-haze_contact_list_factory_iface_close_all (TpChannelFactoryIface *iface)
+haze_contact_list_close_all (HazeContactList *self)
 {
-    HazeContactList *self = HAZE_CONTACT_LIST (iface);
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (self);
+    HazeContactListPrivate *priv = self->priv;
     GHashTable *tmp;
 
     if (priv->list_channels)
@@ -356,12 +462,12 @@ haze_contact_list_factory_iface_close_all (TpChannelFactoryIface *iface)
         priv->group_channels = NULL;
         g_hash_table_destroy (tmp);
     }
-}
 
-static void
-haze_contact_list_factory_iface_connecting (TpChannelFactoryIface *iface)
-{
-    /* TODO: Is there anything that should be done here?*/
+    if (priv->status_changed_id != 0)
+    {
+        g_signal_handler_disconnect (priv->conn, priv->status_changed_id);
+        priv->status_changed_id = 0;
+    }
 }
 
 static TpHandleSet *
@@ -387,7 +493,7 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
 {
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (buddy->account);
     HazeContactList *contact_list = conn->contact_list;
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (contact_list);
+    HazeContactListPrivate *priv = contact_list->priv;
     HazeContactListChannel *subscribe, *group;
     TpHandleSet *add_handles;
     const char *group_name;
@@ -403,7 +509,7 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
     add_handles = _handle_a_buddy (priv->conn, buddy);
 
     subscribe = haze_contact_list_get_channel (contact_list,
-        TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_SUBSCRIBE, NULL);
+        TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_SUBSCRIBE, NULL, NULL);
 
     tp_group_mixin_change_members (G_OBJECT (subscribe), "",
         tp_handle_set_peek (add_handles), NULL, NULL, NULL, 0, 0);
@@ -422,7 +528,7 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
 {
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (buddy->account);
     HazeContactList *contact_list = conn->contact_list;
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (contact_list);
+    HazeContactListPrivate *priv = contact_list->priv;
     HazeContactListChannel *subscribe, *group;
     TpHandleSet *rem_handles;
     const char *group_name, *buddy_name;
@@ -454,7 +560,7 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
     if (last_instance)
     {
         subscribe = haze_contact_list_get_channel (contact_list,
-            TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_SUBSCRIBE, NULL);
+            TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_SUBSCRIBE, NULL, NULL);
 
         tp_group_mixin_change_members (G_OBJECT (subscribe), "",
             NULL, tp_handle_set_peek (rem_handles), NULL, NULL, 0, 0);
@@ -521,7 +627,7 @@ _create_initial_group(gchar *group_name,
                       TpIntSet *handles,
                       HazeContactList *contact_list)
 {
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE(contact_list);
+    HazeContactListPrivate *priv = contact_list->priv;
     TpBaseConnection *conn = TP_BASE_CONNECTION (priv->conn);
     TpHandleRepoIface *handle_repo =
         tp_base_connection_get_handles (conn, TP_HANDLE_TYPE_GROUP);
@@ -529,7 +635,7 @@ _create_initial_group(gchar *group_name,
     TpHandle group_handle = tp_handle_ensure (handle_repo, group_name, NULL,
         NULL);
     group = haze_contact_list_get_channel (contact_list,
-        TP_HANDLE_TYPE_GROUP, group_handle, NULL /*created*/);
+        TP_HANDLE_TYPE_GROUP, group_handle, NULL, NULL /*created*/);
 
     tp_group_mixin_change_members (G_OBJECT (group), "", handles, NULL,
                                    NULL, NULL, 0, 0);
@@ -548,7 +654,7 @@ static void
 _add_initial_buddies (HazeContactList *self,
                       HazeContactListChannel *subscribe)
 {
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (self);
+    HazeContactListPrivate *priv = self->priv;
 
     PurpleAccount *account = priv->conn->account;
     GSList *buddies = purple_find_buddies(account, NULL);
@@ -575,125 +681,122 @@ _add_initial_buddies (HazeContactList *self,
     tp_handle_set_destroy (add_handles);
 }
 
-static void
-haze_contact_list_factory_iface_connected (TpChannelFactoryIface *iface)
+static gboolean
+haze_contact_list_request (HazeContactList *self,
+                           gpointer request_token,
+                           GHashTable *request_properties,
+                           gboolean require_new)
 {
-    HazeContactList *self = HAZE_CONTACT_LIST (iface);
-    HazeContactListChannel *subscribe, *publish;
-
-    /* Ensure contact lists exist before going any further. */
-    subscribe = haze_contact_list_get_channel (self, TP_HANDLE_TYPE_LIST,
-        HAZE_LIST_HANDLE_SUBSCRIBE, NULL /*created*/);
-    g_assert (subscribe != NULL);
-
-    publish = haze_contact_list_get_channel (self, TP_HANDLE_TYPE_LIST,
-            HAZE_LIST_HANDLE_PUBLISH, NULL /*created*/);
-    g_assert (publish != NULL);
-
-    _add_initial_buddies (self, subscribe);
-}
-
-static void
-haze_contact_list_factory_iface_disconnected (TpChannelFactoryIface *iface)
-{
-}
-
-struct _ForeachData
-{
-    TpChannelFunc foreach;
-    gpointer user_data;
-};
-
-static void
-_foreach_slave (gpointer key, gpointer value, gpointer user_data)
-{
-    struct _ForeachData *data = (struct _ForeachData *) user_data;
-    TpChannelIface *chan = TP_CHANNEL_IFACE (value);
-
-    data->foreach (chan, data->user_data);
-}
-
-static void
-haze_contact_list_factory_iface_foreach (TpChannelFactoryIface *iface,
-                                         TpChannelFunc foreach,
-                                         gpointer user_data)
-{
-    HazeContactList *self = HAZE_CONTACT_LIST (iface);
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (self);
-    struct _ForeachData data;
-
-    data.user_data = user_data;
-    data.foreach = foreach;
-
-    g_hash_table_foreach (priv->list_channels, _foreach_slave, &data);
-    g_hash_table_foreach (priv->group_channels, _foreach_slave, &data);
-}
-
-static TpChannelFactoryRequestStatus
-haze_contact_list_factory_iface_request (TpChannelFactoryIface *iface,
-                                         const gchar *chan_type,
-                                         TpHandleType handle_type,
-                                         guint handle,
-                                         gpointer request,
-                                         TpChannelIface **ret,
-                                         GError **error)
-{
-    HazeContactList *self = HAZE_CONTACT_LIST (iface);
-    HazeContactListPrivate *priv = HAZE_CONTACT_LIST_GET_PRIVATE (self);
-    TpBaseConnection *conn = TP_BASE_CONNECTION (priv->conn);
-    TpHandleRepoIface *handle_repo =
-        tp_base_connection_get_handles (conn, handle_type);
-    HazeContactListChannel *chan;
+    TpHandleRepoIface *handle_repo;
+    TpHandleType handle_type;
+    TpHandle handle;
     const gchar *channel_name;
     gboolean created;
+    HazeContactListChannel *chan;
+    GError *error = NULL;
+    const gchar * const *fixed_properties;
+    const gchar * const *allowed_properties;
 
-    if (strcmp (chan_type, TP_IFACE_CHANNEL_TYPE_CONTACT_LIST))
-        return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
+    if (tp_strdiff (tp_asv_get_string (request_properties,
+            TP_IFACE_CHANNEL ".ChannelType"),
+        TP_IFACE_CHANNEL_TYPE_CONTACT_LIST))
+    {
+        return FALSE;
+    }
 
-    if (handle_type != TP_HANDLE_TYPE_LIST &&
-        handle_type != TP_HANDLE_TYPE_GROUP)
-        return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
+    handle_type = tp_asv_get_uint32 (request_properties,
+        TP_IFACE_CHANNEL ".TargetHandleType", NULL);
 
-    /* If the handle is valid, then they are not requesting an unimplemented
-     * list channel.
-     */
-    if (!tp_handle_is_valid (handle_repo, handle, NULL))
-        return TP_CHANNEL_FACTORY_REQUEST_STATUS_INVALID_HANDLE;
+    switch (handle_type)
+    {
+    case TP_HANDLE_TYPE_LIST:
+        fixed_properties = list_fixed_properties;
+        allowed_properties = list_allowed_properties;
+        break;
+    case TP_HANDLE_TYPE_GROUP:
+        fixed_properties = group_fixed_properties;
+        allowed_properties = group_allowed_properties;
+        break;
+    default:
+        return FALSE;
+    }
+
+    handle_repo = tp_base_connection_get_handles (
+        TP_BASE_CONNECTION (self->priv->conn), handle_type);
+
+    handle = tp_asv_get_uint32 (request_properties,
+        TP_IFACE_CHANNEL ".TargetHandle", NULL);
+    g_assert (tp_handle_is_valid (handle_repo, handle, NULL));
+
+    if (tp_channel_manager_asv_has_unknown_properties (request_properties,
+          fixed_properties, allowed_properties, &error))
+    {
+        goto error;
+    }
 
     channel_name = tp_handle_inspect (handle_repo, handle);
     DEBUG ("grabbing channel '%s'...", channel_name);
-    chan = haze_contact_list_get_channel (self, handle_type, handle,
-        &created);
 
-    if (chan)
+    chan = haze_contact_list_get_channel (self, handle_type, handle,
+        request_token, &created);
+    g_assert (chan != NULL);
+
+    if (!created)
     {
-        *ret = TP_CHANNEL_IFACE (chan);
-        if (created)
+        if (require_new)
         {
-            return TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
+            tp_channel_manager_emit_request_failed (self, request_token,
+                TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "Channel already exists");
         }
         else
         {
-            return TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
+            tp_channel_manager_emit_request_already_satisfied (self,
+                request_token, TP_EXPORTABLE_CHANNEL (chan));
         }
     }
-    else
-    {
-        g_warning ("eh!  why does the channel '%s' not exist?", channel_name);
-        return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
-    }
+
+    return TRUE;
+
+error:
+    tp_channel_manager_emit_request_failed (self, request_token,
+        error->domain, error->code, error->message);
+    g_error_free (error);
+    return TRUE;
+}
+
+
+static gboolean
+haze_contact_list_create_channel (TpChannelManager *manager,
+                                  gpointer request_token,
+                                  GHashTable *request_properties)
+{
+    HazeContactList *self = HAZE_CONTACT_LIST (manager);
+
+    return haze_contact_list_request (self, request_token,
+        request_properties, TRUE);
+}
+
+static gboolean
+haze_contact_list_ensure_channel (TpChannelManager *manager,
+                                  gpointer request_token,
+                                  GHashTable *request_properties)
+{
+    HazeContactList *self = HAZE_CONTACT_LIST (manager);
+
+    return haze_contact_list_request (self, request_token,
+        request_properties, FALSE);
 }
 
 static void
-haze_contact_list_factory_iface_init (gpointer g_iface,
-                                      gpointer iface_data)
+channel_manager_iface_init (gpointer g_iface,
+                            gpointer iface_data G_GNUC_UNUSED)
 {
-    TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *) g_iface;
+    TpChannelManagerIface *iface = g_iface;
 
-    klass->close_all = haze_contact_list_factory_iface_close_all;
-    klass->connecting = haze_contact_list_factory_iface_connecting;
-    klass->connected = haze_contact_list_factory_iface_connected;
-    klass->disconnected = haze_contact_list_factory_iface_disconnected;
-    klass->foreach = haze_contact_list_factory_iface_foreach;
-    klass->request = haze_contact_list_factory_iface_request;
+    iface->foreach_channel = haze_contact_list_foreach_channel;
+    iface->foreach_channel_class = haze_contact_list_foreach_channel_class;
+    iface->create_channel = haze_contact_list_create_channel;
+    iface->ensure_channel = haze_contact_list_ensure_channel;
+    /* Request is equivalent to Ensure for this channel class */
+    iface->request_channel = haze_contact_list_ensure_channel;
 }

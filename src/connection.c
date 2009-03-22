@@ -398,20 +398,20 @@ _haze_connection_create_handle_repos (TpBaseConnection *base,
 }
 
 static GPtrArray *
-_haze_connection_create_channel_factories (TpBaseConnection *base)
+_haze_connection_create_channel_managers (TpBaseConnection *base)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
-    GPtrArray *channel_factories = g_ptr_array_new ();
+    GPtrArray *channel_managers = g_ptr_array_new ();
 
     self->im_factory = HAZE_IM_CHANNEL_FACTORY (
         g_object_new (HAZE_TYPE_IM_CHANNEL_FACTORY, "connection", self, NULL));
-    g_ptr_array_add (channel_factories, self->im_factory);
+    g_ptr_array_add (channel_managers, self->im_factory);
 
     self->contact_list = HAZE_CONTACT_LIST (
         g_object_new (HAZE_TYPE_CONTACT_LIST, "connection", self, NULL));
-    g_ptr_array_add (channel_factories, self->contact_list);
+    g_ptr_array_add (channel_managers, self->contact_list);
 
-    return channel_factories;
+    return channel_managers;
 }
 
 static gchar *
@@ -553,8 +553,8 @@ haze_connection_class_init (HazeConnectionClass *klass)
     object_class->finalize = haze_connection_finalize;
 
     base_class->create_handle_repos = _haze_connection_create_handle_repos;
-    base_class->create_channel_factories =
-        _haze_connection_create_channel_factories;
+    base_class->create_channel_managers =
+        _haze_connection_create_channel_managers;
     base_class->get_unique_connection_name =
         haze_connection_get_unique_connection_name;
     base_class->start_connecting = _haze_connection_start_connecting;

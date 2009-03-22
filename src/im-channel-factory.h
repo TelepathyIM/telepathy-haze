@@ -3,7 +3,7 @@
 /*
  * im-channel-factory.h - HazeImChannelFactory header
  * Copyright (C) 2007 Will Thompson
- * Copyright (C) 2007 Collabora Ltd.
+ * Copyright (C) 2007-2008 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,16 +44,18 @@ G_BEGIN_DECLS
 
 typedef struct _HazeImChannelFactory      HazeImChannelFactory;
 typedef struct _HazeImChannelFactoryClass HazeImChannelFactoryClass;
+typedef struct _HazeImChannelFactoryPrivate HazeImChannelFactoryPrivate;
 
 struct _HazeImChannelFactory {
     GObject parent;
+    HazeImChannelFactoryPrivate *priv;
 };
 
 struct _HazeImChannelFactoryClass {
     GObjectClass parent_class;
 };
 
-GType        haze_im_channel_factory_get_type    (void) G_GNUC_CONST;
+GType haze_im_channel_factory_get_type (void) G_GNUC_CONST;
 
 PurpleConversationUiOps *haze_get_conv_ui_ops (void);
 

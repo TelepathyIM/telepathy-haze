@@ -1,7 +1,7 @@
 /*
  * im-channel-factory.c - HazeImChannelFactory source
  * Copyright (C) 2007 Will Thompson
- * Copyright (C) 2007 Collabora Ltd.
+ * Copyright (C) 2007-2008 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,36 +19,35 @@
  *
  */
 
+#include "config.h"
+#include "im-channel-factory.h"
+
 #include <string.h>
 
-#include <telepathy-glib/channel-factory-iface.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/handle-repo.h>
 #include <telepathy-glib/base-connection.h>
+#include <telepathy-glib/channel-manager.h>
+#include <telepathy-glib/dbus.h>
+#include <telepathy-glib/handle-repo.h>
+#include <telepathy-glib/interfaces.h>
 
 #include "debug.h"
 #include "im-channel.h"
-#include "im-channel-factory.h"
 #include "connection.h"
 
-typedef struct _HazeImChannelFactoryPrivate HazeImChannelFactoryPrivate;
 struct _HazeImChannelFactoryPrivate {
     HazeConnection *conn;
     GHashTable *channels;
+    gulong status_changed_id;
     gboolean dispose_has_run;
 };
-#define HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE(o) \
-    (G_TYPE_INSTANCE_GET_PRIVATE((o), HAZE_TYPE_IM_CHANNEL_FACTORY, \
-                                 HazeImChannelFactoryPrivate))
 
-static void haze_im_channel_factory_iface_init (gpointer g_iface,
-                                                gpointer iface_data);
+static void channel_manager_iface_init (gpointer, gpointer);
 
 G_DEFINE_TYPE_WITH_CODE(HazeImChannelFactory,
     haze_im_channel_factory,
     G_TYPE_OBJECT,
-    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_FACTORY_IFACE,
-      haze_im_channel_factory_iface_init));
+    G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_MANAGER,
+      channel_manager_iface_init))
 
 /* properties: */
 enum {
@@ -58,7 +57,9 @@ enum {
 };
 
 static HazeIMChannel *get_im_channel (HazeImChannelFactory *self,
-    TpHandle handle, TpHandle initiator, gboolean *created);
+    TpHandle handle, TpHandle initiator, gpointer request_token,
+    gboolean *created);
+static void close_all (HazeImChannelFactory *self);
 
 static void
 conversation_updated_cb (PurpleConversation *conv,
@@ -102,7 +103,7 @@ conversation_updated_cb (PurpleConversation *conv,
     }
 
     chan = get_im_channel (im_factory, ui_data->contact_handle,
-        ui_data->contact_handle, NULL);
+        ui_data->contact_handle, NULL, NULL);
 
     tp_svc_channel_interface_chat_state_emit_chat_state_changed (
         (TpSvcChannelInterfaceChatState*)chan, ui_data->contact_handle, state);
@@ -111,48 +112,43 @@ conversation_updated_cb (PurpleConversation *conv,
 static void
 haze_im_channel_factory_init (HazeImChannelFactory *self)
 {
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE(self);
+    self->priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
+        HAZE_TYPE_IM_CHANNEL_FACTORY, HazeImChannelFactoryPrivate);
 
-    priv->channels = g_hash_table_new_full (g_direct_hash, g_direct_equal,
-                                            NULL, g_object_unref);
-
-    priv->conn = NULL;
-    priv->dispose_has_run = FALSE;
+    self->priv->channels = g_hash_table_new_full (NULL, NULL,
+        NULL, g_object_unref);
+    self->priv->conn = NULL;
+    self->priv->dispose_has_run = FALSE;
 }
 
 static void
 haze_im_channel_factory_dispose (GObject *object)
 {
     HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (object);
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE(self);
 
-    if (priv->dispose_has_run)
+    if (self->priv->dispose_has_run)
         return;
 
-    priv->dispose_has_run = TRUE;
+    self->priv->dispose_has_run = TRUE;
 
-    tp_channel_factory_iface_close_all (TP_CHANNEL_FACTORY_IFACE (object));
-    g_assert (priv->channels == NULL);
+    close_all (self);
+    g_assert (self->priv->channels == NULL);
 
     if (G_OBJECT_CLASS (haze_im_channel_factory_parent_class)->dispose)
         G_OBJECT_CLASS (haze_im_channel_factory_parent_class)->dispose (object);
 }
 
 static void
-haze_im_channel_factory_get_property (GObject    *object,
-                                 guint       property_id,
-                                 GValue     *value,
-                                 GParamSpec *pspec)
+haze_im_channel_factory_get_property (GObject *object,
+                                      guint property_id,
+                                      GValue *value,
+                                      GParamSpec *pspec)
 {
-    HazeImChannelFactory *fac = HAZE_IM_CHANNEL_FACTORY (object);
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (fac);
+    HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (object);
 
     switch (property_id) {
         case PROP_CONNECTION:
-            g_value_set_object (value, priv->conn);
+            g_value_set_object (value, self->priv->conn);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -161,23 +157,47 @@ haze_im_channel_factory_get_property (GObject    *object,
 }
 
 static void
-haze_im_channel_factory_set_property (GObject      *object,
-                                 guint         property_id,
-                                 const GValue *value,
-                                 GParamSpec   *pspec)
+haze_im_channel_factory_set_property (GObject *object,
+                                      guint property_id,
+                                      const GValue *value,
+                                      GParamSpec *pspec)
 {
-    HazeImChannelFactory *fac = HAZE_IM_CHANNEL_FACTORY (object);
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (fac);
+    HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (object);
 
     switch (property_id) {
         case PROP_CONNECTION:
-            priv->conn = g_value_get_object (value);
+            self->priv->conn = g_value_get_object (value);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
             break;
     }
+}
+
+static void
+status_changed_cb (HazeConnection *conn,
+                   guint status,
+                   guint reason,
+                   HazeImChannelFactory *self)
+{
+    if (status == TP_CONNECTION_STATUS_DISCONNECTED)
+        close_all (self);
+}
+
+static void
+haze_im_channel_factory_constructed (GObject *object)
+{
+    HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (object);
+    void (*constructed) (GObject *) =
+        ((GObjectClass *) haze_im_channel_factory_parent_class)->constructed;
+
+    if (constructed != NULL)
+    {
+        constructed (object);
+    }
+
+    self->priv->status_changed_id = g_signal_connect (self->priv->conn,
+        "status-changed", (GCallback) status_changed_cb, self);
 }
 
 static void
@@ -187,6 +207,7 @@ haze_im_channel_factory_class_init (HazeImChannelFactoryClass *klass)
     GParamSpec *param_spec;
     void *conv_handle = purple_conversations_get_handle();
 
+    object_class->constructed = haze_im_channel_factory_constructed;
     object_class->dispose = haze_im_channel_factory_dispose;
     object_class->get_property = haze_im_channel_factory_get_property;
     object_class->set_property = haze_im_channel_factory_set_property;
@@ -211,42 +232,45 @@ haze_im_channel_factory_class_init (HazeImChannelFactoryClass *klass)
 static void
 im_channel_closed_cb (HazeIMChannel *chan, gpointer user_data)
 {
-    HazeImChannelFactory *fac = HAZE_IM_CHANNEL_FACTORY (user_data);
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (fac);
+    HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (user_data);
     TpHandle contact_handle;
 
-    if (priv->channels)
+    tp_channel_manager_emit_channel_closed_for_object (self,
+        TP_EXPORTABLE_CHANNEL (chan));
+
+    if (self->priv->channels)
     {
         g_object_get (chan, "handle", &contact_handle, NULL);
 
         DEBUG ("removing channel with handle %d", contact_handle);
 
-        g_hash_table_remove (priv->channels, GINT_TO_POINTER (contact_handle));
+        g_hash_table_remove (self->priv->channels,
+            GUINT_TO_POINTER (contact_handle));
     }
 }
 
 static HazeIMChannel *
 new_im_channel (HazeImChannelFactory *self,
                 TpHandle handle,
-                TpHandle initiator)
+                TpHandle initiator,
+                gpointer request_token)
 {
-    HazeImChannelFactoryPrivate *priv;
     TpBaseConnection *conn;
     HazeIMChannel *chan;
     char *object_path;
+    GSList *requests = NULL;
 
     g_assert (HAZE_IS_IM_CHANNEL_FACTORY (self));
 
-    priv = HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (self);
-    conn = (TpBaseConnection *)priv->conn;
+    conn = (TpBaseConnection *) self->priv->conn;
 
-    g_assert (!g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle)));
+    g_assert (!g_hash_table_lookup (self->priv->channels,
+          GINT_TO_POINTER (handle)));
 
     object_path = g_strdup_printf ("%s/ImChannel%u", conn->object_path, handle);
 
     chan = g_object_new (HAZE_TYPE_IM_CHANNEL,
-                         "connection", priv->conn,
+                         "connection", self->priv->conn,
                          "object-path", object_path,
                          "handle", handle,
                          "initiator-handle", initiator,
@@ -256,10 +280,14 @@ new_im_channel (HazeImChannelFactory *self,
 
     g_signal_connect (chan, "closed", G_CALLBACK (im_channel_closed_cb), self);
 
-    g_hash_table_insert (priv->channels, GINT_TO_POINTER (handle), chan);
+    g_hash_table_insert (self->priv->channels, GINT_TO_POINTER (handle), chan);
 
-    tp_channel_factory_iface_emit_new_channel (self, (TpChannelIface *)chan,
-            NULL);
+    if (request_token != NULL)
+        requests = g_slist_prepend (requests, request_token);
+
+    tp_channel_manager_emit_new_channel (self,
+        TP_EXPORTABLE_CHANNEL (chan), requests);
+    g_slist_free (requests);
 
     g_free (object_path);
 
@@ -270,12 +298,11 @@ static HazeIMChannel *
 get_im_channel (HazeImChannelFactory *self,
                 TpHandle handle,
                 TpHandle initiator,
+                gpointer request_token,
                 gboolean *created)
 {
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (self);
     HazeIMChannel *chan =
-        g_hash_table_lookup (priv->channels, GINT_TO_POINTER (handle));
+        g_hash_table_lookup (self->priv->channels, GINT_TO_POINTER (handle));
 
     if (chan)
     {
@@ -284,7 +311,7 @@ get_im_channel (HazeImChannelFactory *self,
     }
     else
     {
-        chan = new_im_channel (self, handle, initiator);
+        chan = new_im_channel (self, handle, initiator, request_token);
         if (created)
             *created = TRUE;
     }
@@ -293,38 +320,30 @@ get_im_channel (HazeImChannelFactory *self,
 }
 
 static void
-haze_im_channel_factory_iface_close_all (TpChannelFactoryIface *iface)
+close_all (HazeImChannelFactory *self)
 {
-    HazeImChannelFactory *fac = HAZE_IM_CHANNEL_FACTORY (iface);
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (fac);
     GHashTable *tmp;
 
     DEBUG ("closing im channels");
 
-    if (priv->channels)
+    if (self->priv->channels)
     {
-        tmp = priv->channels;
-        priv->channels = NULL;
+        tmp = self->priv->channels;
+        self->priv->channels = NULL;
         g_hash_table_destroy (tmp);
     }
-}
 
-static void
-haze_im_channel_factory_iface_connecting (TpChannelFactoryIface *iface)
-{
-    /* HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface); */
-}
-
-static void
-haze_im_channel_factory_iface_disconnected (TpChannelFactoryIface *iface)
-{
-    /* HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface); */
+    if (self->priv->status_changed_id != 0)
+    {
+        g_signal_handler_disconnect (self->priv->conn,
+            self->priv->status_changed_id);
+        self->priv->status_changed_id = 0;
+    }
 }
 
 struct _ForeachData
 {
-    TpChannelFunc foreach;
+    TpExportableChannelFunc foreach;
     gpointer user_data;
 };
 
@@ -332,81 +351,23 @@ static void
 _foreach_slave (gpointer key, gpointer value, gpointer user_data)
 {
     struct _ForeachData *data = (struct _ForeachData *) user_data;
-    TpChannelIface *chan = TP_CHANNEL_IFACE (value);
+    TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
 
     data->foreach (chan, data->user_data);
 }
 
 static void
-haze_im_channel_factory_iface_foreach (TpChannelFactoryIface *iface,
-                                       TpChannelFunc foreach,
-                                       gpointer user_data)
+haze_im_channel_factory_foreach (TpChannelManager *iface,
+                                 TpExportableChannelFunc foreach,
+                                 gpointer user_data)
 {
-    HazeImChannelFactory *fac = HAZE_IM_CHANNEL_FACTORY (iface);
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (fac);
+    HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface);
     struct _ForeachData data;
 
     data.user_data = user_data;
     data.foreach = foreach;
 
-    g_hash_table_foreach (priv->channels, _foreach_slave, &data);
-}
-
-static TpChannelFactoryRequestStatus
-haze_im_channel_factory_iface_request (TpChannelFactoryIface *iface,
-                                       const gchar *chan_type,
-                                       TpHandleType handle_type,
-                                       guint handle,
-                                       gpointer request,
-                                       TpChannelIface **ret,
-                                       GError **error)
-{
-    HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface);
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (self);
-    TpBaseConnection *base_conn = (TpBaseConnection *) priv->conn;
-    TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-            base_conn, TP_HANDLE_TYPE_CONTACT);
-    HazeIMChannel *chan;
-    TpChannelFactoryRequestStatus status;
-    gboolean created;
-
-    if (strcmp (chan_type, TP_IFACE_CHANNEL_TYPE_TEXT))
-        return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_IMPLEMENTED;
-
-    if (handle_type != TP_HANDLE_TYPE_CONTACT)
-        return TP_CHANNEL_FACTORY_REQUEST_STATUS_NOT_AVAILABLE;
-
-    if (!tp_handle_is_valid (contact_repo, handle, error))
-        return TP_CHANNEL_FACTORY_REQUEST_STATUS_ERROR;
-
-    chan = get_im_channel (self, handle, base_conn->self_handle, &created);
-    if (created)
-    {
-        status = TP_CHANNEL_FACTORY_REQUEST_STATUS_CREATED;
-    }
-    else
-    {
-        status = TP_CHANNEL_FACTORY_REQUEST_STATUS_EXISTING;
-    }
-
-    *ret = TP_CHANNEL_IFACE (chan);
-    return status;
-}
-
-static void
-haze_im_channel_factory_iface_init (gpointer g_iface,
-                                    gpointer iface_data)
-{
-    TpChannelFactoryIfaceClass *klass = (TpChannelFactoryIfaceClass *) g_iface;
-
-    klass->close_all = haze_im_channel_factory_iface_close_all;
-    klass->connecting = haze_im_channel_factory_iface_connecting;
-    klass->connected = NULL; //haze_im_channel_factory_iface_connected;
-    klass->disconnected = haze_im_channel_factory_iface_disconnected;
-    klass->foreach = haze_im_channel_factory_iface_foreach;
-    klass->request = haze_im_channel_factory_iface_request;
+    g_hash_table_foreach (self->priv->channels, _foreach_slave, &data);
 }
 
 static void
@@ -439,7 +400,7 @@ haze_write_im (PurpleConversation *conv,
         type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
 
     chan = get_im_channel (im_factory, ui_data->contact_handle,
-        ui_data->contact_handle, NULL);
+        ui_data->contact_handle, NULL, NULL);
 
     if (flags & PURPLE_MESSAGE_RECV)
         tp_text_mixin_receive (G_OBJECT (chan), type, ui_data->contact_handle,
@@ -489,9 +450,7 @@ haze_create_conversation (PurpleConversation *conv)
 
     HazeImChannelFactory *im_factory =
         ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (im_factory);
-    TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (im_factory->priv->conn);
     TpHandleRepoIface *contact_repo =
         tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
 
@@ -522,9 +481,7 @@ haze_destroy_conversation (PurpleConversation *conv)
 
     HazeImChannelFactory *im_factory =
         ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
-    HazeImChannelFactoryPrivate *priv =
-        HAZE_IM_CHANNEL_FACTORY_GET_PRIVATE (im_factory);
-    TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (im_factory->priv->conn);
     TpHandleRepoIface *contact_repo =
         tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
 
@@ -580,4 +537,132 @@ PurpleConversationUiOps *
 haze_get_conv_ui_ops(void)
 {
     return &conversation_ui_ops;
+}
+
+static const gchar * const fixed_properties[] = {
+    TP_IFACE_CHANNEL ".ChannelType",
+    TP_IFACE_CHANNEL ".TargetHandleType",
+    NULL
+};
+static const gchar * const allowed_properties[] = {
+    TP_IFACE_CHANNEL ".TargetHandle",
+    TP_IFACE_CHANNEL ".TargetID",
+    NULL
+};
+
+static void
+haze_im_channel_factory_foreach_channel_class (TpChannelManager *manager,
+    TpChannelManagerChannelClassFunc func,
+    gpointer user_data)
+{
+    GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal,
+        NULL, (GDestroyNotify) tp_g_value_slice_free);
+    GValue *value;
+
+    value = tp_g_value_slice_new (G_TYPE_STRING);
+    g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_TEXT);
+    g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType", value);
+
+    value = tp_g_value_slice_new (G_TYPE_UINT);
+    g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
+    g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType", value);
+
+    func (manager, table, allowed_properties, user_data);
+
+    g_hash_table_destroy (table);
+}
+
+static gboolean
+haze_im_channel_factory_request (HazeImChannelFactory *self,
+                                 gpointer request_token,
+                                 GHashTable *request_properties,
+                                 gboolean require_new)
+{
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->conn);
+    TpHandle handle;
+    gboolean created;
+    HazeIMChannel *chan;
+    GError *error = NULL;
+
+    if (tp_strdiff (tp_asv_get_string (request_properties,
+            TP_IFACE_CHANNEL ".ChannelType"),
+        TP_IFACE_CHANNEL_TYPE_TEXT))
+    {
+        return FALSE;
+    }
+
+    if (tp_asv_get_uint32 (request_properties,
+        TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
+    {
+        return FALSE;
+    }
+
+    handle = tp_asv_get_uint32 (request_properties,
+        TP_IFACE_CHANNEL ".TargetHandle", NULL);
+    g_assert (handle != 0);
+
+    if (tp_channel_manager_asv_has_unknown_properties (request_properties,
+          fixed_properties, allowed_properties, &error))
+    {
+        goto error;
+    }
+
+    chan = get_im_channel (self, handle, base_conn->self_handle,
+        request_token, &created);
+    g_assert (chan != NULL);
+
+    if (!created)
+    {
+        if (require_new)
+        {
+            tp_channel_manager_emit_request_failed (self, request_token,
+                TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "Channel already exists");
+        }
+        else
+        {
+            tp_channel_manager_emit_request_already_satisfied (self,
+                request_token, TP_EXPORTABLE_CHANNEL (chan));
+        }
+    }
+
+    return TRUE;
+
+error:
+    tp_channel_manager_emit_request_failed (self, request_token,
+        error->domain, error->code, error->message);
+    g_error_free (error);
+    return TRUE;
+}
+
+static gboolean
+haze_im_channel_factory_create_channel (TpChannelManager *manager,
+                                        gpointer request_token,
+                                        GHashTable *request_properties)
+{
+    return haze_im_channel_factory_request (HAZE_IM_CHANNEL_FACTORY (manager),
+        request_token, request_properties, TRUE);
+}
+
+static gboolean
+haze_im_channel_factory_ensure_channel (TpChannelManager *manager,
+                                        gpointer request_token,
+                                        GHashTable *request_properties)
+{
+    return haze_im_channel_factory_request (HAZE_IM_CHANNEL_FACTORY (manager),
+        request_token, request_properties, FALSE);
+}
+
+static void
+channel_manager_iface_init (gpointer g_iface,
+                            gpointer iface_data G_GNUC_UNUSED)
+{
+    TpChannelManagerIface *iface = g_iface;
+
+    iface->foreach_channel = haze_im_channel_factory_foreach;
+    iface->foreach_channel_class =
+        haze_im_channel_factory_foreach_channel_class;
+    iface->create_channel = haze_im_channel_factory_create_channel;
+    iface->ensure_channel = haze_im_channel_factory_ensure_channel;
+    /* Request is equivalent to Ensure for this channel class */
+    iface->request_channel = haze_im_channel_factory_ensure_channel;
 }

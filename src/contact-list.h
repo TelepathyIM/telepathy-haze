@@ -28,6 +28,7 @@ G_BEGIN_DECLS
 
 typedef struct _HazeContactList HazeContactList;
 typedef struct _HazeContactListClass HazeContactListClass;
+typedef struct _HazeContactListPrivate HazeContactListPrivate;
 
 struct _HazeContactListClass {
     GObjectClass parent_class;
@@ -35,7 +36,7 @@ struct _HazeContactListClass {
 
 struct _HazeContactList {
     GObject parent;
-    gpointer priv;
+    HazeContactListPrivate *priv;
 };
 
 GType haze_contact_list_get_type (void);
@@ -60,6 +61,7 @@ GType haze_contact_list_get_type (void);
 G_END_DECLS
 
 HazeContactListChannel *haze_contact_list_get_channel (HazeContactList *self,
-    guint handle_type, TpHandle handle, gboolean *created);
+    guint handle_type, TpHandle handle, gpointer request_token,
+    gboolean *created);
 
 #endif /* #ifndef __HAZE_CONTACT_LIST_H__*/
