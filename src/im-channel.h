@@ -23,7 +23,7 @@
 
 #include <glib-object.h>
 
-#include <telepathy-glib/text-mixin.h>
+#include <telepathy-glib/message-mixin.h>
 
 #include <libpurple/conversation.h>
 
@@ -37,14 +37,13 @@ typedef struct _HazeIMChannelClass HazeIMChannelClass;
 struct _HazeIMChannelClass {
     GObjectClass parent_class;
 
-    TpTextMixinClass text_class;
     TpDBusPropertiesMixinClass properties_class;
 };
 
 struct _HazeIMChannel {
     GObject parent;
 
-    TpTextMixin text;
+    TpMessageMixin messages;
 
     HazeIMChannelPrivate *priv;
 };

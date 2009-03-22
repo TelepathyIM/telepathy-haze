@@ -62,12 +62,14 @@ struct _HazeIMChannelPrivate
 };
 
 static void channel_iface_init (gpointer, gpointer);
-static void text_iface_init (gpointer, gpointer);
 static void chat_state_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE(HazeIMChannel, haze_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT, text_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT,
+        tp_message_mixin_text_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_MESSAGES,
+        tp_message_mixin_messages_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_CHAT_STATE,
         chat_state_iface_init);
@@ -89,7 +91,7 @@ haze_im_channel_close (TpSvcChannel *iface,
     }
 
     /* requires support from TpChannelManager */
-    if (tp_text_mixin_has_pending_messages ((GObject *) self, NULL))
+    if (tp_message_mixin_has_pending_messages ((GObject *) self, NULL))
     {
         if (priv->initiator != priv->handle)
         {
@@ -104,7 +106,7 @@ haze_im_channel_close (TpSvcChannel *iface,
             tp_handle_ref (contact_repo, priv->initiator);
         }
 
-        tp_text_mixin_set_rescued ((GObject *) self);
+        tp_message_mixin_set_rescued ((GObject *) self);
     }
     else
     {
@@ -149,16 +151,16 @@ _chat_state_available (HazeIMChannel *chan)
 static const char * const*
 _haze_im_channel_interfaces (HazeIMChannel *chan)
 {
-    static const char * const no_interfaces[] = { NULL };
-    static const char * const chat_state_ifaces[] = {
-        TP_IFACE_CHANNEL_INTERFACE_CHAT_STATE,
-        NULL
-    };
+  static const char * const interfaces[] = {
+      TP_IFACE_CHANNEL_INTERFACE_CHAT_STATE,
+      TP_IFACE_CHANNEL_INTERFACE_MESSAGES,
+      NULL
+  };
 
-    if (_chat_state_available (chan))
-        return chat_state_ifaces;
-    else
-        return no_interfaces;
+  if (_chat_state_available (chan))
+    return interfaces;
+  else
+    return interfaces + 1;
 }
 
 static void
@@ -300,70 +302,93 @@ chat_state_iface_init (gpointer g_iface, gpointer iface_data)
 }
 
 static void
-haze_im_channel_send (TpSvcChannelTypeText *channel,
-                      guint type,
-                      const gchar *text,
-                      DBusGMethodInvocation *context)
+haze_im_channel_send (GObject *obj,
+                      TpMessage *message,
+                      TpMessageSendingFlags send_flags)
 {
-    HazeIMChannel *self = HAZE_IM_CHANNEL (channel);
-    GError *error = NULL;
-    PurpleMessageFlags flags = 0;
-    char *message, *escaped, *line_broken, *reapostrophised;
+  HazeIMChannel *self = HAZE_IM_CHANNEL (obj);
+  const GHashTable *header, *body;
+  const gchar *content_type, *text;
+  guint type = 0;
+  PurpleMessageFlags flags = 0;
+  gchar *escaped, *line_broken, *reapostrophised;
+  GError *error = NULL;
 
-    if (type >= NUM_TP_CHANNEL_TEXT_MESSAGE_TYPES) {
-        DEBUG ("invalid message type %u", type);
-        g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-                "invalid message type: %u", type);
-        dbus_g_method_return_error (context, error);
-        g_error_free (error);
-
-        return;
+  if (tp_message_count_parts (message) != 2)
+    {
+      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "messages must have a single plain-text part");
+      goto err;
     }
 
-    if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION) {
-        /* XXX this is not good enough for prpl-irc, which has a slash-command
-         *     for actions and doesn't do special stuff to messages which happen
-         *     to start with "/me ".
-         */
-        message = g_strconcat ("/me ", text, NULL);
-    } else {
-        message = g_strdup (text);
+  header = tp_message_peek (message, 0);
+  body = tp_message_peek (message, 1);
+
+  type = tp_asv_get_uint32 (header, "message-type", NULL);
+  content_type = tp_asv_get_string (body, "content-type");
+  text = tp_asv_get_string (body, "content");
+
+  if (tp_strdiff (content_type, "text/plain"))
+    {
+      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "messages must have a single plain-text part");
+      goto err;
     }
 
-    escaped = g_markup_escape_text (message, -1);
-    /* avoid line breaks being swallowed! */
-    line_broken = purple_strreplace (escaped, "\n", "<br>");
-    /* This is a workaround for prpl-yahoo, which in libpurple <= 2.3.1 could
-     * not deal with &apos; and would send it literally.
-     * TODO: When we depend on new enough libpurple, remove this workaround.
+  if (text == NULL)
+    {
+      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          "message body must be a UTF-8 string");
+      goto err;
+    }
+
+  switch (type)
+    {
+    case TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION:
+      /* XXX this is not good enough for prpl-irc, which has a slash-command
+       *     for actions and doesn't do special stuff to messages which happen
+       *     to start with "/me ".
+       */
+      text = g_strconcat ("/me ", text, NULL);
+      break;
+    case TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY:
+      flags |= PURPLE_MESSAGE_AUTO_RESP;
+      /* deliberate fall-through: */
+    case TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL:
+      text = g_strdup (text);
+      break;
+    /* TODO: libpurple should probably have a NOTICE flag, and then we could
+     * support TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE.
      */
-    reapostrophised = purple_strreplace (line_broken, "&apos;", "'");
-
-    if (type == TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY) {
-        flags |= PURPLE_MESSAGE_AUTO_RESP;
+    default:
+      error = g_error_new (TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          "unsupported message type: %u", type);
+      goto err;
     }
 
-    purple_conv_im_send_with_flags (PURPLE_CONV_IM (self->priv->conv),
-        reapostrophised, flags);
+  escaped = g_markup_escape_text (text, -1);
+  /* avoid line breaks being swallowed! */
+  line_broken = purple_strreplace (escaped, "\n", "<br>");
+  /* This is a workaround for prpl-yahoo, which in libpurple <= 2.3.1 could
+   * not deal with &apos; and would send it literally.
+   * TODO: When we depend on new enough libpurple, remove this workaround.
+   */
+  reapostrophised = purple_strreplace (line_broken, "&apos;", "'");
 
-    g_free (reapostrophised);
-    g_free (line_broken);
-    g_free (escaped);
-    g_free (message);
+  purple_conv_im_send_with_flags (PURPLE_CONV_IM (self->priv->conv),
+      reapostrophised, flags);
 
-    tp_svc_channel_type_text_return_from_send (context);
-}
+  g_free (reapostrophised);
+  g_free (line_broken);
+  g_free (escaped);
 
-static void
-text_iface_init (gpointer g_iface, gpointer iface_data)
-{
-    TpSvcChannelTypeTextClass *klass = (TpSvcChannelTypeTextClass *)g_iface;
+  tp_message_mixin_sent (obj, message, 0, "", NULL);
+  return;
 
-    tp_text_mixin_iface_init (g_iface, iface_data);
-#define IMPLEMENT(x) tp_svc_channel_type_text_implement_##x (\
-        klass, haze_im_channel_##x)
-    IMPLEMENT(send);
-#undef IMPLEMENT
+err:
+  g_assert (error != NULL);
+  tp_message_mixin_sent (obj, message, 0, NULL, error);
+  g_error_free (error);
 }
 
 static void
@@ -479,6 +504,17 @@ haze_im_channel_set_property (GObject     *object,
     }
 }
 
+static const TpChannelTextMessageType supported_message_types[] = {
+    TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL,
+    TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION,
+    TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY,
+};
+
+static const gchar * const supported_content_types[] = {
+    "text/plain",
+    NULL
+};
+
 static GObject *
 haze_im_channel_constructor (GType type, guint n_props,
                              GObjectConstructParam *props)
@@ -503,8 +539,10 @@ haze_im_channel_constructor (GType type, guint n_props,
     g_assert (priv->initiator != 0);
     tp_handle_ref (contact_handles, priv->initiator);
 
-    tp_text_mixin_init (obj, G_STRUCT_OFFSET (HazeIMChannel, text),
-                        contact_handles);
+    tp_message_mixin_init (obj, G_STRUCT_OFFSET (HazeIMChannel, messages),
+        conn);
+    tp_message_mixin_implement_sending (obj, haze_im_channel_send, 3,
+        supported_message_types, 0, 0, supported_content_types);
 
     bus = tp_get_bus ();
     dbus_g_connection_register_g_object (bus, priv->object_path, obj);
@@ -547,6 +585,7 @@ haze_im_channel_dispose (GObject *obj)
     }
 
     g_free (priv->object_path);
+    tp_message_mixin_finalize (obj);
 }
 
 static void
@@ -636,15 +675,14 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
         param_spec);
 
 
-    tp_text_mixin_class_init (object_class,
-                              G_STRUCT_OFFSET(HazeIMChannelClass, text_class));
-
     if (!properties_mixin_initialized)
     {
         properties_mixin_initialized = TRUE;
         klass->properties_class.interfaces = prop_interfaces;
         tp_dbus_properties_mixin_class_init (object_class,
             G_STRUCT_OFFSET (HazeIMChannelClass, properties_class));
+
+        tp_message_mixin_init_dbus_properties (object_class);
     }
 }
 
@@ -655,44 +693,84 @@ haze_im_channel_init (HazeIMChannel *self)
                                               HazeIMChannelPrivate);
 }
 
+static TpMessage *
+_make_message (HazeIMChannel *self,
+               char *text_plain,
+               PurpleMessageFlags flags,
+               time_t mtime)
+{
+  TpMessage *message = tp_message_new ((TpBaseConnection *) self->priv->conn,
+      2, 2);
+  TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
+
+  if (flags & PURPLE_MESSAGE_AUTO_RESP)
+    type = TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY;
+  else if (purple_message_meify (text_plain, -1))
+    type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
+
+  tp_message_set_handle (message, 0, "message-sender", TP_HANDLE_TYPE_CONTACT,
+      self->priv->handle);
+  tp_message_set_uint32 (message, 0, "message-type", type);
+  /* FIXME: can we tell whether the message's timestamp is when it was sent, or
+   *        when it was received? If so, set message-sent.
+   */
+  tp_message_set_uint64 (message, 0, "message-received", mtime);
+
+  /* Body */
+  tp_message_set_string (message, 1, "content-type", "text/plain");
+  tp_message_set_string (message, 1, "content", text_plain);
+
+  return message;
+}
+
+static TpMessage *
+_make_delivery_report (HazeIMChannel *self,
+                       char *text_plain)
+{
+  TpMessage *report = tp_message_new ((TpBaseConnection *) self->priv->conn, 1,
+      1);
+
+  /* "MUST be the intended recipient of the original message" */
+  tp_message_set_uint32 (report, 0, "message-sender", self->priv->handle);
+  tp_message_set_uint32 (report, 0, "message-type",
+      TP_CHANNEL_TEXT_MESSAGE_TYPE_DELIVERY_REPORT);
+  /* FIXME: we don't know that the failure is temporary */
+  tp_message_set_uint32 (report, 0, "delivery-status",
+      TP_DELIVERY_STATUS_TEMPORARILY_FAILED);
+  /* Or should this be in the message body, in the user's locale? */
+  tp_message_set_string (report, 0, "delivery-error-message", text_plain);
+
+  return report;
+}
+
 void
 haze_im_channel_receive (HazeIMChannel *self,
                          const char *xhtml_message,
                          PurpleMessageFlags flags,
                          time_t mtime)
 {
-    TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
-    char *line_broken, *message;
+  gchar *line_broken, *text_plain;
 
-    /* Replaces newline characters with <br>, which then get turned back into
-     * newlines by purple_markup_strip_html (which replaces "\n" with " ")...
-     */
-    line_broken = purple_strdup_withhtml (xhtml_message);
-    message = purple_markup_strip_html (line_broken);
-    g_free (line_broken);
+  /* Replaces newline characters with <br>, which then get turned back into
+   * newlines by purple_markup_strip_html (which replaces "\n" with " ")...
+   */
+  line_broken = purple_strdup_withhtml (xhtml_message);
+  text_plain = purple_markup_strip_html (line_broken);
+  g_free (line_broken);
 
-    if (flags & PURPLE_MESSAGE_AUTO_RESP)
-        type = TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY;
-    else if (purple_message_meify (message, -1))
-        type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
+  if (flags & PURPLE_MESSAGE_RECV)
+    tp_message_mixin_take_received ((GObject *) self,
+        _make_message (self, text_plain, flags, mtime));
+  else if (flags & PURPLE_MESSAGE_SEND)
+    {
+      /* Do nothing: the message mixin emitted sent for us. */
+    }
+  else if (flags & PURPLE_MESSAGE_ERROR)
+    tp_message_mixin_take_received ((GObject *) self,
+        _make_delivery_report (self, text_plain));
+  else
+    DEBUG ("channel %u: ignoring message %s with flags %u",
+        self->priv->handle, text_plain, flags);
 
-    if (flags & PURPLE_MESSAGE_RECV)
-        tp_text_mixin_receive (G_OBJECT (self), type, self->priv->handle,
-                               mtime, message);
-    else if (flags & PURPLE_MESSAGE_SEND)
-        tp_svc_channel_type_text_emit_sent (self, mtime, type, message);
-    else if (flags & PURPLE_MESSAGE_ERROR)
-        /* This is wrong.  The mtime, type and message are of the error message
-         * (such as "Unable to send message: The message is too large.") not of
-         * the message causing the error, and the ChannelTextSendError parameter
-         * shouldn't always be unknown.  But this is the best that can be done
-         * until I fix libpurple.
-         */
-        tp_svc_channel_type_text_emit_send_error (self,
-            TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, mtime, type, message);
-    else
-        DEBUG ("channel %u: ignoring message %s with flags %u",
-            self->priv->handle, message, flags);
-
-    g_free (message);
+  g_free (text_plain);
 }
