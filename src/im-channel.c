@@ -62,6 +62,7 @@ struct _HazeIMChannelPrivate
 };
 
 static void channel_iface_init (gpointer, gpointer);
+static void destroyable_iface_init (gpointer g_iface, gpointer iface_data);
 static void chat_state_iface_init (gpointer g_iface, gpointer iface_data);
 
 G_DEFINE_TYPE_WITH_CODE(HazeIMChannel, haze_im_channel, G_TYPE_OBJECT,
@@ -71,6 +72,8 @@ G_DEFINE_TYPE_WITH_CODE(HazeIMChannel, haze_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_MESSAGES,
         tp_message_mixin_messages_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_DESTROYABLE,
+        destroyable_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_CHAT_STATE,
         chat_state_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
@@ -154,6 +157,7 @@ _haze_im_channel_interfaces (HazeIMChannel *chan)
   static const char * const interfaces[] = {
       TP_IFACE_CHANNEL_INTERFACE_CHAT_STATE,
       TP_IFACE_CHANNEL_INTERFACE_MESSAGES,
+      TP_IFACE_CHANNEL_INTERFACE_DESTROYABLE,
       NULL
   };
 
@@ -182,6 +186,42 @@ channel_iface_init (gpointer g_iface, gpointer iface_data)
     IMPLEMENT(get_channel_type);
     IMPLEMENT(get_handle);
     IMPLEMENT(get_interfaces);
+#undef IMPLEMENT
+}
+
+/**
+ * haze_im_channel_destroy
+ *
+ * Implements D-Bus method Destroy
+ * on interface org.freedesktop.Telepathy.Channel.Interface.Destroyable
+ */
+static void
+haze_im_channel_destroy (TpSvcChannelInterfaceDestroyable *iface,
+                         DBusGMethodInvocation *context)
+{
+    HazeIMChannel *self = HAZE_IM_CHANNEL (iface);
+
+    g_assert (HAZE_IS_IM_CHANNEL (self));
+
+    DEBUG ("called on %p", self);
+
+    /* Clear out any pending messages */
+    tp_message_mixin_clear ((GObject *) self);
+
+    /* Close() and Destroy() have the same signature, so we can safely
+     * chain to the other function now */
+    haze_im_channel_close ((TpSvcChannel *) self, context);
+}
+
+static void
+destroyable_iface_init (gpointer g_iface,
+                        gpointer iface_data)
+{
+    TpSvcChannelInterfaceDestroyableClass *klass = g_iface;
+
+#define IMPLEMENT(x) tp_svc_channel_interface_destroyable_implement_##x (\
+    klass, haze_im_channel_##x)
+    IMPLEMENT(destroy);
 #undef IMPLEMENT
 }
 
