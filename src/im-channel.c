@@ -742,6 +742,7 @@ _make_message (HazeIMChannel *self,
   TpMessage *message = tp_message_new ((TpBaseConnection *) self->priv->conn,
       2, 2);
   TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
+  time_t now = time (NULL);
 
   if (flags & PURPLE_MESSAGE_AUTO_RESP)
     type = TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY;
@@ -751,10 +752,14 @@ _make_message (HazeIMChannel *self,
   tp_message_set_handle (message, 0, "message-sender", TP_HANDLE_TYPE_CONTACT,
       self->priv->handle);
   tp_message_set_uint32 (message, 0, "message-type", type);
-  /* FIXME: can we tell whether the message's timestamp is when it was sent, or
-   *        when it was received? If so, set message-sent.
+
+  /* FIXME: the second half of this test shouldn't be necessary but prpl-jabber
+   *        or the test are broken.
    */
-  tp_message_set_uint64 (message, 0, "message-received", mtime);
+  if (flags & PURPLE_MESSAGE_DELAYED || mtime != now)
+    tp_message_set_uint64 (message, 0, "message-sent", mtime);
+
+  tp_message_set_uint64 (message, 0, "message-received", now);
 
   /* Body */
   tp_message_set_string (message, 1, "content-type", "text/plain");
