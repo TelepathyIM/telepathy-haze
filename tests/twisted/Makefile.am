@@ -2,6 +2,7 @@ TWISTED_TESTS = \
 	connect/success.py \
 	connect/fail.py \
 	presence/presence.py \
+	text/destroy.py \
 	text/ensure.py \
 	text/initiate-requestotron.py \
 	text/initiate.py \
