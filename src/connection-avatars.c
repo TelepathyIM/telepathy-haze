@@ -32,6 +32,34 @@
 #include "connection.h"
 #include "debug.h"
 
+static gchar **
+_get_acceptable_mime_types (HazeConnection *self)
+{
+    PurplePluginProtocolInfo *prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (self);
+
+    g_return_val_if_fail (prpl_info->icon_spec.format != NULL, NULL);
+
+    if (self->acceptable_avatar_mime_types == NULL)
+    {
+        gchar **mime_types, **i;
+        gchar *format;
+
+        mime_types = g_strsplit (prpl_info->icon_spec.format, ",", 0);
+
+        for (i = mime_types; *i != NULL; i++)
+        {
+            format = *i;
+            /* FIXME: image/ico is not the correct mime type. */
+            *i = g_strconcat ("image/", format, NULL);
+            g_free (format);
+        }
+
+        self->acceptable_avatar_mime_types = mime_types;
+    }
+
+    return self->acceptable_avatar_mime_types;
+}
+
 static void
 haze_connection_get_avatar_requirements (TpSvcConnectionInterfaceAvatars *self,
                                          DBusGMethodInvocation *context)
@@ -40,8 +68,6 @@ haze_connection_get_avatar_requirements (TpSvcConnectionInterfaceAvatars *self,
     TpBaseConnection *base = TP_BASE_CONNECTION (conn);
     PurplePluginProtocolInfo *prpl_info;
     PurpleBuddyIconSpec *icon_spec;
-    gchar **mime_types, **i;
-    gchar *format;
 
     TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
@@ -51,22 +77,11 @@ haze_connection_get_avatar_requirements (TpSvcConnectionInterfaceAvatars *self,
     /* If the spec or the formats are null, this iface wasn't implemented. */
     g_assert (icon_spec != NULL && icon_spec->format != NULL);
 
-    mime_types = g_strsplit (icon_spec->format, ",", 0);
-
-    for (i = mime_types; *i != NULL; i++)
-    {
-        format = *i;
-        /* FIXME: image/ico is not the correct mime type. */
-        *i = g_strconcat ("image/", format, NULL);
-        g_free (format);
-    }
-
     tp_svc_connection_interface_avatars_return_from_get_avatar_requirements (
-        context, (const gchar **) mime_types,
+        context, (const gchar **) _get_acceptable_mime_types (conn),
         icon_spec->min_width, icon_spec->min_height,
         icon_spec->max_width, icon_spec->max_height,
         icon_spec->max_filesize);
-    g_strfreev (mime_types);
 }
 
 static GArray *
@@ -334,15 +349,20 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
     PurpleAccount *account = conn->account;
     PurplePluginProtocolInfo *prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
 
+    GError *error = NULL;
+    gchar *message;
+
     guchar *icon_data = NULL;
     size_t icon_len = avatar->len;
     gchar *token;
+    gchar **mime_types = _get_acceptable_mime_types (conn);
+
+    gboolean acceptable_mime_type = FALSE;
 
     const size_t max_filesize = prpl_info->icon_spec.max_filesize;
 
     if (max_filesize > 0 && icon_len > max_filesize)
     {
-        GError *error = NULL;
         g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
                      "avatar is %" G_GSIZE_FORMAT "B, "
                      "but the limit is %" G_GSIZE_FORMAT "B",
@@ -353,6 +373,37 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
         g_error_free (error);
         return;
     }
+
+    /* FIXME: This is a work-around for mission control passing an empty
+     *        mime_type when it re-sets your avatar on connection.  Since it
+     *        only caches the avatar if it was set correctly by Empathy, it's
+     *        most likely actually acceptable, but the work-around should
+     *        probably go away when MC is fixed.
+     */
+    if (*mime_type == '\0')
+        acceptable_mime_type = TRUE;
+
+    while (!acceptable_mime_type && *mime_types != NULL)
+    {
+        if (!tp_strdiff (*mime_types, mime_type))
+            acceptable_mime_type = TRUE;
+        mime_types++;
+    }
+
+    if (!acceptable_mime_type)
+    {
+        message = g_strdup_printf ("'%s' is not a supported MIME type",
+            mime_type);
+        g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, message);
+
+        dbus_g_method_return_error (context, error);
+
+        g_error_free (error);
+        g_free (message);
+
+        return;
+    }
+
 
     /* purple_buddy_icons_set_account_icon () takes ownership of the pointer
      * passed to it, but 'avatar' will be freed soon.

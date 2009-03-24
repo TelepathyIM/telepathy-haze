@@ -66,6 +66,8 @@ struct _HazeConnection {
     TpContactsMixin contacts;
     TpPresenceMixin presence;
 
+    gchar **acceptable_avatar_mime_types;
+
     gpointer priv;
 };
 
