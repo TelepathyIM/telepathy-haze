@@ -350,7 +350,6 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
     PurplePluginProtocolInfo *prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
 
     GError *error = NULL;
-    gchar *message;
 
     guchar *icon_data = NULL;
     size_t icon_len = avatar->len;
@@ -392,14 +391,12 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
 
     if (!acceptable_mime_type)
     {
-        message = g_strdup_printf ("'%s' is not a supported MIME type",
-            mime_type);
-        g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT, message);
+        g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+            "'%s' is not a supported MIME type", mime_type);
 
         dbus_g_method_return_error (context, error);
 
         g_error_free (error);
-        g_free (message);
 
         return;
     }
