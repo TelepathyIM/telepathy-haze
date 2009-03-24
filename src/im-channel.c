@@ -91,7 +91,6 @@ haze_im_channel_close (TpSvcChannel *iface,
         goto out;
     }
 
-#if 0
     /* requires support from TpChannelManager */
     if (tp_text_mixin_has_pending_messages ((GObject *) self, NULL))
     {
@@ -111,7 +110,6 @@ haze_im_channel_close (TpSvcChannel *iface,
         tp_text_mixin_set_rescued ((GObject *) self);
     }
     else
-#endif
     {
         purple_conversation_destroy (priv->conv);
         priv->conv = NULL;

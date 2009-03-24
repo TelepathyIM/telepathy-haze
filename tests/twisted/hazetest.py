@@ -5,10 +5,10 @@ Infrastructure code for testing Haze by pretending to be a Jabber server.
 
 import base64
 import os
-import random
 import sha
 import sys
 import time
+import random
 
 import ns
 import servicetest
@@ -57,22 +57,27 @@ def request_muc_handle(q, conn, stream, muc_jid):
     event = q.expect('dbus-return', method='RequestHandles')
     return event.value[0][0]
 
-def make_muc_presence(affiliation, role, muc_jid, alias):
+def make_muc_presence(affiliation, role, muc_jid, alias, jid=None):
     presence = domish.Element((None, 'presence'))
     presence['from'] = '%s/%s' % (muc_jid, alias)
     x = presence.addElement((ns.MUC_USER, 'x'))
     item = x.addElement('item')
     item['affiliation'] = affiliation
     item['role'] = role
+    if jid is not None:
+        item['jid'] = jid
     return presence
 
 def sync_stream(q, stream):
     """Used to ensure that the CM has processed all stanzas sent to it."""
 
     iq = IQ(stream, "get")
+    id = iq['id']
     iq.addElement(('http://jabber.org/protocol/disco#info', 'query'))
     stream.send(iq)
-    q.expect('stream-iq', query_ns='http://jabber.org/protocol/disco#info')
+    q.expect('stream-iq', query_ns='http://jabber.org/protocol/disco#info',
+        predicate=(lambda event:
+            event.stanza['id'] == id and event.iq_type == 'result'))
 
 class JabberAuthenticator(xmlstream.Authenticator):
     "Trivial XML stream authenticator that accepts one username/digest pair."
@@ -381,11 +386,6 @@ def exec_test_deferred (funs, params, protocol=None, timeout=None):
 
         conn.Disconnect()
 
-        if 'HAZE_TEST_REFDBG' in os.environ:
-            # we have to wait that the CM timeouts so the process is properly
-            # exited and refdbg can generates its report
-            time.sleep(5.5)
-
     except dbus.DBusException, e:
         pass
 
@@ -498,3 +498,21 @@ def elem_iq(server, type, **kw):
             iq[k] = v
 
     return iq
+
+def make_presence(_from, to='test@localhost', type=None, status=None, caps=None):
+    presence = domish.Element((None, 'presence'))
+    presence['from'] = _from
+    presence['to'] = to
+
+    if type is not None:
+        presence['type'] = type
+
+    if status is not None:
+        presence.addElement('status', content=status)
+
+    if caps is not None:
+        cel = presence.addElement(('http://jabber.org/protocol/caps', 'c'))
+        for key,value in caps.items():
+            cel[key] = value
+
+    return presence

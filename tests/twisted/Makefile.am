@@ -1,6 +1,13 @@
 TWISTED_TESTS = \
 	connect/success.py \
-	connect/fail.py
+	connect/fail.py \
+	presence/presence.py \
+	text/ensure.py \
+	text/initiate-requestotron.py \
+	text/initiate.py \
+	text/respawn.py \
+	text/test-text-no-body.py
+
 
 TESTS =
 
@@ -10,6 +17,7 @@ TESTS_ENVIRONMENT = \
 check-local: check-twisted
 
 check-twisted:
+	rm -f ../haze-testing.log
 	sh $(top_srcdir)/tools/with-session-bus.sh \
 		--config-file=$(top_builddir)/tests/tmp-session-bus.conf \
 		-- $(MAKE) check-TESTS \

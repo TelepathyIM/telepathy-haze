@@ -15,8 +15,7 @@ def test(q, bus, conn, stream):
     #q.expect('dbus-signal', signal='PresenceUpdate',
     #    args=[{1L: (0L, {u'available': {}})}])
 
-    # FIXME: Haze currently signals status change reason NONE, not REQUESTED
-    q.expect('dbus-signal', signal='StatusChanged', args=[0, 0])
+    q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
 
     conn.Disconnect()
     q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])
