@@ -23,28 +23,29 @@
 
 #include <glib-object.h>
 
-#include <telepathy-glib/text-mixin.h>
+#include <telepathy-glib/message-mixin.h>
 
 #include <libpurple/conversation.h>
 
 G_BEGIN_DECLS
 
 typedef struct _HazeIMChannel HazeIMChannel;
+typedef struct _HazeIMChannelPrivate HazeIMChannelPrivate;
 typedef struct _HazeIMChannelClass HazeIMChannelClass;
+
 
 struct _HazeIMChannelClass {
     GObjectClass parent_class;
 
-    TpTextMixinClass text_class;
     TpDBusPropertiesMixinClass properties_class;
 };
 
 struct _HazeIMChannel {
     GObject parent;
 
-    TpTextMixin text;
+    TpMessageMixin messages;
 
-    gpointer priv;
+    HazeIMChannelPrivate *priv;
 };
 
 GType haze_im_channel_get_type (void);
@@ -78,6 +79,9 @@ struct _HazeConversationUiData
 
 #define PURPLE_CONV_GET_HAZE_UI_DATA(conv) \
     ((HazeConversationUiData *) conv->ui_data)
+
+void haze_im_channel_receive (HazeIMChannel *self, const char *xhtml_message,
+    PurpleMessageFlags flags, time_t mtime);
 
 G_END_DECLS
 

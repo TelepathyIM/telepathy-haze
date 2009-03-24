@@ -2,11 +2,14 @@ TWISTED_TESTS = \
 	connect/success.py \
 	connect/fail.py \
 	presence/presence.py \
+	text/destroy.py \
 	text/ensure.py \
 	text/initiate-requestotron.py \
 	text/initiate.py \
 	text/respawn.py \
-	text/test-text-no-body.py
+	text/test-text-delayed.py \
+	text/test-text-no-body.py \
+	text/test-text.py
 
 
 TESTS =

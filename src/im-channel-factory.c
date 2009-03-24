@@ -391,49 +391,13 @@ haze_write_im (PurpleConversation *conv,
                time_t mtime)
 {
     PurpleAccount *account = purple_conversation_get_account (conv);
-
     HazeImChannelFactory *im_factory =
         ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
-    TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
-    HazeIMChannel *chan = NULL;
-    char *line_broken, *message;
-
     HazeConversationUiData *ui_data = PURPLE_CONV_GET_HAZE_UI_DATA (conv);
-
-    /* Replaces newline characters with <br>, which then get turned back into
-     * newlines by purple_markup_strip_html (which replaces "\n" with " ")...
-     */
-    line_broken = purple_strdup_withhtml (xhtml_message);
-    message = purple_markup_strip_html (line_broken);
-    g_free (line_broken);
-
-    if (flags & PURPLE_MESSAGE_AUTO_RESP)
-        type = TP_CHANNEL_TEXT_MESSAGE_TYPE_AUTO_REPLY;
-    else if (purple_message_meify(message, -1))
-        type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
-
-    chan = get_im_channel (im_factory, ui_data->contact_handle,
+    HazeIMChannel *chan = get_im_channel (im_factory, ui_data->contact_handle,
         ui_data->contact_handle, NULL, NULL);
 
-    if (flags & PURPLE_MESSAGE_RECV)
-        tp_text_mixin_receive (G_OBJECT (chan), type, ui_data->contact_handle,
-                               mtime, message);
-    else if (flags & PURPLE_MESSAGE_SEND)
-        tp_svc_channel_type_text_emit_sent (chan, mtime, type, message);
-    else if (flags & PURPLE_MESSAGE_ERROR)
-        /* This is wrong.  The mtime, type and message are of the error message
-         * (such as "Unable to send message: The message is too large.") not of
-         * the message causing the error, and the ChannelTextSendError parameter
-         * shouldn't always be unknown.  But this is the best that can be done
-         * until I fix libpurple.
-         */
-        tp_svc_channel_type_text_emit_send_error (chan,
-            TP_CHANNEL_TEXT_SEND_ERROR_UNKNOWN, mtime, type, message);
-    else
-        DEBUG ("channel %u: ignoring message %s with flags %u",
-            ui_data->contact_handle, message, flags);
-
-    g_free (message);
+    haze_im_channel_receive (chan, xhtml_message, flags, mtime);
 }
 
 static void
