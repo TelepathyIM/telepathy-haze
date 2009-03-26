@@ -25,32 +25,46 @@ Fixes:
  * Doesn't crash if you try to open a second connection to the same
    account. (Fixes fd.o#18361.)
 
-telepathy-haze 0.2.1 – “DUM DE DUM DE DIDDLE IDDLE DE DUM‼” (2008-08-18)
-========================================================================
+telepathy-haze 0.2.1 (2008-08-18)
+=================================
 
- * A publish channel now exists, which allows you to accept or decline incoming
-   subscription requests (but nothing else yet; it's not possible to later
-   remove someone from the list, for instance).
- * Add support for setting your avatar (fd.o #13123).
- * Stop your accounts auto-awaying themselves (fd.o #14335).
- * Don't crash when the UI passes an empty or otherwise invalid host name as
-   the server parameter for a new connection (fd.o #14445).
- * Don't sporadically crash on connection errors, such as an incorrect password
-   (fd.o #14933).
- * Debugging output from Haze and libpurple is now silenced unless you set
-   HAZE_DEBUG appropriately ("haze" and "purple", respectively).
+The “DUM DE DUM DE DIDDLE IDDLE DE DUM‼” release.
+
+Dependencies:
 
  * Haze now requires telepathy-glib >= 0.7.0.
 
-telepathy-haze 0.2.0 – "I Remember Piano Lessons" (2008-02-07)
-==============================================================
+Fixes and Enhancements:
+
+ * A publish channel now exists, which allows you to accept or decline
+   incoming subscription requests (but nothing else yet; it's not
+   possible to later remove someone from the list, for instance).
+ * Add support for setting your avatar (fd.o #13123).
+ * Stop your accounts auto-awaying themselves (fd.o #14335).
+ * Don't crash when the UI passes an empty or otherwise invalid host
+   name as the server parameter for a new connection (fd.o #14445).
+ * Don't sporadically crash on connection errors, such as an incorrect
+   password (fd.o #14933).
+ * Debugging output from Haze and libpurple is now silenced unless you
+   set HAZE_DEBUG appropriately ("haze" and "purple", respectively).
+
+telepathy-haze 0.2.0 (2008-02-07)
+=================================
+
+The "I Remember Piano Lessons" release.
+
+Fixes:
 
  * Protocols now present the correct parameters, with appropriate
    defaults, rather than always taking account, password and server.
  * Send apostrophes correctly on Yahoo! Messenger.
 
-telepathy-haze 0.1.4 – "Watch That Pinkie" (2007-11-21)
-=======================================================
+telepathy-haze 0.1.4 (2007-11-21)
+=================================
+
+The “Watch That Pinkie” release.
+
+Fixes:
 
  * Fix building against glib 2.10 (which is the lowest version against
    which telepathy-glib builds).
@@ -58,43 +72,60 @@ telepathy-haze 0.1.4 – "Watch That Pinkie" (2007-11-21)
    suppress libpurple's own D-Bus messages on libpurple <= 2.1.0 (they
    were already suppressed on later libpurples).
 
-telepathy-haze 0.1.3 – "Fix the Sky a Little" (2007-11-14)
-==========================================================
+telepathy-haze 0.1.3 (2007-11-14)
+=================================
+
+The “Fix the Sky a Little” release.
+
+Fixes and Enhancements:
 
  * Don't mistakenly delete ~/.purple on exit with libpurple >= 2.3.0
  * Build without warnings against telepathy-glib 0.6.1.
  * Disable -Werror in releases.
  * Report message send errors.
- * Report reasons for disconnecting properly (requires libpurple >= 2.3.0)
+ * Report reasons for disconnecting properly (requires libpurple >=
+   2.3.0)
 
-telepathy-haze 0.1.2 – "Re: Your Brains" (2007-09-16)
-======================================================
+telepathy-haze 0.1.2 (2007-09-16)
+=================================
+
+The “Re: Your Brains” release.
+
+Fixes:
 
  * Properly clean up zombie children.  No more mountains of defunct
    telepathy-haze processes!
- * Fix sending messages with <, > and &.  (Previously, "i <3 u" was sent as
-   "i ", which is much less romantic.)
+ * Fix sending messages with <, > and &.  (Previously, "i <3 u" was sent
+   as "i ", which is much less romantic.)
  * Use "local-xmpp" rather than "bonjour" as the name of the protocol
    formerly known as Rendezvous.
 
-telepathy-haze 0.1.1 – "Release less often, release correctly" (2007-08-17)
-===========================================================================
+telepathy-haze 0.1.1 (2007-08-17)
+=================================
+
+The “Release less often, release correctly” release.
+
+Fixes:
 
  * Fixed some segfaults, and some corruption caused by g_free-ing
    slice-allocated memory.
 
-telepathy-haze 0.1.0 – "It's Like The ... 90s" (2007-08-10)
-===========================================================
+telepathy-haze 0.1.0 (2007-08-10)
+=================================
+
+The “It's Like The ... 90s” release.
 
 Supported in this release:
 
  * Connecting to MSN, XMPP, AIM known to work.
  * Plain text conversations with individual contacts.
  * The 'subscribe' list, plus contact list groups.
- * Basic presence: available, busy, away, extended away, invisible, with a
-   message when supported by the underlying prpl.
- * Retrieving your own server alias and those of your contacts, plus saving
-   custom aliases for your contacts to the server (where supported by the
-   prpl).
+ * Basic presence: available, busy, away, extended away, invisible, with
+   a message when supported by the underlying prpl.
+ * Retrieving your own server alias and those of your contacts, plus
+   saving custom aliases for your contacts to the server (where
+   supported by the prpl).
  * Retrieving your contacts' avatars (but not setting your own).
  * Typing notifications.
+
+vim: tw=72
