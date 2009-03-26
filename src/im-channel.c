@@ -772,8 +772,8 @@ static TpMessage *
 _make_delivery_report (HazeIMChannel *self,
                        char *text_plain)
 {
-  TpMessage *report = tp_message_new ((TpBaseConnection *) self->priv->conn, 1,
-      1);
+  TpMessage *report = tp_message_new ((TpBaseConnection *) self->priv->conn, 2,
+      2);
 
   /* "MUST be the intended recipient of the original message" */
   tp_message_set_uint32 (report, 0, "message-sender", self->priv->handle);
@@ -782,8 +782,13 @@ _make_delivery_report (HazeIMChannel *self,
   /* FIXME: we don't know that the failure is temporary */
   tp_message_set_uint32 (report, 0, "delivery-status",
       TP_DELIVERY_STATUS_TEMPORARILY_FAILED);
-  /* Or should this be in the message body, in the user's locale? */
+
+  /* Put libpurple's localized human-readable error message both into the debug
+   * info field in the header, and as the delivery report's body.
+   */
   tp_message_set_string (report, 0, "delivery-error-message", text_plain);
+  tp_message_set_string (report, 1, "content-type", "text/plain");
+  tp_message_set_string (report, 1, "content", text_plain);
 
   return report;
 }
