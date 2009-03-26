@@ -7,6 +7,24 @@ Dependencies:
 
  * telepathy-glib >= 0.7.21 is now required.
 
+Enhancements:
+
+ * Connections implement the Requests, SimplePresence and Contacts
+   interfaces, courtesy of Simon McVittie.
+ * Text channels implement the Messages and Destroyable interfaces.
+
+Fixes:
+
+ * Text channels closed with pending messages now respawn. (Fixes
+   fd.o#17842.)
+ * Compiles without warnings on AMD64, courtesy of Larry Reaves. (Fixes
+   fd.o#18513.)
+ * No longer asserts if you try to set the alias for someone not on your
+   contact list. Empathy turns out to do this if you try to accept an
+   authorization request. (Fixes fd.o#17382.)
+ * Doesn't crash if you try to open a second connection to the same
+   account. (Fixes fd.o#18361.)
+
 telepathy-haze 0.2.1 – “DUM DE DUM DE DIDDLE IDDLE DE DUM‼” (2008-08-18)
 ========================================================================
 
