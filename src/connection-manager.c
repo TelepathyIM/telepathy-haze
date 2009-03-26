@@ -440,6 +440,12 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          "parameters",      params,
                                          NULL);
 
+    if (!haze_connection_create_account (conn, error))
+      {
+        g_object_unref (conn);
+        return FALSE;
+      }
+
     cm->connections = g_list_prepend(cm->connections, conn);
     g_signal_connect (conn, "shutdown-finished",
                       G_CALLBACK (connection_shutdown_finished_cb),

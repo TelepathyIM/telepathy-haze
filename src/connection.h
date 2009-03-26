@@ -86,6 +86,8 @@ haze_connection_handle_inspect (HazeConnection *conn,
                                 TpHandleType handle_type,
                                 TpHandle handle);
 
+gboolean haze_connection_create_account (HazeConnection *self, GError **error);
+
 GType haze_connection_get_type (void);
 
 /* TYPE MACROS */
