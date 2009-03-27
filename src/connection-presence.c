@@ -22,6 +22,8 @@
 #include "connection-presence.h"
 #include "debug.h"
 
+#include <telepathy-glib/dbus.h>
+
 static const TpPresenceStatusOptionalArgumentSpec arg_specs[] = {
     { "message", "s" },
     { NULL, NULL }
@@ -270,37 +272,33 @@ _set_own_status (GObject *obj,
 {
     HazeConnection *self = HAZE_CONNECTION (obj);
     const char *status_id = NULL;
-    GValue *message_v;
-    char *message = NULL;
+    const gchar *message = NULL;
     GList *attrs = NULL;
 
-    if (status)
+    if (status != NULL)
+      {
         status_id = _get_purple_status_id (self, status->index);
 
-    if (!status_id)
-    {
+        if (status->optional_arguments != NULL)
+          message = tp_asv_get_string (status->optional_arguments, "message");
+      }
+
+    if (status_id == NULL)
+      {
         /* TODO: Is there a more sensible way to have a default? */
         DEBUG ("defaulting to 'available' status");
         status_id = "available";
-    }
+      }
 
-    if (status->optional_arguments)
-    {
-        message_v = g_hash_table_lookup (status->optional_arguments, "message");
-        if (message_v)
-            message = g_value_dup_string (message_v);
-    }
-
-    if (message)
-    {
+    if (message != NULL)
+      {
         attrs = g_list_append (attrs, "message");
-        attrs = g_list_append (attrs, message);
-    }
+        attrs = g_list_append (attrs, (gchar *) message);
+      }
 
     purple_account_set_status_list (self->account, status_id, TRUE, attrs);
+
     g_list_free (attrs);
-    if (message)
-        g_free (message);
 
     return TRUE;
 }
