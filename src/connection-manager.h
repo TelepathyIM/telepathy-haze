@@ -80,8 +80,6 @@ GType haze_connection_manager_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), HAZE_TYPE_CONNECTION_MANAGER, \
                               HazeConnectionManagerClass))
 
-HazeConnectionManager *haze_connection_manager_get (void);
-
 G_END_DECLS
 
 #endif /* #ifndef __HAZE_CONNECTION_MANAGER_H__*/

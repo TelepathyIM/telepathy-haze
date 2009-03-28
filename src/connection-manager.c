@@ -520,13 +520,3 @@ haze_connection_manager_init (HazeConnectionManager *self)
 {
     DEBUG ("Initializing (HazeConnectionManager *)%p", self);
 }
-
-HazeConnectionManager *
-haze_connection_manager_get (void) {
-    static HazeConnectionManager *manager = NULL;
-    if (G_UNLIKELY(manager == NULL)) {
-        manager = g_object_new (HAZE_TYPE_CONNECTION_MANAGER, NULL);
-    }
-    g_assert (manager != NULL);
-    return manager;
-}

@@ -226,7 +226,7 @@ get_cm (void)
     fatal_mask &= ~G_LOG_LEVEL_CRITICAL;
     g_log_set_always_fatal (fatal_mask);
 
-    return (TpBaseConnectionManager *) haze_connection_manager_get ();
+    return (TpBaseConnectionManager *) g_object_new (HAZE_TYPE_CONNECTION_MANAGER, NULL);
 }
 
 static gboolean
