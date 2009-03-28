@@ -201,13 +201,10 @@ haze_report_disconnect_reason (PurpleConnection *gc,
 #endif
 
 static gboolean
-idle_disconnected_cb(gpointer data)
+idle_finish_shutdown (gpointer data)
 {
-    PurpleAccount *account = (PurpleAccount *) data;
-    HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
-
-    tp_base_connection_finish_shutdown (TP_BASE_CONNECTION (conn));
-    return FALSE;
+  tp_base_connection_finish_shutdown (TP_BASE_CONNECTION (data));
+  return FALSE;
 }
 
 static void
@@ -236,7 +233,12 @@ disconnected_cb (PurpleConnection *pc)
 
     }
 
-    g_idle_add(idle_disconnected_cb, account);
+    /* Call tp_base_connection_finish_shutdown () in an idle because calling it
+     * might lead to the HazeConnection being destroyed, which would mean the
+     * PurpleAccount were destroyed, but we're currently inside libpurple code
+     * that uses it.
+     */
+    g_idle_add (idle_finish_shutdown, conn);
 }
 
 static void
