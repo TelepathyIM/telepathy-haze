@@ -206,8 +206,6 @@ idle_disconnected_cb(gpointer data)
     PurpleAccount *account = (PurpleAccount *) data;
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
 
-    DEBUG ("deleting account %s", account->username);
-    purple_accounts_delete (account);
     tp_base_connection_finish_shutdown (TP_BASE_CONNECTION (conn));
     return FALSE;
 }
@@ -548,6 +546,12 @@ haze_connection_finalize (GObject *object)
     tp_presence_mixin_finalize (object);
 
     g_strfreev (self->acceptable_avatar_mime_types);
+
+    if (self->account != NULL)
+      {
+        DEBUG ("deleting account %s", self->account->username);
+        purple_accounts_delete (self->account);
+      }
 
     G_OBJECT_CLASS (haze_connection_parent_class)->finalize (object);
 }
