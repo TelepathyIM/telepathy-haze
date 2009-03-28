@@ -21,6 +21,7 @@
 
 #include <string.h>
 
+#include <telepathy-glib/dbus.h>
 #include <telepathy-glib/dbus-properties-mixin.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/handle-repo-dynamic.h>
@@ -84,22 +85,6 @@ typedef struct _HazeConnectionPrivate
 
 #define PC_GET_BASE_CONN(pc) \
     (ACCOUNT_GET_TP_BASE_CONNECTION (purple_connection_get_account (pc)))
-
-static const gchar *
-_get_param_string (GHashTable *parameters,
-                   const gchar *key)
-{
-    GValue *value = (GValue *) g_hash_table_lookup (parameters, key);
-    if (value)
-    {
-        g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
-        return (g_value_get_string (value));
-    }
-    else
-    {
-        return NULL;
-    }
-}
 
 static void
 connected_cb (PurpleConnection *pc)
@@ -313,7 +298,7 @@ haze_connection_create_account (HazeConnection *self,
 
     g_return_val_if_fail (self->account == NULL, FALSE);
 
-    username = _get_param_string (params, "account");
+    username = tp_asv_get_string (params, "account");
     g_assert (username != NULL);
 
     if (purple_accounts_find (username, prpl_id) != NULL)
@@ -329,7 +314,7 @@ haze_connection_create_account (HazeConnection *self,
 
     self->account->ui_data = self;
 
-    password = _get_param_string (params, "password");
+    password = tp_asv_get_string (params, "password");
     if (password)
     {
         purple_account_set_password (self->account, password);
