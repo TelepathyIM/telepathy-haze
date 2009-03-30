@@ -201,15 +201,10 @@ haze_report_disconnect_reason (PurpleConnection *gc,
 #endif
 
 static gboolean
-idle_disconnected_cb(gpointer data)
+idle_finish_shutdown (gpointer data)
 {
-    PurpleAccount *account = (PurpleAccount *) data;
-    HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
-
-    DEBUG ("deleting account %s", account->username);
-    purple_accounts_delete (account);
-    tp_base_connection_finish_shutdown (TP_BASE_CONNECTION (conn));
-    return FALSE;
+  tp_base_connection_finish_shutdown (TP_BASE_CONNECTION (data));
+  return FALSE;
 }
 
 static void
@@ -238,7 +233,12 @@ disconnected_cb (PurpleConnection *pc)
 
     }
 
-    g_idle_add(idle_disconnected_cb, account);
+    /* Call tp_base_connection_finish_shutdown () in an idle because calling it
+     * might lead to the HazeConnection being destroyed, which would mean the
+     * PurpleAccount were destroyed, but we're currently inside libpurple code
+     * that uses it.
+     */
+    g_idle_add (idle_finish_shutdown, conn);
 }
 
 static void
@@ -289,23 +289,42 @@ _set_option (const PurpleAccountOption *option,
     g_hash_table_remove (context->params, option->pref_name);
 }
 
-static void
-_create_account (HazeConnection *self)
+/**
+ * haze_connection_create_account:
+ *
+ * Attempts to create a PurpleAccount corresponding to this connection. Must be
+ * called immediately after constructing a connection. It's a shame GObject
+ * constructors can't fail.
+ *
+ * Returns: %TRUE if the account was successfully created and hooked up;
+ *          %FALSE with @error set in the TP_ERRORS domain if the account
+ *          already existed or another error occurred.
+ */
+gboolean
+haze_connection_create_account (HazeConnection *self,
+                                GError **error)
 {
     HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
     GHashTable *params = priv->parameters;
     PurplePluginProtocolInfo *prpl_info = priv->protocol_info->prpl_info;
-
+    const gchar *prpl_id = priv->protocol_info->prpl_id;
     const gchar *username, *password;
     struct _i_want_closure context;
 
-    username = _get_param_string (params, "account");
-    g_assert (username);
+    g_return_val_if_fail (self->account == NULL, FALSE);
 
-    g_assert (self->account == NULL);
+    username = _get_param_string (params, "account");
+    g_assert (username != NULL);
+
+    if (purple_accounts_find (username, prpl_id) != NULL)
+      {
+        g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+            "a connection already exists to %s on %s", username, prpl_id);
+        return FALSE;
+      }
+
     self->account = purple_account_new (username, priv->protocol_info->prpl_id);
     purple_accounts_add (self->account);
-    g_assert (self->account);
     g_hash_table_remove (params, "account");
 
     self->account->ui_data = self;
@@ -322,6 +341,8 @@ _create_account (HazeConnection *self)
     g_list_foreach (prpl_info->protocol_options, (GFunc) _set_option, &context);
 
     g_hash_table_foreach (params, (GHFunc) _warn_unhandled_parameter, "lala");
+
+    return TRUE;
 }
 
 static gboolean
@@ -329,9 +350,10 @@ _haze_connection_start_connecting (TpBaseConnection *base,
                                    GError **error)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
-
     TpHandleRepoIface *contact_handles =
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+
+    g_return_val_if_fail (self->account != NULL, FALSE);
 
     base->self_handle = tp_handle_ensure (contact_handles,
         purple_account_get_username (self->account), NULL, error);
@@ -486,8 +508,6 @@ haze_connection_constructor (GType type,
 
     priv->disconnecting = FALSE;
 
-    _create_account (self);
-
     tp_contacts_mixin_init (object,
         G_STRUCT_OFFSET (HazeConnection, contacts));
     tp_base_connection_register_with_contacts_mixin (
@@ -528,6 +548,12 @@ haze_connection_finalize (GObject *object)
     tp_presence_mixin_finalize (object);
 
     g_strfreev (self->acceptable_avatar_mime_types);
+
+    if (self->account != NULL)
+      {
+        DEBUG ("deleting account %s", self->account->username);
+        purple_accounts_delete (self->account);
+      }
 
     G_OBJECT_CLASS (haze_connection_parent_class)->finalize (object);
 }

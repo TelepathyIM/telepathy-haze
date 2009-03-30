@@ -1,6 +1,7 @@
 TWISTED_TESTS = \
-	connect/success.py \
 	connect/fail.py \
+	connect/success.py \
+	connect/twice-to-same-account.py \
 	presence/presence.py \
 	text/destroy.py \
 	text/ensure.py \
