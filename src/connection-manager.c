@@ -396,32 +396,6 @@ get_protocols (HazeConnectionManagerClass *klass)
     return protocols;
 }
 
-HazeConnection *
-haze_connection_manager_get_haze_connection (HazeConnectionManager *self,
-                                             PurpleAccount *account)
-{
-    HazeConnection *hc;
-    GList *l = self->connections;
-
-    while (l != NULL) {
-        hc = l->data;
-        if(hc->account == account) {
-            return hc;
-        }
-    }
-
-    return NULL;
-}
-
-static void
-connection_shutdown_finished_cb (TpBaseConnection *conn,
-                                 gpointer data)
-{
-    HazeConnectionManager *self = HAZE_CONNECTION_MANAGER (data);
-
-    self->connections = g_list_remove(self->connections, conn);
-}
-
 static TpBaseConnection *
 _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          const gchar *proto,
@@ -445,12 +419,6 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
         g_object_unref (conn);
         return FALSE;
       }
-
-    cm->connections = g_list_prepend(cm->connections, conn);
-    g_signal_connect (conn, "shutdown-finished",
-                      G_CALLBACK (connection_shutdown_finished_cb),
-                      cm);
-
     return (TpBaseConnection *) conn;
 }
 
@@ -551,14 +519,4 @@ static void
 haze_connection_manager_init (HazeConnectionManager *self)
 {
     DEBUG ("Initializing (HazeConnectionManager *)%p", self);
-}
-
-HazeConnectionManager *
-haze_connection_manager_get (void) {
-    static HazeConnectionManager *manager = NULL;
-    if (G_UNLIKELY(manager == NULL)) {
-        manager = g_object_new (HAZE_TYPE_CONNECTION_MANAGER, NULL);
-    }
-    g_assert (manager != NULL);
-    return manager;
 }

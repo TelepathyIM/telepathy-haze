@@ -40,7 +40,6 @@ struct _HazeConnectionManagerClass {
 
 struct _HazeConnectionManager {
     TpBaseConnectionManager parent;
-    GList *connections;
 };
 
 typedef struct _HazeProtocolInfo HazeProtocolInfo;
@@ -80,12 +79,6 @@ GType haze_connection_manager_get_type (void);
 #define HAZE_CONNECTION_MANAGER_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS ((obj), HAZE_TYPE_CONNECTION_MANAGER, \
                               HazeConnectionManagerClass))
-
-HazeConnectionManager *haze_connection_manager_get (void);
-
-HazeConnection *
-haze_connection_manager_get_haze_connection (HazeConnectionManager *self,
-                                             PurpleAccount *account);
 
 G_END_DECLS
 
