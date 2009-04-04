@@ -1,4 +1,4 @@
-telepathy-haze 0.3.0 (UNRELEASED)
+telepathy-haze 0.3.0 (2009-04-04)
 =================================
 
 The “Google Abandonware” release.
@@ -12,6 +12,10 @@ Enhancements:
  * Connections implement the Requests, SimplePresence and Contacts
    interfaces, courtesy of Simon McVittie.
  * Text channels implement the Messages and Destroyable interfaces.
+ * Courtesy of Simon McVittie, telepathy-gabble and FinnAir flight 0837,
+   Haze now has a test suite! They test Haze connecting to a fake XMPP
+   server; while not perfect (no-one should use Haze for XMPP in real
+   life!) it's an improvement on no tests.
 
 Fixes:
 
