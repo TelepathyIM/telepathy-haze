@@ -30,6 +30,7 @@ check-twisted:
 
 EXTRA_DIST = \
 	$(TWISTED_TESTS) \
+	constants.py \
 	hazetest.py \
 	servicetest.py \
 	ns.py
