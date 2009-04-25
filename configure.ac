@@ -91,6 +91,8 @@ AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 #AC_SUBST(DBUS_SERVICES_DIR)
 #AC_DEFINE_UNQUOTED(DBUS_SERVICES_DIR, "$DBUS_SERVICES_DIR", [DBus services directory])
 
+SHAVE_INIT(.)
+
 AC_OUTPUT([Makefile
            src/Makefile
            data/Makefile
@@ -98,4 +100,6 @@ AC_OUTPUT([Makefile
 	   tests/Makefile
 	   tests/twisted/Makefile
 	   tools/Makefile
+           shave
+           shave-libtool
            ])

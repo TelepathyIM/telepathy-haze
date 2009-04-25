@@ -1,5 +1,6 @@
 EXTRA_DIST = \
-    with-session-bus.sh
+    with-session-bus.sh \
+    shave.mk
 
 all: $(EXTRA_DIST)
 

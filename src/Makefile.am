@@ -1,9 +1,11 @@
+include $(top_srcdir)/tools/shave.mk
+
 libexec_PROGRAMS = telepathy-haze
 
 man_MANS = telepathy-haze.8
 
 %.8: %.8.in Makefile
-	sed -e 's,[@]libexecdir[@],@libexecdir@,' < $< > $@
+	$(QUIET_GEN)sed -e 's,[@]libexecdir[@],@libexecdir@,' < $< > $@
 
 EXTRA_DIST = telepathy-haze.8.in
 CLEANFILES = $(man_MANS)
