@@ -7,10 +7,14 @@ param-account=s required
 param-password=s required
 param-server=s
 param-port=i
+param-use_ssl=b
 param-always-use-rv-proxy=b
+param-allow_multiple_logins=b
 default-server=login.messaging.aol.com
 default-port=5190
+default-use_ssl=false
 default-always-use-rv-proxy=false
+default-allow_multiple_logins=true
 
 [Protocol gadugadu]
 param-account=s required
@@ -30,11 +34,15 @@ param-account=s required
 param-password=s required
 param-server=s
 param-port=i
+param-use_ssl=b
 param-always-use-rv-proxy=b
+param-allow_multiple_logins=b
 param-charset=s
 default-server=login.messaging.aol.com
 default-port=5190
+default-use_ssl=false
 default-always-use-rv-proxy=false
+default-allow_multiple_logins=true
 default-charset=UTF-8
 
 [Protocol irc]
@@ -42,11 +50,13 @@ param-account=s required
 param-password=s
 param-port=i
 param-charset=s
+param-autodetect_utf8=b
 param-username=s
 param-realname=s
 param-ssl=b
 default-port=6667
 default-charset=UTF-8
+default-autodetect_utf8=false
 default-ssl=false
 
 [Protocol jabber]
@@ -58,19 +68,23 @@ param-auth-plain-in-clear=b
 param-port=i
 param-server=s
 param-ft-proxies=s
+param-custom_smileys=b
 default-require-encryption=false
 default-old-ssl=false
 default-auth-plain-in-clear=false
 default-port=5222
-default-ft-proxies=proxy.jabber.org:7777
+default-ft-proxies=proxy.jabber.org
+default-custom_smileys=true
 
 [Protocol local-xmpp]
 param-account=s required
+param-port=i
 param-first-name=s required
 param-last-name=s required
 param-email=s
 param-AIM=s
 param-jid=s
+default-port=5298
 
 [Protocol msn]
 param-account=s required
@@ -97,10 +111,22 @@ default-port=1863
 [Protocol qq]
 param-account=s required
 param-password=s required
-param-use-tcp=b
 param-server=s
-param-port=s
-default-use-tcp=false
+param-client_version=s
+param-use-tcp=b
+param-show_notice=b
+param-show_news=b
+param-show_chat=b
+param-keep_alive_interval=i
+param-update_interval=i
+default-server=auto
+default-client_version=qq2005
+default-use-tcp=true
+default-show_notice=true
+default-show_news=true
+default-show_chat=true
+default-keep_alive_interval=60
+default-update_interval=300
 
 [Protocol sametime]
 param-account=s required
@@ -112,32 +138,6 @@ param-fake-client-id=b
 default-port=1533
 default-force-login=false
 default-fake-client-id=false
-
-[Protocol silc]
-param-account=s required
-param-password=s
-param-server=s
-param-port=i
-param-public-key=s
-param-private-key=s
-param-cipher=s
-param-hmac=s
-param-pfs=b
-param-pubkey-auth=b
-param-block-ims=b
-param-block-wb=b
-param-open-wb=b
-param-sign-verify=b
-default-server=silc.silcnet.org
-default-port=706
-default-cipher=aes-256-ctr
-default-hmac=hmac-sha256-96
-default-pfs=false
-default-pubkey-auth=false
-default-block-ims=false
-default-block-wb=false
-default-open-wb=false
-default-sign-verify=false
 
 [Protocol simple]
 param-account=s required
