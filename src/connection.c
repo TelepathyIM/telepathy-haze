@@ -550,6 +550,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
     TpBaseConnectionClass *base_class = TP_BASE_CONNECTION_CLASS (klass);
     GParamSpec *param_spec;
     static const gchar *interfaces_always_present[] = {
+        TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
         TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
         TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
         TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
