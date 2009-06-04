@@ -1,3 +1,20 @@
+telepathy-haze 0.3.1 (2009-06-05)
+=================================
+
+The “man3 encounters player, who quotes Hayek” release.
+
+Enhancements:
+
+ * Shaved `make` output, courtesy of Jonny Lamb. This is disabled by
+   default; ./configure --enable-shave to enable it.
+
+ * haze.manager has been updated for more recent libpurples. Fixes
+   fd.o#17709.
+
+Fixes:
+
+ * Connection.GetInterfaces() now includes Requests. Fixes fd.o#21800.
+
 telepathy-haze 0.3.0 (2009-04-04)
 =================================
 
