@@ -43,7 +43,7 @@ typedef enum {
 static const TpPresenceStatusSpec statuses[] = {
     { "available", TP_CONNECTION_PRESENCE_TYPE_AVAILABLE, TRUE,
         arg_specs, NULL, NULL },
-    { "busy", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE,
+    { "busy", TP_CONNECTION_PRESENCE_TYPE_BUSY, TRUE,
         arg_specs, NULL, NULL },
     { "away", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE,
         arg_specs, NULL, NULL },
