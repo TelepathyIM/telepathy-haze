@@ -1,3 +1,30 @@
+telepathy-haze 0.3.2 (2009-08-25)
+=================================
+
+The “Isaac” release.
+
+Fixes:
+
+ * Yahoo! Japan-specific parameters are no longer listed for the 'yahoo'
+   protocol in haze.manager. This fixes Gnome bug #591381. If you're
+   using libpurple 2.6.0 or later, 'yahoojp' will be available as a
+   separate protocol.
+
+ * The "busy" status is exposed as Busy rather than as Away. This fixes
+   fd.o#23441.
+
+ * Haze now fails gracefully rather than asserting if you try to connect
+   to MSN and your libpurple was built without SSL support. Fixes
+   fd.o#22800.
+
+Enhancements:
+
+ * The Facebook protocol plugin is now special-cased to have a
+   sensible name in the Telepathy API. It seems to work with Empathy
+   2.27.91 if you delete haze.manager (which will no longer be shipped
+   in a future release when stable releases of clients support it being
+   absent).
+
 telepathy-haze 0.3.1 (2009-06-05)
 =================================
 
