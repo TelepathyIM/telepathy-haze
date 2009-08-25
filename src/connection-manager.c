@@ -53,6 +53,7 @@ static HazeProtocolInfo known_protocol_info[] = {
     { "qq",         "prpl-qq",          NULL, "" },
     { "sametime",   "prpl-meanwhile",   NULL, "" },
     { "yahoo",      "prpl-yahoo",       NULL, "local_charset:charset" },
+    { "yahoojp",    "prpl-yahoojp",     NULL, "local_charset:charset" },
     { "zephyr",     "prpl-zephyr",      NULL, "encoding:charset" },
     { NULL,         NULL,               NULL, "" }
 };
