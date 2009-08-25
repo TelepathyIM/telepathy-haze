@@ -41,6 +41,8 @@ G_DEFINE_TYPE(HazeConnectionManager,
  */
 static HazeProtocolInfo known_protocol_info[] = {
     { "aim",        "prpl-aim",         NULL, "" },
+    /* Seriously. */
+    { "facebook",   "prpl-bigbrownchunx-facebookim", NULL, "" },
     { "gadugadu",   "prpl-gg",          NULL, "" },
     { "groupwise",  "prpl-novell",      NULL, "" },
     { "irc",        "prpl-irc",         NULL, "encoding:charset" },
@@ -161,6 +163,13 @@ _translate_protocol_option (PurpleAccountOption *option,
      */
     if (name == NULL)
       name = g_strdup (pref_name);
+
+    if (g_str_has_prefix (name, "facebook_"))
+      {
+        gchar *tmp = g_strdup (name + strlen ("facebook_"));
+        g_free (name);
+        name = tmp;
+      }
 
     g_strdelimit (name, "_", '-');
     paramspec->name = name;
