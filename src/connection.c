@@ -1,7 +1,7 @@
 /*
  * connection.c - HazeConnection source
  * Copyright (C) 2007 Will Thompson
- * Copyright (C) 2007-2008 Collabora Ltd.
+ * Copyright (C) 2007-2009 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -345,11 +345,11 @@ _haze_connection_start_connecting (TpBaseConnection *base,
     if (!base->self_handle)
         return FALSE;
 
-    purple_account_set_enabled(self->account, UI_ID, TRUE);
-    purple_account_connect(self->account);
-
     tp_base_connection_change_status(base, TP_CONNECTION_STATUS_CONNECTING,
                                      TP_CONNECTION_STATUS_REASON_REQUESTED);
+
+    purple_account_set_enabled(self->account, UI_ID, TRUE);
+    purple_account_connect(self->account);
 
     return TRUE;
 }

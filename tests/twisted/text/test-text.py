@@ -122,9 +122,14 @@ def test(q, bus, conn, stream):
     elem = stream_message.stanza
     assert elem.name == 'message'
     assert elem['type'] == 'chat'
-    body = list(stream_message.stanza.elements())[0]
-    assert body.name == 'body'
-    assert body.children[0] == u'/me waves'
+
+    found = False
+    for e in elem.elements():
+        if e.name == 'body':
+            found = True
+            e.children[0] == u'/me waves'
+            break
+    assert found, elem.toXml()
 
     sent_message = message_sent.args[0]
     assert len(sent_message) == 2, sent_message
@@ -151,9 +156,14 @@ def test(q, bus, conn, stream):
     elem = stream_message.stanza
     assert elem.name == 'message'
     assert elem['type'] == 'chat'
-    body = list(stream_message.stanza.elements())[0]
-    assert body.name == 'body'
-    assert body.children[0] == u'goodbye'
+
+    found = False
+    for e in elem.elements():
+        if e.name == 'body':
+            found = True
+            e.children[0] == u'goodbye'
+            break
+    assert found, elem.toXml()
 
     sent_message = message_sent.args[0]
     assert len(sent_message) == 2, sent_message

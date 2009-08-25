@@ -7,6 +7,7 @@ FIXME: test C.I.Presence too
 import dbus
 
 from twisted.words.xish import domish, xpath
+from twisted.words.protocols.jabber.client import IQ
 
 from hazetest import exec_test
 
@@ -16,14 +17,15 @@ def test(q, bus, conn, stream):
 
     amy_handle = conn.RequestHandles(1, ['amy@foo.com'])[0]
 
-    event = q.expect('stream-iq', query_ns='jabber:iq:roster')
-    event.stanza['type'] = 'result'
-
-    item = event.query.addElement('item')
+    # Divergence from Gabble: hazetest responds to all roster gets with an
+    # empty roster, so we need to push the roster.
+    iq = IQ(stream, 'set')
+    query = iq.addElement(('jabber:iq:roster', 'query'))
+    item = query.addElement('item')
     item['jid'] = 'amy@foo.com'
     item['subscription'] = 'both'
 
-    stream.send(event.stanza)
+    stream.send(iq)
 
     presence = domish.Element((None, 'presence'))
     presence['from'] = 'amy@foo.com'

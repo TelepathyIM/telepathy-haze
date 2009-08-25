@@ -70,9 +70,14 @@ def test(q, bus, conn, stream):
     elem = event.stanza
     assert elem.name == 'message'
     assert elem['type'] == 'chat'
-    body = list(event.stanza.elements())[0]
-    assert body.name == 'body'
-    assert body.children[0] == u'hey'
+
+    found = False
+    for e in elem.elements():
+        if e.name == 'body':
+            found = True
+            e.children[0] == u'hey'
+            break
+    assert found, elem.toXml()
 
     # <message type="chat"><body>hello</body</message>
     m = domish.Element((None, 'message'))

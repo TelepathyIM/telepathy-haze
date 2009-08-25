@@ -1,7 +1,7 @@
 /*
  * connection-manager.c - HazeConnectionManager source
  * Copyright (C) 2007 Will Thompson
- * Copyright (C) 2007-2008 Collabora Ltd.
+ * Copyright (C) 2007-2009 Collabora Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,33 +40,23 @@ G_DEFINE_TYPE(HazeConnectionManager,
  * hyphens rather than underscores for consistency.
  */
 static HazeProtocolInfo known_protocol_info[] = {
-    { "aim",        "prpl-aim",         NULL,
-        "always_use_rv_proxy:always-use-rv-proxy" },
+    { "aim",        "prpl-aim",         NULL, "" },
+    /* Seriously. */
+    { "facebook",   "prpl-bigbrownchunx-facebookim", NULL, "" },
     { "gadugadu",   "prpl-gg",          NULL, "" },
     { "groupwise",  "prpl-novell",      NULL, "" },
     { "irc",        "prpl-irc",         NULL, "encoding:charset" },
-    { "icq",        "prpl-icq",         NULL,
-        "encoding:charset,always_use_rv_proxy:always-use-rv-proxy" },
+    { "icq",        "prpl-icq",         NULL, "encoding:charset" },
     { "jabber",     "prpl-jabber",      NULL,
-        "connect_server:server,old_ssl:old-ssl,require_tls:require-encryption,"
-        "auth_plain_in_clear:auth-plain-in-clear,ft_proxies:ft-proxies" },
+        "connect_server:server,require_tls:require-encryption" },
     { "local-xmpp", "prpl-bonjour",     NULL,
         "first:first-name,last:last-name" },
-    { "msn",        "prpl-msn",         NULL,
-        "http_method:http-method,http_method_server:http-method-server,"
-        "custom_smileys:custom-smileys" },
-    { "qq",         "prpl-qq",          NULL, "use_tcp:use-tcp" },
-    { "sametime",   "prpl-meanwhile",   NULL,
-        "force_login:force-login,fake_client_id:fake-client-id" },
-    { "yahoo",      "prpl-yahoo",       NULL,
-        "local_charset:charset,xfer_host:xfer-host,xferjp_host:xferjp-host,"
-        "xfer_port:xfer-port,room_list_locale:room-list-locale,"
-        "ignore_invites:ignore-invites" },
-    { "zephyr",     "prpl-zephyr",      NULL,
-        "encoding:charset,use_tzc:use-tzc,tzc_command:tzc-command,"
-        "write_anyone:write-anyone,write_zsubs:write-zsubs,"
-        "read_anyone:read-anyone,read_zsubs:read-zsubs,"
-        "exposure_level:exposure-level" },
+    { "msn",        "prpl-msn",         NULL, "" },
+    { "qq",         "prpl-qq",          NULL, "" },
+    { "sametime",   "prpl-meanwhile",   NULL, "" },
+    { "yahoo",      "prpl-yahoo",       NULL, "local_charset:charset" },
+    { "yahoojp",    "prpl-yahoojp",     NULL, "local_charset:charset" },
+    { "zephyr",     "prpl-zephyr",      NULL, "encoding:charset" },
     { NULL,         NULL,               NULL, "" }
 };
 
@@ -167,10 +157,23 @@ _translate_protocol_option (PurpleAccountOption *option,
 {
     const char *pref_name = purple_account_option_get_setting (option);
     PurplePrefType pref_type = purple_account_option_get_type (option);
-    gchar *name = g_hash_table_lookup (parameter_map, pref_name);
+    gchar *name = g_strdup (g_hash_table_lookup (parameter_map, pref_name));
+
     /* These strings are never free'd, but need to last until exit anyway.
      */
-    paramspec->name = g_strdup (name ? name : pref_name);
+    if (name == NULL)
+      name = g_strdup (pref_name);
+
+    if (g_str_has_prefix (name, "facebook_"))
+      {
+        gchar *tmp = g_strdup (name + strlen ("facebook_"));
+        g_free (name);
+        name = tmp;
+      }
+
+    g_strdelimit (name, "_", '-');
+    paramspec->name = name;
+
     paramspec->setter_data = option->pref_name;
     /* TODO: does libpurple ever require a parameter besides the username
      *       and possibly password?
