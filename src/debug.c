@@ -25,6 +25,7 @@
 
 #include <libpurple/debug.h>
 #include <telepathy-glib/debug.h>
+#include <telepathy-glib/debug-sender.h>
 
 
 typedef enum
@@ -74,30 +75,66 @@ static char *debug_level_names[] =
 };
 
 static void
+log_to_debug_sender (const gchar *category,
+                     GLogLevelFlags level,
+                     const gchar *message)
+{
+    TpDebugSender *dbg;
+    GTimeVal now;
+    gchar *domain;
+
+    dbg = tp_debug_sender_dup ();
+
+    g_get_current_time (&now);
+
+    domain = g_strdup_printf ("%s/%s", G_LOG_DOMAIN, category);
+
+    tp_debug_sender_add_message (dbg, &now, domain,
+        G_LOG_LEVEL_DEBUG, message);
+
+    g_free (domain);
+    g_object_unref (dbg);
+}
+
+static void
 haze_debug_print (PurpleDebugLevel level,
                   const char *category,
                   const char *arg_s)
 {
     char *argh = g_strchomp (g_strdup (arg_s));
     const char *level_name = debug_level_names[level];
+    GLogLevelFlags log_level;
+
     switch (level)
     {
         case PURPLE_DEBUG_WARNING:
+            log_level = G_LOG_LEVEL_WARNING;
             g_warning ("%s: %s", category, argh);
             break;
         case PURPLE_DEBUG_FATAL:
             /* g_critical doesn't cause an abort() in haze, so libpurple will
              * still get to do the honours of blowing us out of the water.
              */
+            log_level = G_LOG_LEVEL_CRITICAL;
             g_critical ("[%s] %s: %s", level_name, category, argh);
             break;
         case PURPLE_DEBUG_ERROR:
         case PURPLE_DEBUG_MISC:
         case PURPLE_DEBUG_INFO:
         default:
+          if (level == PURPLE_DEBUG_ERROR)
+              log_level = G_LOG_LEVEL_ERROR;
+          else if (level == PURPLE_DEBUG_INFO)
+              log_level = G_LOG_LEVEL_INFO;
+          else
+              log_level = G_LOG_LEVEL_DEBUG;
+
             g_message ("[%s] %s: %s", level_name, category, argh);
             break;
     }
+
+    log_to_debug_sender (category, log_level, argh);
+
     g_free(argh);
 }
 
@@ -160,13 +197,20 @@ void
 haze_debug (const gchar *format,
             ...)
 {
+    gchar *message;
+    va_list args;
+
+    va_start (args, format);
+    message = g_strdup_vprintf (format, args);
+    va_end (args);
+
+    log_to_debug_sender ("haze", G_LOG_LEVEL_DEBUG, message);
+
     if (flags & HAZE_DEBUG_HAZE)
     {
-        va_list args;
-        va_start (args, format);
-
-        g_logv (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, format, args);
-
-        va_end (args);
+        g_log (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, "%s", message);
     }
+
+    g_free (message);
 }
+

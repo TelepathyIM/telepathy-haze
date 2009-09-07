@@ -27,12 +27,20 @@
 #include <libpurple/prpl.h>
 #include <libpurple/accountopt.h>
 
+#include <telepathy-glib/debug-sender.h>
+
 #include "connection-manager.h"
 #include "debug.h"
 
 G_DEFINE_TYPE(HazeConnectionManager,
     haze_connection_manager,
     TP_TYPE_BASE_CONNECTION_MANAGER)
+
+typedef struct _HazeConnectionManagerPrivate HazeConnectionManagerPrivate;
+struct _HazeConnectionManagerPrivate
+{
+    TpDebugSender *debug_sender;
+};
 
 /* For some protocols, removing the "prpl-" prefix from its name in libpurple
  * doesn't give the right name for Telepathy.  Other protocols need some
@@ -506,20 +514,46 @@ static void _init_protocol_table (HazeConnectionManagerClass *klass)
 }
 
 static void
+_haze_cm_finalize (GObject *object)
+{
+    HazeConnectionManager *self = HAZE_CONNECTION_MANAGER (object);
+    HazeConnectionManagerPrivate *priv = self->priv;
+
+    if (priv->debug_sender != NULL)
+    {
+        g_object_unref (priv->debug_sender);
+        priv->debug_sender = NULL;
+    }
+}
+
+static void
 haze_connection_manager_class_init (HazeConnectionManagerClass *klass)
 {
     TpBaseConnectionManagerClass *base_class =
         (TpBaseConnectionManagerClass *)klass;
+    GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
     _init_protocol_table (klass);
+
+    object_class->finalize = _haze_cm_finalize;
 
     base_class->new_connection = _haze_connection_manager_new_connection;
     base_class->cm_dbus_name = "haze";
     base_class->protocol_params = get_protocols (klass);
+
+    g_type_class_add_private (klass, sizeof (HazeConnectionManagerPrivate));
 }
 
 static void
 haze_connection_manager_init (HazeConnectionManager *self)
 {
+    HazeConnectionManagerPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
+        HAZE_TYPE_CONNECTION_MANAGER, HazeConnectionManagerPrivate);
+
+    self->priv = priv;
+
+    priv->debug_sender = tp_debug_sender_dup ();
+    g_log_set_default_handler (tp_debug_sender_log_handler, G_LOG_DOMAIN);
+
     DEBUG ("Initializing (HazeConnectionManager *)%p", self);
 }
