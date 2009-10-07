@@ -39,6 +39,7 @@
 #include "connection-presence.h"
 #include "connection-aliasing.h"
 #include "connection-avatars.h"
+#include "connection-capabilities.h"
 #include "contact-list-channel.h"
 
 enum
@@ -62,6 +63,8 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_aliasing_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
         haze_connection_avatars_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CAPABILITIES,
+        haze_connection_capabilities_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
         tp_contacts_mixin_iface_init);
     );
@@ -500,6 +503,7 @@ haze_connection_constructor (GType type,
 
     haze_connection_aliasing_init (object);
     haze_connection_avatars_init (object);
+    haze_connection_capabilities_init (object);
     haze_connection_presence_init (object);
 
     return (GObject *)self;
@@ -553,6 +557,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
         TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
         TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
         TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+        TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES,
         TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
         /* TODO: This is a lie.  Not all protocols supported by libpurple
          *       actually have the concept of a user-settable alias, but
@@ -608,6 +613,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);
     haze_connection_avatars_class_init (object_class);
+    haze_connection_capabilities_class_init(object_class);
 }
 
 static void

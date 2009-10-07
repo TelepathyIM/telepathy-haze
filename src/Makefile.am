@@ -20,6 +20,8 @@ telepathy_haze_SOURCES = main.c \
                          connection-aliasing.h \
                          connection-avatars.c \
                          connection-avatars.h \
+                         connection-capabilities.c \
+                         connection-capabilities.h \
                          connection-presence.c \
                          connection-presence.h \
                          connection.c \
