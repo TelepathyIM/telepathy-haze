@@ -31,6 +31,7 @@
 
 #include "contact-list.h"
 #include "im-channel-factory.h"
+#include "media-manager.h"
 
 G_BEGIN_DECLS
 
@@ -62,6 +63,7 @@ struct _HazeConnection {
 
     HazeContactList *contact_list;
     HazeImChannelFactory *im_factory;
+    HazeMediaManager *media_manager;
 
     TpContactsMixin contacts;
     TpPresenceMixin presence;

@@ -417,6 +417,10 @@ _haze_connection_create_channel_managers (TpBaseConnection *base)
         g_object_new (HAZE_TYPE_IM_CHANNEL_FACTORY, "connection", self, NULL));
     g_ptr_array_add (channel_managers, self->im_factory);
 
+    self->media_manager = HAZE_MEDIA_MANAGER (
+        g_object_new (HAZE_TYPE_MEDIA_MANAGER, "connection", self, NULL));
+    g_ptr_array_add (channel_managers, self->media_manager);
+
     self->contact_list = HAZE_CONTACT_LIST (
         g_object_new (HAZE_TYPE_CONTACT_LIST, "connection", self, NULL));
     g_ptr_array_add (channel_managers, self->contact_list);
