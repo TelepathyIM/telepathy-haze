@@ -617,7 +617,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);
     haze_connection_avatars_class_init (object_class);
-    haze_connection_capabilities_class_init(object_class);
+    haze_connection_capabilities_class_init (object_class);
 }
 
 static void

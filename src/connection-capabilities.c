@@ -32,10 +32,10 @@ static PurpleMediaCaps
 tp_flags_to_purple_caps (guint flags)
 {
   PurpleMediaCaps caps = PURPLE_MEDIA_CAPS_NONE;
-  caps |= (flags & TP_CHANNEL_MEDIA_CAPABILITY_AUDIO) != 0 ?
-      PURPLE_MEDIA_CAPS_AUDIO : 0;
-  caps |= (flags & TP_CHANNEL_MEDIA_CAPABILITY_VIDEO) != 0 ?
-      PURPLE_MEDIA_CAPS_VIDEO : 0;
+  if (flags & TP_CHANNEL_MEDIA_CAPABILITY_AUDIO)
+    caps |= PURPLE_MEDIA_CAPS_AUDIO;
+  if (flags & TP_CHANNEL_MEDIA_CAPABILITY_VIDEO)
+    caps |= PURPLE_MEDIA_CAPS_VIDEO;
   return caps;
 }
 
@@ -43,10 +43,10 @@ static guint
 purple_caps_to_tp_flags (PurpleMediaCaps caps)
 {
   guint flags = 0;
-  flags |= (caps & PURPLE_MEDIA_CAPS_AUDIO) != 0 ?
-      TP_CHANNEL_MEDIA_CAPABILITY_AUDIO : 0;
-  flags |= (caps & PURPLE_MEDIA_CAPS_VIDEO) != 0 ?
-      TP_CHANNEL_MEDIA_CAPABILITY_VIDEO : 0;
+  if (caps & PURPLE_MEDIA_CAPS_AUDIO)
+    flags |= TP_CHANNEL_MEDIA_CAPABILITY_AUDIO;
+  if (caps & PURPLE_MEDIA_CAPS_VIDEO)
+    flags |= TP_CHANNEL_MEDIA_CAPABILITY_VIDEO;
   return flags;
 }
 
@@ -112,12 +112,6 @@ _emit_capabilities_changed (HazeConnection *conn,
  *
  * Implements D-Bus method AdvertiseCapabilities
  * on interface org.freedesktop.Telepathy.Connection.Interface.Capabilities
- *
- * @error: Used to return a pointer to a GError detailing any error
- *         that occurred, D-Bus will throw the error only if this
- *         function returns FALSE.
- *
- * Returns: TRUE if successful, FALSE if an error was thrown.
  */
 static void
 haze_connection_advertise_capabilities (TpSvcConnectionInterfaceCapabilities *iface,
@@ -154,6 +148,7 @@ haze_connection_advertise_capabilities (TpSvcConnectionInterfaceCapabilities *if
 
       g_free (channel_type);
     }
+
   for (i = 0; NULL != del[i]; i++)
     {
       if (g_str_equal (del[i], TP_IFACE_CHANNEL_TYPE_STREAMED_MEDIA))
@@ -162,6 +157,7 @@ haze_connection_advertise_capabilities (TpSvcConnectionInterfaceCapabilities *if
           break;
         }
     }
+
   purple_media_manager_set_ui_caps (purple_media_manager_get(), caps);
 
   _emit_capabilities_changed (self, base->self_handle, old_caps, caps);
@@ -360,7 +356,11 @@ haze_connection_capabilities_iface_init (gpointer g_iface,
  * a way to indicate when caps change or even when the initial caps
  * are received.
  */
-static void *caps_handle = NULL;
+/*
+ * This array should be in the HazeConnection structure, but I'm not
+ * going to bother since this is just a hack.
+ */
+static GArray *caps_cb_ids = NULL;
 
 typedef struct {
   PurpleConnection *pc;
@@ -381,6 +381,8 @@ caps_received_cb_cb (gpointer data)
   TpHandle contact = tp_handle_ensure (contact_repo, bname, NULL, NULL);
   PurpleMediaCaps caps = purple_prpl_get_media_caps (account, bname);
 
+  caps_cb_ids = g_array_remove_index (caps_cb_ids, 0);
+
   _emit_capabilities_changed (conn, contact,
       purple_caps_to_tp_flags(crd->caps),
       purple_caps_to_tp_flags(caps));
@@ -398,32 +400,77 @@ caps_received_cb (PurpleConnection *pc,
 {
   PurpleAccount *account = purple_connection_get_account (pc);
   CapsReceivedData *crd = g_slice_new0 (CapsReceivedData);
+  gulong id;
+
   crd->pc = pc;
   crd->bname = g_strdup (from);
   crd->caps = purple_prpl_get_media_caps (account, from);
-  g_timeout_add (10000, caps_received_cb_cb, crd);
+
+  id = g_timeout_add_seconds (10, caps_received_cb_cb, crd);
+  g_array_append_val (caps_cb_ids, id);
   return FALSE;
 }
 
-void
-haze_connection_capabilities_class_init (GObjectClass *object_class)
+static void
+connection_status_changed_cb (HazeConnection *conn,
+                              guint status,
+                              guint reason,
+                              HazeMediaManager *self)
 {
-	PurplePlugin *jabber;
-	jabber = purple_find_prpl("prpl-jabber");
+  PurplePlugin *jabber;
 
-	if (!jabber)
-		return;
+  switch (status)
+    {
+    case TP_CONNECTION_STATUS_CONNECTING:
+      caps_cb_ids = g_array_new (FALSE, FALSE, sizeof (gulong));
+      jabber = purple_find_prpl ("prpl-jabber");
 
-	caps_handle = object_class;
-	purple_signal_connect (jabber, "jabber-receiving-presence", caps_handle,
-			    PURPLE_CALLBACK (caps_received_cb), NULL);
+      if (jabber)
+        purple_signal_connect (jabber, "jabber-receiving-presence",
+            conn, PURPLE_CALLBACK (caps_received_cb), NULL);
+      break;
+
+    case TP_CONNECTION_STATUS_DISCONNECTED:
+      jabber = purple_find_prpl ("prpl-jabber");
+
+      if (jabber)
+        purple_signal_disconnect (jabber, "jabber-receiving-presence",
+            conn, PURPLE_CALLBACK (caps_received_cb));
+
+      while (caps_cb_ids->len > 0)
+        {
+          gulong tmp = g_array_index (caps_cb_ids, gulong, 0);
+          caps_cb_ids = g_array_remove_index_fast (caps_cb_ids, 0);
+          g_source_remove (tmp);
+        }
+
+      g_array_free (caps_cb_ids, TRUE);
+
+      if (conn->status_changed_id != 0)
+        {
+          g_signal_handler_disconnect (conn, conn->status_changed_id);
+          conn->status_changed_id = 0;
+        }
+
+      break;
+    }
 }
 /* end hack */
 
 void
+haze_connection_capabilities_class_init (GObjectClass *object_class)
+{
+}
+
+void
 haze_connection_capabilities_init (GObject *object)
 {
+  HazeConnection *conn = HAZE_CONNECTION (object);
   tp_contacts_mixin_add_contact_attributes_iface (G_OBJECT (object),
       TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES,
       conn_capabilities_fill_contact_attributes);
+
+  /* Part of the hack to get media caps right for jabber */
+  conn->status_changed_id = g_signal_connect (conn,
+      "status-changed", (GCallback) connection_status_changed_cb, object);
 }

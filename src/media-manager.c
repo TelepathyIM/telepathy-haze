@@ -207,6 +207,8 @@ connection_status_changed_cb (HazeConnection *conn,
       break;
 
     case TP_CONNECTION_STATUS_DISCONNECTED:
+      g_signal_handlers_disconnect_by_func (purple_media_manager_get (),
+          G_CALLBACK (init_media_cb), self);
       haze_media_manager_close_all (self);
       break;
     }
@@ -256,19 +258,12 @@ static const gchar * const named_channel_allowed_properties[] = {
 static GHashTable *
 haze_media_manager_channel_class (void)
 {
-  GHashTable *table = g_hash_table_new_full (g_str_hash, g_str_equal,
-      NULL, (GDestroyNotify) tp_g_value_slice_free);
-  GValue *value;
-
-  value = tp_g_value_slice_new (G_TYPE_STRING);
-  g_value_set_static_string (value, TP_IFACE_CHANNEL_TYPE_STREAMED_MEDIA);
-  g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType", value);
-
-  value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
-  g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType", value);
-
-  return table;
+  return tp_asv_new (
+      TP_IFACE_CHANNEL ".ChannelType", G_TYPE_STRING,
+          TP_IFACE_CHANNEL_TYPE_STREAMED_MEDIA,
+      TP_IFACE_CHANNEL ".TargetHandleType", G_TYPE_UINT,
+          TP_HANDLE_TYPE_CONTACT,
+      NULL);
 }
 
 static void

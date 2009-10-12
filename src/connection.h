@@ -70,6 +70,9 @@ struct _HazeConnection {
 
     gchar **acceptable_avatar_mime_types;
 
+    /* Part of the hack for Jabber media caps */
+    gulong status_changed_id;
+
     gpointer priv;
 };
 
