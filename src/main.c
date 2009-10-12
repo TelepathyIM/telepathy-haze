@@ -173,6 +173,181 @@ set_libpurple_preferences (void)
 
 }
 
+/*
+ * TODO: Remove these once we're using telepathy-farsight.
+ * All this is bootstrap type code to get libpurple's GStreamer
+ * stuff to start right.
+ *
+ * Most of this is from Pidgin's gtkmedia.c
+ */
+#include <gst/gst.h>
+#include "mediamanager.h"
+#include "media-gst.h"
+#include "libpurple/debug.h"
+
+static GstElement *
+create_default_video_src (PurpleMedia *media,
+                          const gchar *session_id,
+                          const gchar *participant)
+{
+	GstElement *sendbin, *src, *videoscale, *capsfilter;
+	GstPad *pad;
+	GstPad *ghost;
+	GstCaps *caps;
+
+#ifdef _WIN32
+	/* autovideosrc doesn't pick ksvideosrc for some reason */
+	src = gst_element_factory_make("ksvideosrc", NULL);
+	if (src == NULL)
+		src = gst_element_factory_make("dshowvideosrc", NULL);
+	if (src == NULL)
+		src = gst_element_factory_make("autovideosrc", NULL);
+#else
+	src = gst_element_factory_make("gconfvideosrc", NULL);
+	if (src == NULL)
+		src = gst_element_factory_make("autovideosrc", NULL);
+	if (src == NULL)
+		src = gst_element_factory_make("v4l2src", NULL);
+	if (src == NULL)
+		src = gst_element_factory_make("v4lsrc", NULL);
+#endif
+	if (src == NULL) {
+		purple_debug_error("gtkmedia", "Unable to find a suitable "
+				"element for the default video source.\n");
+		return NULL;
+	}
+
+	sendbin = gst_bin_new("pidgindefaultvideosrc");
+	videoscale = gst_element_factory_make("videoscale", NULL);
+	capsfilter = gst_element_factory_make("capsfilter", NULL);
+
+	/* It was recommended to set the size <= 352x288 and framerate <= 20 */
+	caps = gst_caps_from_string("video/x-raw-yuv , width=[250,352] , "
+			"height=[200,288] , framerate=[1/1,20/1]");
+	g_object_set(G_OBJECT(capsfilter), "caps", caps, NULL);
+
+	gst_bin_add_many(GST_BIN(sendbin), src,
+			videoscale, capsfilter, NULL);
+	gst_element_link_many(src, videoscale, capsfilter, NULL);
+
+	pad = gst_element_get_static_pad(capsfilter, "src");
+	ghost = gst_ghost_pad_new("ghostsrc", pad);
+	gst_object_unref(pad);
+	gst_element_add_pad(sendbin, ghost);
+
+	return sendbin;
+}
+
+static GstElement *
+create_default_video_sink (PurpleMedia *media,
+                           const gchar *session_id,
+                           const gchar *participant)
+{
+	GstElement *sink = gst_element_factory_make("gconfvideosink", NULL);
+	if (sink == NULL)
+		sink = gst_element_factory_make("autovideosink", NULL);
+	if (sink == NULL)
+		purple_debug_error("gtkmedia", "Unable to find a suitable "
+				"element for the default video sink.\n");
+	return sink;
+}
+
+static GstElement *
+create_default_audio_src (PurpleMedia *media,
+		          const gchar *session_id,
+                          const gchar *participant)
+{
+	GstElement *src;
+	src = gst_element_factory_make("gconfaudiosrc", NULL);
+	if (src == NULL)
+		src = gst_element_factory_make("autoaudiosrc", NULL);
+	if (src == NULL)
+		src = gst_element_factory_make("alsasrc", NULL);
+	if (src == NULL)
+		src = gst_element_factory_make("osssrc", NULL);
+	if (src == NULL)
+		src = gst_element_factory_make("dshowaudiosrc", NULL);
+	if (src == NULL) {
+		purple_debug_error("gtkmedia", "Unable to find a suitable "
+				"element for the default audio source.\n");
+		return NULL;
+	}
+	gst_element_set_name(src, "pidgindefaultaudiosrc");
+	return src;
+}
+
+static GstElement *
+create_default_audio_sink (PurpleMedia *media,
+		           const gchar *session_id,
+                           const gchar *participant)
+{
+	GstElement *sink;
+	sink = gst_element_factory_make("gconfaudiosink", NULL);
+	if (sink == NULL)
+		sink = gst_element_factory_make("autoaudiosink",NULL);
+	if (sink == NULL) {
+		purple_debug_error("gtkmedia", "Unable to find a suitable "
+				"element for the default audio sink.\n");
+		return NULL;
+	}
+	return sink;
+}
+
+static void
+init_libpurple_media (int *argc,
+                      char **argv[])
+{
+    PurpleMediaManager *manager = purple_media_manager_get();
+    PurpleMediaElementInfo *default_video_src =
+        g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
+             "id", "pidgindefaultvideosrc",
+             "name", "Pidgin Default Video Source",
+             "type", PURPLE_MEDIA_ELEMENT_VIDEO
+                 | PURPLE_MEDIA_ELEMENT_SRC
+                 | PURPLE_MEDIA_ELEMENT_ONE_SRC
+                 | PURPLE_MEDIA_ELEMENT_UNIQUE,
+             "create-cb", create_default_video_src, NULL);
+    PurpleMediaElementInfo *default_video_sink =
+        g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
+             "id", "pidgindefaultvideosink",
+             "name", "Pidgin Default Video Sink",
+             "type", PURPLE_MEDIA_ELEMENT_VIDEO
+                 | PURPLE_MEDIA_ELEMENT_SINK
+                 | PURPLE_MEDIA_ELEMENT_ONE_SINK,
+             "create-cb", create_default_video_sink, NULL);
+    PurpleMediaElementInfo *default_audio_src =
+        g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
+             "id", "pidgindefaultaudiosrc",
+             "name", "Pidgin Default Audio Source",
+             "type", PURPLE_MEDIA_ELEMENT_AUDIO
+                 | PURPLE_MEDIA_ELEMENT_SRC
+                 | PURPLE_MEDIA_ELEMENT_ONE_SRC
+                 | PURPLE_MEDIA_ELEMENT_UNIQUE,
+             "create-cb", create_default_audio_src, NULL);
+    PurpleMediaElementInfo *default_audio_sink =
+        g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
+            "id", "pidgindefaultaudiosink",
+            "name", "Pidgin Default Audio Sink",
+            "type", PURPLE_MEDIA_ELEMENT_AUDIO
+                | PURPLE_MEDIA_ELEMENT_SINK
+                | PURPLE_MEDIA_ELEMENT_ONE_SINK,
+            "create-cb", create_default_audio_sink, NULL);
+
+    if (!g_thread_supported ())
+        g_thread_init (NULL);
+    
+    gst_init (argc, argv);
+
+    purple_media_manager_set_ui_caps (purple_media_manager_get (),
+        PURPLE_MEDIA_CAPS_AUDIO | PURPLE_MEDIA_CAPS_VIDEO);
+
+    purple_media_manager_set_active_element(manager, default_video_src);
+    purple_media_manager_set_active_element(manager, default_video_sink);
+    purple_media_manager_set_active_element(manager, default_audio_src);
+    purple_media_manager_set_active_element(manager, default_audio_sink);
+}
+/* End TODO */
+
 static void
 init_libpurple (void)
 {
@@ -288,6 +463,10 @@ main(int argc,
 
     signal (SIGCHLD, SIG_IGN);
     init_libpurple();
+
+/* TODO: Remove these once we're using telepathy-farsight */
+    init_libpurple_media (&argc, &argv);
+/* End TODO */
 
     ret = tp_run_connection_manager (UI_ID, PACKAGE_VERSION, get_cm, argc,
                                      argv);
