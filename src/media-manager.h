@@ -1,6 +1,8 @@
 /*
  * media-manager.h - Header for HazeMediaManager
- * Copyright (C) 2009 Collabora Ltd.
+ * Copyright (C) 2006, 2009 Collabora Ltd.
+ *
+ * Copied heavily from telepathy-gabble
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public

@@ -1,6 +1,9 @@
 /*
  * connection-capabilities.c - Capabilities interface implementation of HazeConnection
- * Copyright (C) 2009 Collabora Ltd.
+ * Copyright (C) 2005, 2006, 2008, 2009 Collabora Ltd.
+ * Copyright (C) 2005, 2006, 2008 Nokia Corporation
+ *
+ * Copied heavily from telepathy-gabble
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
