@@ -65,6 +65,12 @@ PKG_CHECK_MODULES(DBUS_GLIB,[dbus-glib-1 >= 0.73])
 AC_SUBST(DBUS_GLIB_CFLAGS)
 AC_SUBST(DBUS_GLIB_LIBS)
 
+# TODO: Remove this once we're using telepathy-farsight
+PKG_CHECK_MODULES(GSTREAMER,[gstreamer-0.10])
+AC_SUBST(GSTREAMER_CFLAGS)
+AC_SUBST(GSTREAMER_LIBS)
+# End TODO
+
 AC_CHECK_LIB(purple, purple_dbus_uninit,
   [ AC_DEFINE(HAVE_PURPLE_DBUS_UNINIT, [],
     [Define if purple_dbus_uninit is present in libpurple]) ],
