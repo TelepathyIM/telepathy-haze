@@ -19,7 +19,7 @@ m4_define([haze_version],
                  [haze_base_version].[haze_nano_version])])
 
 AC_INIT([telepathy-haze], [haze_version],
-        [https://bugs.freedesktop.org/enter_bug.cgi?product=Telepathy&component=telepathy-haze])
+        [https://bugs.freedesktop.org/enter_bug.cgi?product=Telepathy&component=haze])
 
 AC_CONFIG_MACRO_DIR([m4])
 
