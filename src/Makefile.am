@@ -38,6 +38,8 @@ telepathy_haze_SOURCES = main.c \
                          media-channel.h \
                          media-manager.c \
                          media-manager.h \
+                         media-stream.c \
+                         media-stream.h \
                          notify.c \
                          notify.h \
                          request.c \
