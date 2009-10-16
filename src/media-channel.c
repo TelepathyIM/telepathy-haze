@@ -1268,9 +1268,9 @@ _haze_media_channel_request_contents (HazeMediaChannel *chan,
   HazeMediaChannelPrivate *priv = chan->priv;
   gboolean want_audio, want_video;
   guint idx;
-  PurpleMediaSessionType type = PURPLE_MEDIA_NONE;
   TpHandleRepoIface *contact_handles;
   const gchar *contact_id;
+  guint audio_count = 0, video_count = 0;
 
   DEBUG ("called");
 
@@ -1338,9 +1338,26 @@ _haze_media_channel_request_contents (HazeMediaChannel *chan,
       guint media_type = g_array_index (media_types, guint, idx);
 
       if (media_type == TP_MEDIA_STREAM_TYPE_AUDIO)
-        type = PURPLE_MEDIA_AUDIO;
+        ++audio_count;
       else if (media_type == TP_MEDIA_STREAM_TYPE_VIDEO)
-        type = PURPLE_MEDIA_VIDEO;
+        ++video_count;
+    }
+
+  while (audio_count > 0 || video_count > 0)
+    {
+      PurpleMediaSessionType type = PURPLE_MEDIA_NONE;
+
+      if (audio_count > 0)
+        {
+          type |= PURPLE_MEDIA_AUDIO;
+          --audio_count;
+        }
+
+      if (video_count > 0)
+        {
+          type |= PURPLE_MEDIA_VIDEO;
+          --video_count;
+        }
 
       if (purple_prpl_initiate_media (priv->conn->account,
           contact_id, type) == FALSE)
