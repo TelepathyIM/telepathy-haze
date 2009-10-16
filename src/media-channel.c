@@ -31,6 +31,7 @@
 
 #include "connection.h"
 #include "debug.h"
+#include "media-stream.h"
 #include "mediamanager.h"
 
 static void channel_iface_init (gpointer, gpointer);
@@ -121,6 +122,8 @@ struct _HazeMediaChannelPrivate
 
   guint next_stream_id;
 
+  GPtrArray *streams;
+
   TpLocalHoldState hold_state;
   TpLocalHoldStateReason hold_state_reason;
 
@@ -144,27 +147,54 @@ haze_media_channel_init (HazeMediaChannel *self)
   self->priv = priv;
 
   priv->next_stream_id = 1;
+  priv->streams = g_ptr_array_sized_new (1);
 
   /* initialize properties mixin */
   tp_properties_mixin_init (G_OBJECT (self), G_STRUCT_OFFSET (
         HazeMediaChannel, properties));
 }
 
-/* Add this when the session handler interface is implemented */
-#if 0
-static void
-media_error_cb(PurpleMedia *media,
-               const gchar *error,
-               HazeMediaChannel *chan)
+static HazeMediaStream *
+find_stream_by_name (HazeMediaChannel *self,
+                     const gchar *name,
+                     GError **error)
 {
+  HazeMediaChannelPrivate *priv = self->priv;
+  guint i;
+
+  for (i = 0; i < priv->streams->len; i++)
+    {
+      HazeMediaStream *stream = g_ptr_array_index (priv->streams, i);
+      const gchar *stream_id;
+
+      g_object_get (stream, "name", &stream_id, NULL);
+      if (g_str_equal (name, stream_id))
+        return stream;
+    }
+
+  g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      "given stream name %s does not exist", name);
+  return NULL;
 }
-#endif
 
 static void
-media_state_changed_cb(PurpleMedia *media,
-                       PurpleMediaState state,
-                       gchar *sid, gchar *name,
-                       HazeMediaChannel *chan)
+media_error_cb (PurpleMedia *media,
+                const gchar *error,
+                HazeMediaChannel *chan)
+{
+  HazeMediaStream *stream = g_ptr_array_index (chan->priv->streams, 0);
+  if (stream != NULL) {
+    guint id;
+    g_object_get (stream, "id", &id, NULL);
+    tp_svc_channel_type_streamed_media_emit_stream_error (chan, id, 0, error);
+  }
+}
+
+static void
+media_state_changed_cb (PurpleMedia *media,
+                        PurpleMediaState state,
+                        gchar *sid, gchar *name,
+                        HazeMediaChannel *chan)
 {
   if (sid == NULL && name == NULL)
     {
@@ -206,13 +236,95 @@ media_state_changed_cb(PurpleMedia *media,
             }
         }
     }
-  else if (state == PURPLE_MEDIA_STATE_NEW &&
-      sid != NULL && name != NULL)
+  else if (state == PURPLE_MEDIA_STATE_NEW)
     {
-      if (purple_media_get_session_type (media, sid) & PURPLE_MEDIA_VIDEO)
+      if (sid != NULL && name != NULL)
         {
-          /* Show remote video in its own window */
-          purple_media_set_output_window (media, sid, name, 0);
+          if (purple_media_get_session_type (media, sid) & PURPLE_MEDIA_VIDEO)
+            {
+              /* Show remote video in its own window */
+              purple_media_set_output_window (media, sid, name, 0);
+            }
+        }
+      else if (sid != NULL && name == NULL)
+        {
+          PurpleMediaSessionType type;
+          HazeMediaStream *stream;
+          gchar *object_path;
+          guint id;
+
+          type = purple_media_get_session_type (chan->priv->media, sid);
+
+          id = chan->priv->next_stream_id++;
+
+          object_path = g_strdup_printf ("%s/MediaStream%u",
+              chan->priv->object_path, id);
+
+          stream = haze_media_stream_new (object_path, media,
+              sid, id, "", NULL, FALSE);
+
+          g_free (object_path);
+
+          DEBUG ("%p: created new MediaStream %p for content '%s'",
+              chan, stream, name);
+
+          g_ptr_array_add (chan->priv->streams, stream);
+
+          tp_svc_channel_type_streamed_media_emit_stream_added (
+              chan, 0, chan->priv->initial_peer, type & PURPLE_MEDIA_AUDIO ?
+              TP_MEDIA_STREAM_TYPE_AUDIO : TP_MEDIA_STREAM_TYPE_VIDEO);
+        }
+    }
+  else if (state == PURPLE_MEDIA_STATE_END && sid != NULL)
+    {
+      HazeMediaStream *stream = find_stream_by_name (chan, sid, NULL);
+      if (stream != NULL)
+        {
+          guint id;
+          g_object_get (stream, "id", &id, NULL);
+          tp_svc_channel_type_streamed_media_emit_stream_removed (chan, id);
+        }
+    }
+
+  if (sid != NULL && name == NULL)
+    {
+      TpMediaStreamState tp_state;
+      HazeMediaStream *stream;
+
+      if (state == PURPLE_MEDIA_STATE_NEW)
+        tp_state = TP_MEDIA_STREAM_STATE_CONNECTING;
+      else if (state == PURPLE_MEDIA_STATE_CONNECTED)
+        tp_state = TP_MEDIA_STREAM_STATE_CONNECTED;
+      else if (state == PURPLE_MEDIA_STATE_END)
+        tp_state = TP_MEDIA_STREAM_STATE_DISCONNECTED;
+      else
+        {
+          DEBUG ("Invalid state %d", state);
+          return;
+        }
+
+      stream = find_stream_by_name (chan, sid, NULL);
+      if (stream != NULL)
+        {
+          guint id;
+          g_object_get (stream, "id", &id, NULL);
+          tp_svc_channel_type_streamed_media_emit_stream_state_changed (chan,
+              id, tp_state);
+        }
+    }
+
+  if (state == PURPLE_MEDIA_STATE_END && sid != NULL && name == NULL)
+    {
+      HazeMediaStream *stream = find_stream_by_name (chan, sid, NULL);
+
+      if (stream != NULL)
+        {
+          guint id;
+          g_object_get (stream, "id", &id, NULL);
+          g_ptr_array_remove (chan->priv->streams, stream);
+          g_object_unref (stream);
+          tp_svc_channel_type_streamed_media_emit_stream_removed (
+              chan, id);
         }
     }
 }
@@ -255,11 +367,8 @@ _latch_to_session (HazeMediaChannel *chan)
 
   DEBUG ("%p: Latching onto session %p", chan, priv->media);
 
-/* Add this when the session handler interface is implemented */
-#if 0
   g_signal_connect(G_OBJECT(priv->media), "error",
        G_CALLBACK(media_error_cb), chan);
-#endif
   g_signal_connect(G_OBJECT(priv->media), "state-changed",
        G_CALLBACK(media_state_changed_cb), chan);
   g_signal_connect(G_OBJECT(priv->media), "stream-info",
@@ -795,6 +904,33 @@ haze_media_channel_dispose (GObject *object)
   if (priv->media != NULL)
     g_object_unref (priv->media);
   priv->media = NULL;
+
+  /* All of the streams should have closed in response to the contents being
+   * removed when the call ended.
+   */
+#if 0
+  g_assert (priv->streams->len == 0);
+#else
+  /*
+   * Should only be needed until libpurple emits
+   * PURPLE_MEDIA_STATE_END correctly
+   */
+    {
+      guint i, id;
+
+      for (i = 0; i < priv->streams->len; i++)
+        {
+          HazeMediaStream *stream = g_ptr_array_index (priv->streams, i);
+          g_object_get (stream, "id", &id, NULL); 
+          g_ptr_array_remove (priv->streams, stream);
+          g_object_unref (stream);
+          tp_svc_channel_type_streamed_media_emit_stream_removed (
+              object, id);
+        }
+    }
+#endif
+  g_ptr_array_free (priv->streams, TRUE);
+  priv->streams = NULL;
 
   if (G_OBJECT_CLASS (haze_media_channel_parent_class)->dispose)
     G_OBJECT_CLASS (haze_media_channel_parent_class)->dispose (object);
