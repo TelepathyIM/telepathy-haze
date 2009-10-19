@@ -24,12 +24,13 @@
 #include "media-stream.h"
 
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/errors.h>
 #include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/properties-mixin.h>
 
 #define DEBUG_FLAG HAZE_DEBUG_MEDIA
 
 #include "debug.h"
-#include "media-channel.h"
 
 static void dbus_properties_iface_init (gpointer, gpointer);
 
