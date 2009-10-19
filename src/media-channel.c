@@ -134,6 +134,7 @@ struct _HazeMediaChannelPrivate
 
   /* These are really booleans, but gboolean is signed. Thanks, GLib */
   unsigned ready:1;
+  unsigned media_ended:1;
   unsigned closed:1;
   unsigned dispose_has_run:1;
 };
@@ -196,47 +197,15 @@ media_state_changed_cb (PurpleMedia *media,
                         gchar *sid, gchar *name,
                         HazeMediaChannel *chan)
 {
-  if (sid == NULL && name == NULL)
-    {
-      if (state == PURPLE_MEDIA_STATE_END)
-        {
-          HazeMediaChannelPrivate *priv = chan->priv;
-          TpGroupMixin *mixin = TP_GROUP_MIXIN (chan);
-          guint terminator;         
-          TpHandle peer;
-          TpIntSet *set;
+  HazeMediaChannelPrivate *priv = chan->priv;
 
-          g_object_unref (priv->media);
-          priv->media = NULL;
+  DEBUG ("%s %s %s",
+      state == PURPLE_MEDIA_STATE_NEW ? "NEW" :
+      state == PURPLE_MEDIA_STATE_CONNECTED ? "CONNECTED" :
+      state == PURPLE_MEDIA_STATE_END ? "END" :
+      "UNKNOWN", sid, name);
 
-          peer = priv->initial_peer;
-
-          /*
-           * This isn't always true. We might need to have this happen on
-           * REJECT/HANGUP signals instead
-           */
-          terminator = mixin->self_handle;
-
-          set = tp_intset_new ();
-
-          /* remove us and the peer from the member list */
-          tp_intset_add (set, mixin->self_handle);
-          tp_intset_add (set, peer);
-
-          tp_group_mixin_change_members ((GObject *) chan,
-              "Media session ended", NULL, set, NULL, NULL,
-              terminator, TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
-
-          tp_intset_destroy (set);
-
-          if (!priv->closed)
-            {
-               DEBUG ("calling media channel close from state changed cb");
-               haze_media_channel_close (chan);
-            }
-        }
-    }
-  else if (state == PURPLE_MEDIA_STATE_NEW)
+  if (state == PURPLE_MEDIA_STATE_NEW)
     {
       if (sid != NULL && name != NULL)
         {
@@ -253,12 +222,12 @@ media_state_changed_cb (PurpleMedia *media,
           gchar *object_path;
           guint id;
 
-          type = purple_media_get_session_type (chan->priv->media, sid);
+          type = purple_media_get_session_type (priv->media, sid);
 
-          id = chan->priv->next_stream_id++;
+          id = priv->next_stream_id++;
 
           object_path = g_strdup_printf ("%s/MediaStream%u",
-              chan->priv->object_path, id);
+              priv->object_path, id);
 
           stream = haze_media_stream_new (object_path, media,
               sid, id, "", NULL, FALSE);
@@ -268,21 +237,11 @@ media_state_changed_cb (PurpleMedia *media,
           DEBUG ("%p: created new MediaStream %p for content '%s'",
               chan, stream, name);
 
-          g_ptr_array_add (chan->priv->streams, stream);
+          g_ptr_array_add (priv->streams, stream);
 
           tp_svc_channel_type_streamed_media_emit_stream_added (
-              chan, 0, chan->priv->initial_peer, type & PURPLE_MEDIA_AUDIO ?
+              chan, 0, priv->initial_peer, type & PURPLE_MEDIA_AUDIO ?
               TP_MEDIA_STREAM_TYPE_AUDIO : TP_MEDIA_STREAM_TYPE_VIDEO);
-        }
-    }
-  else if (state == PURPLE_MEDIA_STATE_END && sid != NULL)
-    {
-      HazeMediaStream *stream = find_stream_by_name (chan, sid, NULL);
-      if (stream != NULL)
-        {
-          guint id;
-          g_object_get (stream, "id", &id, NULL);
-          tp_svc_channel_type_streamed_media_emit_stream_removed (chan, id);
         }
     }
 
@@ -313,18 +272,73 @@ media_state_changed_cb (PurpleMedia *media,
         }
     }
 
-  if (state == PURPLE_MEDIA_STATE_END && sid != NULL && name == NULL)
+  if (state == PURPLE_MEDIA_STATE_END)
     {
-      HazeMediaStream *stream = find_stream_by_name (chan, sid, NULL);
-
-      if (stream != NULL)
+      if (sid != NULL && name == NULL)
         {
+          HazeMediaStream *stream = find_stream_by_name (chan, sid, NULL);
+
+          if (stream != NULL)
+            {
+              guint id;
+              g_object_get (stream, "id", &id, NULL);
+              g_ptr_array_remove (priv->streams, stream);
+              g_object_unref (stream);
+              tp_svc_channel_type_streamed_media_emit_stream_removed (
+                  chan, id);
+            }
+        }
+      else if (sid == NULL && name == NULL)
+        {
+          TpGroupMixin *mixin = TP_GROUP_MIXIN (chan);
+          guint terminator;         
+          TpHandle peer;
+          TpIntSet *set;
+
+          /*
+           * This shouldn't be needed once libpurple emits
+           * PURPLE_MEDIA_STATE_END properly
+           */
           guint id;
-          g_object_get (stream, "id", &id, NULL);
-          g_ptr_array_remove (chan->priv->streams, stream);
-          g_object_unref (stream);
-          tp_svc_channel_type_streamed_media_emit_stream_removed (
-              chan, id);
+
+          while (priv->streams->len > 0)
+            {
+              HazeMediaStream *stream = g_ptr_array_index (priv->streams, 0);
+              g_object_get (stream, "id", &id, NULL); 
+              g_ptr_array_remove_fast (priv->streams, stream);
+              g_object_unref (stream);
+              tp_svc_channel_type_streamed_media_emit_stream_removed (
+                  chan, id);
+            }
+          /* END */
+
+          priv->media_ended = TRUE;
+
+          peer = priv->initial_peer;
+
+          /*
+           * This isn't always true. We might need to have this happen or
+           * cache it on REJECT/HANGUP signals instead
+           */
+          terminator = mixin->self_handle;
+
+          set = tp_intset_new ();
+
+          /* remove us and the peer from the member list */
+          tp_intset_add (set, mixin->self_handle);
+          tp_intset_add (set, peer);
+
+          tp_group_mixin_change_members ((GObject *) chan,
+              "Media session ended", NULL, set, NULL, NULL,
+              terminator, TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
+
+          tp_intset_destroy (set);
+
+          if (!priv->closed)
+            {
+               DEBUG ("calling media channel close from state changed cb");
+               haze_media_channel_close (chan);
+            }
         }
     }
 }
@@ -908,27 +922,8 @@ haze_media_channel_dispose (GObject *object)
   /* All of the streams should have closed in response to the contents being
    * removed when the call ended.
    */
-#if 0
   g_assert (priv->streams->len == 0);
-#else
-  /*
-   * Should only be needed until libpurple emits
-   * PURPLE_MEDIA_STATE_END correctly
-   */
-    {
-      guint i, id;
 
-      for (i = 0; i < priv->streams->len; i++)
-        {
-          HazeMediaStream *stream = g_ptr_array_index (priv->streams, i);
-          g_object_get (stream, "id", &id, NULL); 
-          g_ptr_array_remove (priv->streams, stream);
-          g_object_unref (stream);
-          tp_svc_channel_type_streamed_media_emit_stream_removed (
-              object, id);
-        }
-    }
-#endif
   g_ptr_array_free (priv->streams, TRUE);
   priv->streams = NULL;
 
@@ -979,9 +974,12 @@ haze_media_channel_close (HazeMediaChannel *self)
     {
       priv->closed = TRUE;
 
-      if (priv->media != NULL)
-        purple_media_stream_info (priv->media,
-            PURPLE_MEDIA_INFO_HANGUP, NULL, NULL, FALSE);
+      if (!priv->media_ended)
+        {
+          priv->media_ended = TRUE;
+          purple_media_stream_info (priv->media,
+              PURPLE_MEDIA_INFO_HANGUP, NULL, NULL, FALSE);
+        }
 
       tp_svc_channel_emit_closed (self);
     }
