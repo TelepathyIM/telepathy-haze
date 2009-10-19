@@ -293,6 +293,7 @@ haze_media_stream_set_property (GObject      *object,
     case PROP_MEDIA:
       g_assert (priv->media == NULL);
       priv->media = g_value_dup_object (value);
+      break;
     case PROP_NAT_TRAVERSAL:
       g_assert (priv->nat_traversal == NULL);
       priv->nat_traversal = g_value_dup_string (value);
