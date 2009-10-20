@@ -353,127 +353,43 @@ haze_connection_capabilities_iface_init (gpointer g_iface,
 #undef IMPLEMENT
 }
 
-/*
- * HACK: polling after 10 seconds of getting the presence on jabber
- * connections to get the real caps. Libpurple doesn't yet provide
- * a way to indicate when caps change or even when the initial caps
- * are received.
- */
-/*
- * This array should be in the HazeConnection structure, but I'm not
- * going to bother since this is just a hack.
- */
-static GArray *caps_cb_ids = NULL;
-
-typedef struct {
-  PurpleConnection *pc;
-  gchar *bname;
-  PurpleMediaCaps caps;
-} CapsReceivedData;
-
-static gboolean
-caps_received_cb_cb (gpointer data)
+static void *
+haze_connection_capabilities_get_handle (void)
 {
-  CapsReceivedData *crd = data;
-  PurpleAccount *account = purple_connection_get_account (crd->pc);
+  static int handle;
+  return &handle;
+}
+
+static void
+caps_changed_cb (PurpleBuddy *buddy,
+                 PurpleMediaCaps caps,
+                 PurpleMediaCaps oldcaps)
+{
+  PurpleAccount *account = purple_buddy_get_account (buddy);
   HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
   TpHandleRepoIface *contact_repo =
       tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
-  const gchar *bname = crd->bname;
+  const gchar *bname = purple_buddy_get_name(buddy);
   TpHandle contact = tp_handle_ensure (contact_repo, bname, NULL, NULL);
-  PurpleMediaCaps caps = purple_prpl_get_media_caps (account, bname);
-
-  caps_cb_ids = g_array_remove_index (caps_cb_ids, 0);
 
   _emit_capabilities_changed (conn, contact,
-      purple_caps_to_tp_flags(crd->caps),
+      purple_caps_to_tp_flags(oldcaps),
       purple_caps_to_tp_flags(caps));
-
-  g_free(crd->bname);
-  g_slice_free(CapsReceivedData, crd);
-  return FALSE;
 }
-
-static gboolean
-caps_received_cb (PurpleConnection *pc,
-                  const char *type,
-                  const char *from,
-                  xmlnode *presence)
-{
-  PurpleAccount *account = purple_connection_get_account (pc);
-  CapsReceivedData *crd = g_slice_new0 (CapsReceivedData);
-  gulong id;
-
-  crd->pc = pc;
-  crd->bname = g_strdup (from);
-  crd->caps = purple_prpl_get_media_caps (account, from);
-
-  id = g_timeout_add_seconds (10, caps_received_cb_cb, crd);
-  g_array_append_val (caps_cb_ids, id);
-  return FALSE;
-}
-
-static void
-connection_status_changed_cb (HazeConnection *conn,
-                              guint status,
-                              guint reason,
-                              HazeMediaManager *self)
-{
-  PurplePlugin *jabber;
-
-  switch (status)
-    {
-    case TP_CONNECTION_STATUS_CONNECTING:
-      caps_cb_ids = g_array_new (FALSE, FALSE, sizeof (gulong));
-      jabber = purple_find_prpl ("prpl-jabber");
-
-      if (jabber)
-        purple_signal_connect (jabber, "jabber-receiving-presence",
-            conn, PURPLE_CALLBACK (caps_received_cb), NULL);
-      break;
-
-    case TP_CONNECTION_STATUS_DISCONNECTED:
-      jabber = purple_find_prpl ("prpl-jabber");
-
-      if (jabber)
-        purple_signal_disconnect (jabber, "jabber-receiving-presence",
-            conn, PURPLE_CALLBACK (caps_received_cb));
-
-      while (caps_cb_ids->len > 0)
-        {
-          gulong tmp = g_array_index (caps_cb_ids, gulong, 0);
-          caps_cb_ids = g_array_remove_index_fast (caps_cb_ids, 0);
-          g_source_remove (tmp);
-        }
-
-      g_array_free (caps_cb_ids, TRUE);
-
-      if (conn->status_changed_id != 0)
-        {
-          g_signal_handler_disconnect (conn, conn->status_changed_id);
-          conn->status_changed_id = 0;
-        }
-
-      break;
-    }
-}
-/* end hack */
 
 void
 haze_connection_capabilities_class_init (GObjectClass *object_class)
 {
+  purple_signal_connect (purple_blist_get_handle (), "buddy-caps-changed",
+      haze_connection_capabilities_get_handle (),
+      PURPLE_CALLBACK (caps_changed_cb), NULL);
 }
 
 void
 haze_connection_capabilities_init (GObject *object)
 {
-  HazeConnection *conn = HAZE_CONNECTION (object);
   tp_contacts_mixin_add_contact_attributes_iface (G_OBJECT (object),
       TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES,
       conn_capabilities_fill_contact_attributes);
-
-  /* Part of the hack to get media caps right for jabber */
-  conn->status_changed_id = g_signal_connect (conn,
-      "status-changed", (GCallback) connection_status_changed_cb, object);
 }
