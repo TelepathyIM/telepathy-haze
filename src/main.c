@@ -338,9 +338,6 @@ init_libpurple_media (int *argc,
 
     gst_init (argc, argv);
 
-    purple_media_manager_set_ui_caps (purple_media_manager_get (),
-        PURPLE_MEDIA_CAPS_AUDIO | PURPLE_MEDIA_CAPS_VIDEO);
-
     purple_media_manager_set_active_element(manager, default_video_src);
     purple_media_manager_set_active_element(manager, default_video_sink);
     purple_media_manager_set_active_element(manager, default_audio_src);
