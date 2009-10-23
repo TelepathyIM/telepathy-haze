@@ -265,8 +265,12 @@ _translate_protocol_option (PurpleAccountOption *option,
     if (g_str_equal (paramspec->name, "server"))
         paramspec->filter = _param_filter_no_blanks;
 
-    /* are there other non-password secrets? */
-    if (g_str_equal (paramspec->name, "private-key"))
+    /* There don't seem to be any secrets except for password at the moment
+     * (SILC's private-key is a filename, so its value is not actually secret).
+     * If more appear, e.g. http-proxy-password, this would be a good place to
+     * set the SECRET flag on them; for future-proofing I'll assume tha
+     * anything ending with -password is likely to be secret. */
+    if (g_str_has_suffix (paramspec->name, "-password"))
         paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_SECRET;
 
     return TRUE;
