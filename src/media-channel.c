@@ -1157,10 +1157,19 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
   if ((purple_prpl_get_media_caps (priv->conn->account, target_id) &
       PURPLE_MEDIA_CAPS_MODIFY_SESSION) == 0)
     {
-      GError e = { TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-          "Streams can't be removed in this Haze protocol's calls" };
-      DEBUG ("%s", e.message);
-      dbus_g_method_return_error (context, &e);
+      TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+      gchar *name;
+      GError *e;
+
+      g_object_get (base_conn, "protocol", &name, NULL);
+      g_set_error (&e, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          "Streams can't be removed in Haze's \"%s\" protocol's calls", name);
+      g_free (name);
+
+      DEBUG ("%s", e->message);
+      dbus_g_method_return_error (context, e);
+
+      g_error_free(e);
       g_list_free (ids);
       return;
     }
