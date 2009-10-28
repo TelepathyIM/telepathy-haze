@@ -1149,9 +1149,6 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
 
   priv = obj->priv;
 
-  ids = purple_media_get_session_ids (priv->media);
-  len = g_list_length (ids);
-
   g_object_get (obj, "target-id", &target_id, NULL);
 
   if ((purple_prpl_get_media_caps (priv->conn->account, target_id) &
@@ -1170,11 +1167,13 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
       dbus_g_method_return_error (context, e);
 
       g_error_free(e);
-      g_list_free (ids);
       return;
     }
 
+  ids = purple_media_get_session_ids (priv->media);
+  len = g_list_length (ids);
   media_ids = g_ptr_array_new ();
+
   for (i = 0; i < streams->len; ++i)
     {
       guint id = g_array_index (streams, guint, i);
