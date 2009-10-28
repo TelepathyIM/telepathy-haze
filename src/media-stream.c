@@ -94,13 +94,12 @@ struct _HazeMediaStreamPrivate
 
   gboolean on_hold;
 
-  /* These are really booleans, but gboolean is signed. Thanks, GLib */
-  unsigned closed:1;
-  unsigned dispose_has_run:1;
-  unsigned local_hold:1;
-  unsigned ready:1;
-  unsigned sending:1;
-  unsigned created_locally:1;
+  gboolean closed;
+  gboolean dispose_has_run;
+  gboolean local_hold;
+  gboolean ready;
+  gboolean sending;
+  gboolean created_locally;
 };
 
 HazeMediaStream *

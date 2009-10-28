@@ -132,11 +132,10 @@ struct _HazeMediaChannelPrivate
   gboolean initial_audio;
   gboolean initial_video;
 
-  /* These are really booleans, but gboolean is signed. Thanks, GLib */
-  unsigned ready:1;
-  unsigned media_ended:1;
-  unsigned closed:1;
-  unsigned dispose_has_run:1;
+  gboolean ready;
+  gboolean media_ended;
+  gboolean closed;
+  gboolean dispose_has_run;
 };
 
 static void
