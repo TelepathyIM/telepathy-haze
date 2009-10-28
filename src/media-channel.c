@@ -291,7 +291,7 @@ media_state_changed_cb (PurpleMedia *media,
       else if (sid == NULL && name == NULL)
         {
           TpGroupMixin *mixin = TP_GROUP_MIXIN (chan);
-          guint terminator;         
+          guint terminator;
           TpHandle peer;
           TpIntSet *set;
 
@@ -304,7 +304,7 @@ media_state_changed_cb (PurpleMedia *media,
           while (priv->streams->len > 0)
             {
               HazeMediaStream *stream = g_ptr_array_index (priv->streams, 0);
-              g_object_get (stream, "id", &id, NULL); 
+              g_object_get (stream, "id", &id, NULL);
               g_ptr_array_remove_fast (priv->streams, stream);
               g_object_unref (stream);
               tp_svc_channel_type_streamed_media_emit_stream_removed (

@@ -335,7 +335,7 @@ init_libpurple_media (int *argc,
 
     if (!g_thread_supported ())
         g_thread_init (NULL);
-    
+
     gst_init (argc, argv);
 
     purple_media_manager_set_ui_caps (purple_media_manager_get (),
