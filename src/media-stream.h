@@ -25,7 +25,6 @@
 
 #include <glib-object.h>
 
-//#include "types.h"
 #include <telepathy-glib/enums.h>
 
 #include "media.h"
@@ -99,7 +98,6 @@ gboolean haze_media_stream_change_direction (HazeMediaStream *stream,
 void haze_media_stream_accept_pending_local_send (HazeMediaStream *stream);
 
 HazeMediaStream *haze_media_stream_new (const gchar *object_path,
-//    HazeJingleContent *content,
     PurpleMedia *media,
     const gchar *name,
     guint id,
@@ -107,8 +105,6 @@ HazeMediaStream *haze_media_stream_new (const gchar *object_path,
     const GPtrArray *relay_info,
     gboolean local_hold);
 TpMediaStreamType haze_media_stream_get_media_type (HazeMediaStream *self);
-
-//HazeJingleMediaRtp *haze_media_stream_get_content (HazeMediaStream *self);
 
 G_END_DECLS
 
