@@ -26,6 +26,7 @@
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/channel-iface.h>
+#include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/svc-channel.h>
 #include <telepathy-glib/svc-properties-interface.h>
 
@@ -50,8 +51,6 @@ G_DEFINE_TYPE_WITH_CODE (HazeMediaChannel, haze_media_channel,
       tp_group_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_STREAMED_MEDIA,
       streamed_media_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_PROPERTIES_INTERFACE,
-      tp_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
       tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
@@ -59,7 +58,6 @@ G_DEFINE_TYPE_WITH_CODE (HazeMediaChannel, haze_media_channel,
 
 static const gchar *haze_media_channel_interfaces[] = {
     TP_IFACE_CHANNEL_INTERFACE_GROUP,
-    TP_IFACE_PROPERTIES_INTERFACE,
     NULL
 };
 
@@ -83,31 +81,8 @@ enum
   PROP_CHANNEL_PROPERTIES,
   PROP_INITIAL_AUDIO,
   PROP_INITIAL_VIDEO,
-  /* TP properties (see also below) */
-  PROP_NAT_TRAVERSAL,
-  PROP_STUN_SERVER,
-  PROP_STUN_PORT,
-  PROP_GTALK_P2P_RELAY_TOKEN,
   PROP_MEDIA,
   LAST_PROPERTY
-};
-
-/* TP properties */
-enum
-{
-  CHAN_PROP_NAT_TRAVERSAL = 0,
-  CHAN_PROP_STUN_SERVER,
-  CHAN_PROP_STUN_PORT,
-  CHAN_PROP_GTALK_P2P_RELAY_TOKEN,
-  NUM_CHAN_PROPS,
-  INVALID_CHAN_PROP
-};
-
-const TpPropertySignature channel_property_signatures[NUM_CHAN_PROPS] = {
-      { "nat-traversal",          G_TYPE_STRING },
-      { "stun-server",            G_TYPE_STRING },
-      { "stun-port",              G_TYPE_UINT   },
-      { "gtalk-p2p-relay-token",  G_TYPE_STRING }
 };
 
 struct _HazeMediaChannelPrivate
@@ -148,10 +123,6 @@ haze_media_channel_init (HazeMediaChannel *self)
 
   priv->next_stream_id = 1;
   priv->streams = g_ptr_array_sized_new (1);
-
-  /* initialize properties mixin */
-  tp_properties_mixin_init (G_OBJECT (self), G_STRUCT_OFFSET (
-        HazeMediaChannel, properties));
 }
 
 static HazeMediaStream *
@@ -501,8 +472,6 @@ haze_media_channel_get_property (GObject    *object,
   HazeMediaChannel *chan = HAZE_MEDIA_CHANNEL (object);
   HazeMediaChannelPrivate *priv = chan->priv;
   TpBaseConnection *base_conn = (TpBaseConnection *) priv->conn;
-  const gchar *param_name;
-  guint tp_property_id;
 
   switch (property_id) {
     case PROP_OBJECT_PATH:
@@ -603,21 +572,6 @@ haze_media_channel_get_property (GObject    *object,
       g_value_set_boolean (value, priv->initial_video);
       break;
     default:
-      param_name = g_param_spec_get_name (pspec);
-
-      if (tp_properties_mixin_has_property (object, param_name,
-            &tp_property_id))
-        {
-          GValue *tp_property_value =
-            chan->properties.properties[tp_property_id].value;
-
-          if (tp_property_value)
-            {
-              g_value_copy (tp_property_value, value);
-              return;
-            }
-        }
-
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
   }
@@ -631,8 +585,6 @@ haze_media_channel_set_property (GObject     *object,
 {
   HazeMediaChannel *chan = HAZE_MEDIA_CHANNEL (object);
   HazeMediaChannelPrivate *priv = chan->priv;
-  const gchar *param_name;
-  guint tp_property_id;
 
   switch (property_id) {
     case PROP_OBJECT_PATH:
@@ -677,19 +629,6 @@ haze_media_channel_set_property (GObject     *object,
       priv->initial_video = g_value_get_boolean (value);
       break;
     default:
-      param_name = g_param_spec_get_name (pspec);
-
-      if (tp_properties_mixin_has_property (object, param_name,
-            &tp_property_id))
-        {
-          tp_properties_mixin_change_value (object, tp_property_id, value,
-                                                NULL);
-          tp_properties_mixin_change_flags (object, tp_property_id,
-                                                TP_PROPERTY_FLAG_READ,
-                                                0, NULL);
-          return;
-        }
-
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
   }
@@ -818,33 +757,6 @@ haze_media_channel_class_init (HazeMediaChannelClass *haze_media_channel_class)
       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_INTERFACES, param_spec);
 
-  param_spec = g_param_spec_string ("nat-traversal", "NAT traversal",
-      "NAT traversal mechanism.",
-      "gtalk-p2p",
-      G_PARAM_CONSTRUCT | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_NAT_TRAVERSAL,
-      param_spec);
-
-  param_spec = g_param_spec_string ("stun-server", "STUN server",
-      "IP or address of STUN server.",
-      NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_STUN_SERVER, param_spec);
-
-  param_spec = g_param_spec_uint ("stun-port", "STUN port",
-      "UDP port of STUN server.",
-      0, G_MAXUINT16, 0,
-      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_STUN_PORT, param_spec);
-
-  param_spec = g_param_spec_string ("gtalk-p2p-relay-token",
-      "GTalk P2P Relay Token",
-      "Magic token to authenticate with the Google Talk relay server.",
-      NULL,
-      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_GTALK_P2P_RELAY_TOKEN,
-      param_spec);
-
   param_spec = g_param_spec_object ("media", "PurpleMedia object",
       "Purple media associated with this media channel object.",
       PURPLE_TYPE_MEDIA,
@@ -865,10 +777,6 @@ haze_media_channel_class_init (HazeMediaChannelClass *haze_media_channel_class)
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_INITIAL_VIDEO,
       param_spec);
-
-  tp_properties_mixin_class_init (object_class,
-      G_STRUCT_OFFSET (HazeMediaChannelClass, properties_class),
-      channel_property_signatures, NUM_CHAN_PROPS, NULL);
 
   haze_media_channel_class->dbus_props_class.interfaces = prop_interfaces;
   tp_dbus_properties_mixin_class_init (object_class,
@@ -939,7 +847,6 @@ haze_media_channel_finalize (GObject *object)
   g_free (priv->object_path);
 
   tp_group_mixin_finalize (object);
-  tp_properties_mixin_finalize (object);
 
   G_OBJECT_CLASS (haze_media_channel_parent_class)->finalize (object);
 }

@@ -27,7 +27,6 @@
 
 #include <telepathy-glib/dbus-properties-mixin.h>
 #include <telepathy-glib/group-mixin.h>
-#include <telepathy-glib/properties-mixin.h>
 
 G_BEGIN_DECLS
 
@@ -39,7 +38,6 @@ struct _HazeMediaChannelClass {
     GObjectClass parent_class;
 
     TpGroupMixinClass group_class;
-    TpPropertiesMixinClass properties_class;
     TpDBusPropertiesMixinClass dbus_props_class;
 };
 
@@ -47,7 +45,6 @@ struct _HazeMediaChannel {
     GObject parent;
 
     TpGroupMixin group;
-    TpPropertiesMixin properties;
 
     HazeMediaChannelPrivate *priv;
 };
