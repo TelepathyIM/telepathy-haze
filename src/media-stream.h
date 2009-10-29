@@ -25,6 +25,7 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/dbus-properties-mixin.h>
 #include <telepathy-glib/enums.h>
 
 #include "media.h"
@@ -47,6 +48,8 @@ typedef struct _HazeMediaStreamPrivate HazeMediaStreamPrivate;
 
 struct _HazeMediaStreamClass {
     GObjectClass parent_class;
+
+    TpDBusPropertiesMixinClass dbus_props_class;
 };
 
 struct _HazeMediaStream {
