@@ -1252,8 +1252,15 @@ _haze_media_channel_request_contents (HazeMediaChannel *chan,
       /* Check if the contact supports modifying the session */
       if ((caps & PURPLE_MEDIA_CAPS_MODIFY_SESSION) == 0)
         {
+          TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
+          gchar *name;
+
+          g_object_get (base_conn, "protocol", &name, NULL);
           g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-              "Streams can't be added to this Haze protocol's calls");
+              "Streams can't be added in Haze's \"%s\" protocol's calls",
+              name);
+
+          g_free (name);
           return FALSE;
         }
 
