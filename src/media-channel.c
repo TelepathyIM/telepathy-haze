@@ -1202,7 +1202,7 @@ _haze_media_channel_request_contents (HazeMediaChannel *chan,
         }
       else
         {
-          g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
               "given media type %u is invalid", media_type);
           return FALSE;
         }
