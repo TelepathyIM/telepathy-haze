@@ -283,8 +283,8 @@ media_state_changed_cb (PurpleMedia *media,
           peer = priv->initial_peer;
 
           /*
-           * This isn't always true. We might need to have this happen or
-           * cache it on REJECT/HANGUP signals instead
+           * Primarily, sessions will be ended with hangup or reject. Any that
+           * aren't are because of local errors so set the terminator to self.
            */
           terminator = mixin->self_handle;
 
@@ -335,6 +335,43 @@ media_stream_info_cb(PurpleMedia *media,
       /* add the peer to the member list */
       tp_group_mixin_change_members (G_OBJECT (chan), "", set, NULL, NULL,
           NULL, actor, TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
+    }
+  else if (type == PURPLE_MEDIA_INFO_REJECT ||
+      type == PURPLE_MEDIA_INFO_HANGUP)
+    {
+      TpGroupMixin *mixin = TP_GROUP_MIXIN (chan);
+      guint terminator;
+      TpIntSet *set;
+      gchar *reason;
+
+      if (sid != NULL)
+        return;
+
+      if (local == TRUE)
+        terminator = conn->self_handle;
+      else
+        /* This will need to get the handle from name for multi-user calls */
+        terminator = priv->initial_peer;
+
+      if (type == PURPLE_MEDIA_INFO_REJECT)
+        reason = "Media session rejected";
+      else
+        reason = "Media session hang up";
+
+      set = tp_intset_new ();
+
+      if (name != NULL)
+          /* Remove participant */
+          tp_intset_add (set, priv->initial_peer);
+      else
+          /* Remove us */
+          tp_intset_add (set, mixin->self_handle);
+
+      tp_group_mixin_change_members ((GObject *) chan,
+          reason, NULL, set, NULL, NULL, terminator,
+          TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
+
+      tp_intset_destroy (set);
     }
 }
 
