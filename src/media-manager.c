@@ -184,8 +184,7 @@ media_channel_closed_cb (HazeMediaChannel *chan, gpointer user_data)
 static HazeMediaChannel *
 new_media_channel (HazeMediaManager *self,
                    PurpleMedia *media,
-                   TpHandle maybe_peer,
-                   gboolean peer_in_rp,
+                   TpHandle peer,
                    gboolean initial_audio,
                    gboolean initial_video)
 {
@@ -208,8 +207,7 @@ new_media_channel (HazeMediaManager *self,
                        "connection", priv->conn,
                        "object-path", object_path,
                        "media", media,
-                       "initial-peer", maybe_peer,
-                       "peer-in-rp", peer_in_rp,
+                       "initial-peer", peer,
                        "initial-audio", initial_audio,
                        "initial-video", initial_video,
                        NULL);
@@ -270,8 +268,7 @@ init_media_cb (PurpleMediaManager *manager,
   if (purple_media_is_initiator (media, NULL, NULL) == TRUE)
     return TRUE;
 
-  chan = new_media_channel (self, media, contact,
-      FALSE, FALSE, FALSE);
+  chan = new_media_channel (self, media, contact, FALSE, FALSE);
   tp_channel_manager_emit_new_channel (self,
       TP_EXPORTABLE_CHANNEL (chan), NULL);
   DEBUG ("called");
@@ -445,19 +442,9 @@ haze_media_manager_requestotron (TpChannelManager *manager,
   TpHandle handle;
   HazeMediaChannel *channel = NULL;
   GError *error = NULL;
-  gboolean require_target_handle, add_peer_to_remote_pending;
   gboolean initial_audio, initial_video;
 
   /* Supported modes of operation:
-   * - RequestChannel(None, 0):
-   *     channel is anonymous;
-   *     caller may optionally use AddMembers to add the peer to RemotePending
-   *     without sending them any XML;
-   *     caller uses RequestStreams to set the peer and start the call.
-   * - RequestChannel(Contact, n) where n != 0:
-   *     channel has TargetHandle=n;
-   *     n is in remote pending;
-   *     call is started when caller calls RequestStreams.
    * - CreateChannel({THT: Contact, TH: n}):
    *     channel has TargetHandle=n
    *     n is not in the group interface at all
@@ -467,20 +454,6 @@ haze_media_manager_requestotron (TpChannelManager *manager,
    *       whatever properties and group membership it has;
    *     otherwise the same as into CreateChannel
    */
-  switch (method)
-    {
-    case METHOD_REQUEST:
-      require_target_handle = FALSE;
-      add_peer_to_remote_pending = TRUE;
-      break;
-    case METHOD_CREATE:
-    case METHOD_ENSURE:
-      require_target_handle = TRUE;
-      add_peer_to_remote_pending = FALSE;
-      break;
-    default:
-      g_assert_not_reached ();
-    }
 
   if (tp_strdiff (tp_asv_get_string (request_properties,
           TP_IFACE_CHANNEL ".ChannelType"),
@@ -504,22 +477,11 @@ haze_media_manager_requestotron (TpChannelManager *manager,
       /* already checked by TpBaseConnection */
       g_assert (handle == 0);
 
-      if (require_target_handle)
-        {
-          g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-              "A valid Contact handle must be provided when requesting a media "
-              "channel");
-          goto error;
-        }
+      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          "A valid Contact handle must be provided when requesting a media "
+          "channel");
 
-      if (tp_channel_manager_asv_has_unknown_properties (request_properties,
-              media_channel_fixed_properties, anon_channel_allowed_properties,
-              &error))
-        goto error;
-
-      channel = new_media_channel (self, NULL, 0, FALSE, FALSE, FALSE);
-      break;
-
+      goto error;
     case TP_HANDLE_TYPE_CONTACT:
       /* validity already checked by TpBaseConnection */
       g_assert (handle != 0);
@@ -552,7 +514,7 @@ haze_media_manager_requestotron (TpChannelManager *manager,
         }
 
       channel = new_media_channel (self, NULL, handle,
-          add_peer_to_remote_pending, initial_audio, initial_video);
+          initial_audio, initial_video);
       break;
     default:
       return FALSE;
