@@ -153,12 +153,8 @@ media_error_cb (PurpleMedia *media,
                 const gchar *error,
                 HazeMediaChannel *chan)
 {
-  HazeMediaStream *stream = g_ptr_array_index (chan->priv->streams, 0);
-  if (stream != NULL) {
-    guint id;
-    g_object_get (stream, "id", &id, NULL);
-    tp_svc_channel_type_streamed_media_emit_stream_error (chan, id, 0, error);
-  }
+  g_assert (HAZE_MEDIA_CHANNEL(chan)->priv != NULL);
+  DEBUG ("Media error on %s: %s", chan->priv->object_path, error);
 }
 
 static void
