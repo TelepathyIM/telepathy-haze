@@ -1357,7 +1357,7 @@ haze_media_channel_request_streams (TpSvcChannelTypeStreamedMedia *iface,
 }
 
 /**
- * gabble_media_channel_request_initial_streams:
+ * haze_media_channel_request_initial_streams:
  * @chan: an outgoing call, which must have just been constructed.
  * @succeeded_cb: called with arguments @user_data and a GPtrArray of
  *                TP_STRUCT_TYPE_MEDIA_STREAM_INFO if the request succeeds.
