@@ -34,6 +34,8 @@ telepathy_haze_SOURCES = main.c \
                          im-channel.c \
                          im-channel-factory.c \
                          im-channel-factory.h \
+                         media-backend.c \
+                         media-backend.h \
                          media-channel.c \
                          media-channel.h \
                          media-manager.c \
