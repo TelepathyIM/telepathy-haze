@@ -96,6 +96,8 @@ struct _HazeMediaChannelPrivate
   guint next_stream_id;
 
   GPtrArray *streams;
+  /* list of PendingStreamRequest* in no particular order */
+  GList *pending_stream_requests;
 
   TpLocalHoldState hold_state;
   TpLocalHoldStateReason hold_state_reason;
@@ -144,6 +146,154 @@ find_stream_by_name (HazeMediaChannel *self,
   g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
       "given stream name %s does not exist", name);
   return NULL;
+}
+
+/**
+ * make_stream_list:
+ *
+ * Creates an array of MediaStreamInfo structs.
+ */
+static GPtrArray *
+make_stream_list (HazeMediaChannel *self,
+                  guint len,
+                  HazeMediaStream **streams)
+{
+  HazeMediaChannelPrivate *priv = self->priv;
+  GPtrArray *ret;
+  guint i;
+  GType info_type = TP_STRUCT_TYPE_MEDIA_STREAM_INFO;
+
+  ret = g_ptr_array_sized_new (len);
+
+  for (i = 0; i < len; i++)
+    {
+      GValue entry = { 0, };
+      guint id;
+      TpHandle peer;
+      TpMediaStreamType type;
+      TpMediaStreamState connection_state;
+      CombinedStreamDirection combined_direction;
+
+      g_object_get (streams[i],
+          "id", &id,
+          "media-type", &type,
+          "connection-state", &connection_state,
+          "combined-direction", &combined_direction,
+          NULL);
+
+      peer = priv->initial_peer;
+
+      g_value_init (&entry, info_type);
+      g_value_take_boxed (&entry,
+          dbus_g_type_specialized_construct (info_type));
+
+      dbus_g_type_struct_set (&entry,
+          0, id,
+          1, peer,
+          2, type,
+          3, connection_state,
+          4, COMBINED_DIRECTION_GET_DIRECTION (combined_direction),
+          5, COMBINED_DIRECTION_GET_PENDING_SEND (combined_direction),
+          G_MAXUINT);
+
+      g_ptr_array_add (ret, g_value_get_boxed (&entry));
+    }
+
+  return ret;
+}
+
+typedef struct {
+    /* number of streams requested == number of content objects */
+    guint len;
+    /* array of @len borrowed pointers */
+    guint *types;
+    /* accumulates borrowed pointers to streams. Initially @len NULL pointers;
+     * when the stream for contents[i] is created, it is stored at streams[i].
+     */
+    HazeMediaStream **streams;
+    /* number of non-NULL elements in streams (0 <= satisfied <= contents) */
+    guint satisfied;
+    /* succeeded_cb(context, GPtrArray<TP_STRUCT_TYPE_MEDIA_STREAM_INFO>)
+     * will be called if the stream request succeeds.
+     */
+    GFunc succeeded_cb;
+    /* failed_cb(context, GError *) will be called if the stream request fails.
+     */
+    GFunc failed_cb;
+    gpointer context;
+} PendingStreamRequest;
+
+static PendingStreamRequest *
+pending_stream_request_new (const GArray *types,
+    GFunc succeeded_cb,
+    GFunc failed_cb,
+    gpointer context)
+{
+  PendingStreamRequest *p = g_slice_new0 (PendingStreamRequest);
+
+  g_assert (succeeded_cb);
+  g_assert (failed_cb);
+
+  p->len = types->len;
+  p->types = g_memdup (types->data, types->len * sizeof (gpointer));
+  p->streams = g_new0 (HazeMediaStream *, types->len);
+  p->satisfied = 0;
+  p->succeeded_cb = succeeded_cb;
+  p->failed_cb = failed_cb;
+  p->context = context;
+
+  return p;
+}
+
+static gboolean
+pending_stream_request_maybe_satisfy (PendingStreamRequest *p,
+                                      HazeMediaChannel *channel,
+                                      guint type,
+                                      HazeMediaStream *stream)
+{
+  guint i;
+
+  for (i = 0; i < p->len; i++)
+    {
+      if (p->types[i] == type)
+        {
+          g_assert (p->streams[i] == NULL);
+          p->streams[i] = stream;
+
+          if (++p->satisfied == p->len && p->context != NULL)
+            {
+              GPtrArray *ret = make_stream_list (channel, p->len, p->streams);
+
+              p->succeeded_cb (p->context, ret);
+              g_ptr_array_foreach (ret, (GFunc) g_value_array_free, NULL);
+              g_ptr_array_free (ret, TRUE);
+              p->context = NULL;
+              return TRUE;
+            }
+        }
+    }
+
+  return FALSE;
+}
+
+static void
+pending_stream_request_free (gpointer data)
+{
+  PendingStreamRequest *p = data;
+
+  if (p->context != NULL)
+    {
+      GError e = { TP_ERRORS, TP_ERROR_CANCELLED,
+          "The session terminated before the requested streams could be added"
+      };
+
+      p->failed_cb (p->context, &e);
+    }
+
+  g_free (p->types);
+  g_free (p->streams);
+
+  g_slice_free (PendingStreamRequest, p);
 }
 
 static void
@@ -202,6 +352,33 @@ media_state_changed_cb (PurpleMedia *media,
               chan, stream, name);
 
           g_ptr_array_add (priv->streams, stream);
+
+          /* if any RequestStreams call was waiting for a stream to be created for
+           * that content, return from it successfully */
+            {
+              GList *iter = priv->pending_stream_requests;
+
+              while (iter != NULL)
+               {
+                  if (pending_stream_request_maybe_satisfy (iter->data,
+                        chan, type & PURPLE_MEDIA_AUDIO ?
+                        TP_MEDIA_STREAM_TYPE_AUDIO :
+                        TP_MEDIA_STREAM_TYPE_VIDEO, stream))
+                    {
+                      GList *dead = iter;
+
+                      pending_stream_request_free (dead->data);
+
+                      iter = dead->next;
+                      priv->pending_stream_requests = g_list_delete_link (
+                          priv->pending_stream_requests, dead);
+                    }
+                  else
+                    {
+                      iter = iter->next;
+                    }
+                }
+            }
 
           tp_svc_channel_type_streamed_media_emit_stream_added (
               chan, 0, priv->initial_peer, type & PURPLE_MEDIA_AUDIO ?
@@ -297,6 +474,12 @@ media_state_changed_cb (PurpleMedia *media,
               terminator, TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
 
           tp_intset_destroy (set);
+
+          /* any contents that we were waiting for have now lost */
+          g_list_foreach (priv->pending_stream_requests,
+              (GFunc) pending_stream_request_free, NULL);
+          g_list_free (priv->pending_stream_requests);
+          priv->pending_stream_requests = NULL;
 
           if (!priv->closed)
             {
@@ -1280,6 +1463,7 @@ media_channel_request_streams (HazeMediaChannel *self,
     gpointer context)
 {
   HazeMediaChannelPrivate *priv = self->priv;
+  PendingStreamRequest *psr;
   GError *error = NULL;
 
   if (types->len == 0)
@@ -1311,6 +1495,11 @@ media_channel_request_streams (HazeMediaChannel *self,
   if (!_haze_media_channel_request_contents (self, contact_handle,
       types, &error))
     goto error;
+
+  psr = pending_stream_request_new (types, succeeded_cb, failed_cb,
+      context);
+  priv->pending_stream_requests = g_list_prepend (priv->pending_stream_requests,
+      psr);
 
   return;
 
