@@ -64,35 +64,30 @@ haze_debug_set_flags_from_env ()
 }
 
 
-static char *debug_level_names[] =
+static GLogLevelFlags debug_level_map[] =
 {
-    "all",
-    "misc",
-    "info",
-    "warning",
-    "error",
-    "fatal"
+    G_LOG_LEVEL_DEBUG,    /* PURPLE_DEBUG_ALL */
+    G_LOG_LEVEL_DEBUG,    /* PURPLE_DEBUG_MISC */
+    G_LOG_LEVEL_INFO,     /* PURPLE_DEBUG_INFO */
+    G_LOG_LEVEL_WARNING,  /* PURPLE_DEBUG_WARNING */
+    G_LOG_LEVEL_ERROR,    /* PURPLE_DEBUG_ERROR */
+    G_LOG_LEVEL_CRITICAL, /* PURPLE_DEBUG_CRITICAL */
 };
 
 static void
-log_to_debug_sender (const gchar *category,
+log_to_debug_sender (const gchar *domain,
                      GLogLevelFlags level,
                      const gchar *message)
 {
     TpDebugSender *dbg;
     GTimeVal now;
-    gchar *domain;
 
     dbg = tp_debug_sender_dup ();
 
     g_get_current_time (&now);
 
-    domain = g_strdup_printf ("%s/%s", G_LOG_DOMAIN, category);
+    tp_debug_sender_add_message (dbg, &now, domain, level, message);
 
-    tp_debug_sender_add_message (dbg, &now, domain,
-        G_LOG_LEVEL_DEBUG, message);
-
-    g_free (domain);
     g_object_unref (dbg);
 }
 
@@ -101,40 +96,16 @@ haze_debug_print (PurpleDebugLevel level,
                   const char *category,
                   const char *arg_s)
 {
-    char *argh = g_strchomp (g_strdup (arg_s));
-    const char *level_name = debug_level_names[level];
-    GLogLevelFlags log_level;
+    gchar *argh = g_strchomp (g_strdup (arg_s));
+    gchar *domain = g_strdup_printf ("purple/%s", category);
+    GLogLevelFlags log_level = debug_level_map[level];
 
-    switch (level)
-    {
-        case PURPLE_DEBUG_WARNING:
-            log_level = G_LOG_LEVEL_WARNING;
-            g_warning ("%s: %s", category, argh);
-            break;
-        case PURPLE_DEBUG_FATAL:
-            /* g_critical doesn't cause an abort() in haze, so libpurple will
-             * still get to do the honours of blowing us out of the water.
-             */
-            log_level = G_LOG_LEVEL_CRITICAL;
-            g_critical ("[%s] %s: %s", level_name, category, argh);
-            break;
-        case PURPLE_DEBUG_ERROR:
-        case PURPLE_DEBUG_MISC:
-        case PURPLE_DEBUG_INFO:
-        default:
-          if (level == PURPLE_DEBUG_ERROR)
-              log_level = G_LOG_LEVEL_ERROR;
-          else if (level == PURPLE_DEBUG_INFO)
-              log_level = G_LOG_LEVEL_INFO;
-          else
-              log_level = G_LOG_LEVEL_DEBUG;
+    log_to_debug_sender (domain, log_level, argh);
 
-            g_message ("[%s] %s: %s", level_name, category, argh);
-            break;
-    }
+    if (flags & HAZE_DEBUG_PURPLE)
+        g_log (domain, log_level, "%s", argh);
 
-    log_to_debug_sender (category, log_level, argh);
-
+    g_free (domain);
     g_free(argh);
 }
 
@@ -164,20 +135,22 @@ void
 haze_debug (const gchar *format,
             ...)
 {
+    gchar *domain;
     gchar *message;
     va_list args;
+
+    domain = g_strdup_printf ("%s/%s", G_LOG_DOMAIN, "haze");
 
     va_start (args, format);
     message = g_strdup_vprintf (format, args);
     va_end (args);
 
-    log_to_debug_sender ("haze", G_LOG_LEVEL_DEBUG, message);
+    log_to_debug_sender (domain, G_LOG_LEVEL_DEBUG, message);
 
     if (flags & HAZE_DEBUG_HAZE)
-    {
         g_log (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, "%s", message);
-    }
 
+    g_free (domain);
     g_free (message);
 }
 
