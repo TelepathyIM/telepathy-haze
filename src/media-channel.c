@@ -29,6 +29,7 @@
 #include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/svc-channel.h>
 #include <telepathy-glib/svc-properties-interface.h>
+#include <telepathy-glib/svc-media-interfaces.h>
 
 #include "connection.h"
 #include "debug.h"
@@ -37,6 +38,7 @@
 
 static void channel_iface_init (gpointer, gpointer);
 static void media_signalling_iface_init (gpointer, gpointer);
+static void session_handler_iface_init (gpointer, gpointer);
 static void streamed_media_iface_init (gpointer, gpointer);
 static gboolean haze_media_channel_add_member (GObject *obj,
     TpHandle handle,
@@ -44,6 +46,7 @@ static gboolean haze_media_channel_add_member (GObject *obj,
     GError **error);
 static gboolean haze_media_channel_remove_member (GObject *obj,
     TpHandle handle, const gchar *message, guint reason, GError **error);
+static void _emit_new_stream (HazeMediaChannel *chan, HazeMediaStream *stream);
 
 G_DEFINE_TYPE_WITH_CODE (HazeMediaChannel, haze_media_channel,
     G_TYPE_OBJECT,
@@ -56,12 +59,15 @@ G_DEFINE_TYPE_WITH_CODE (HazeMediaChannel, haze_media_channel,
       media_signalling_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
       tp_dbus_properties_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_MEDIA_SESSION_HANDLER,
+      session_handler_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL));
 
 static const gchar *haze_media_channel_interfaces[] = {
     TP_IFACE_CHANNEL_INTERFACE_GROUP,
     TP_IFACE_CHANNEL_INTERFACE_MEDIA_SIGNALLING,
+    TP_IFACE_MEDIA_SESSION_HANDLER,
     NULL
 };
 
@@ -387,6 +393,9 @@ media_state_changed_cb (PurpleMedia *media,
           tp_svc_channel_type_streamed_media_emit_stream_added (
               chan, 0, priv->initial_peer, type & PURPLE_MEDIA_AUDIO ?
               TP_MEDIA_STREAM_TYPE_AUDIO : TP_MEDIA_STREAM_TYPE_VIDEO);
+
+          if (priv->ready)
+            _emit_new_stream (chan, stream);
         }
     }
 
@@ -1768,6 +1777,125 @@ haze_media_channel_get_session_handlers (
 }
 
 static void
+_emit_new_stream (HazeMediaChannel *chan,
+                  HazeMediaStream *stream)
+{
+  gchar *object_path;
+  guint id, media_type;
+
+  g_object_get (stream,
+                "object-path", &object_path,
+                "id", &id,
+                "media-type", &media_type,
+                NULL);
+
+  /* all of the streams are bidirectional from farsight's point of view, it's
+   * just in the signalling they change */
+  DEBUG ("emitting MediaSessionHandler:NewStreamHandler signal for %s stream %d ",
+      media_type == TP_MEDIA_STREAM_TYPE_AUDIO ? "audio" : "video", id);
+  tp_svc_media_session_handler_emit_new_stream_handler (chan,
+      object_path, id, media_type, TP_MEDIA_STREAM_DIRECTION_BIDIRECTIONAL);
+
+  g_free (object_path);
+}
+
+static void
+haze_media_channel_ready (TpSvcMediaSessionHandler *iface,
+                          DBusGMethodInvocation *context)
+{
+  HazeMediaChannel *self = HAZE_MEDIA_CHANNEL (iface);
+  HazeMediaChannelPrivate *priv = self->priv;
+
+  if (priv->media == NULL)
+    {
+      /* This could also be because someone called Ready() before the
+       * SessionHandler was announced. But the fact that the SessionHandler is
+       * actually also the Channel, and thus this method is available before
+       * NewSessionHandler is emitted, is an implementation detail. So the
+       * error message describes the only legitimate situation in which this
+       * could arise.
+       */
+      GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "call has already ended" };
+
+      DEBUG ("no session, returning an error.");
+      dbus_g_method_return_error (context, &e);
+      return;
+    }
+
+  if (!priv->ready)
+    {
+      guint i;
+
+      DEBUG ("emitting NewStreamHandler for each stream");
+
+      priv->ready = TRUE;
+
+      for (i = 0; i < priv->streams->len; i++)
+        _emit_new_stream (self, g_ptr_array_index (priv->streams, i));
+    }
+
+  tp_svc_media_session_handler_return_from_ready (context);
+}
+
+static void
+haze_media_channel_error (TpSvcMediaSessionHandler *iface,
+                          guint errno,
+                          const gchar *message,
+                          DBusGMethodInvocation *context)
+{
+  HazeMediaChannel *self = HAZE_MEDIA_CHANNEL (iface);
+  HazeMediaChannelPrivate *priv;
+  GPtrArray *tmp;
+  guint i;
+
+  g_assert (HAZE_IS_MEDIA_CHANNEL (self));
+
+  priv = self->priv;
+
+  if (priv->media == NULL)
+    {
+      /* This could also be because someone called Error() before the
+       * SessionHandler was announced. But the fact that the SessionHandler is
+       * actually also the Channel, and thus this method is available before
+       * NewSessionHandler is emitted, is an implementation detail. So the
+       * error message describes the only legitimate situation in which this
+       * could arise.
+       */
+      GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "call has already ended" };
+
+      DEBUG ("no session, returning an error.");
+      dbus_g_method_return_error (context, &e);
+      return;
+    }
+
+  DEBUG ("Media.SessionHandler::Error called, error %u (%s) -- "
+      "emitting error on each stream", errno, message);
+
+  purple_media_end (priv->media, NULL, NULL);
+
+  /* Calling haze_media_stream_error () on all the streams will ultimately
+   * cause them all to emit 'closed'. In response to 'closed', stream_close_cb
+   * unrefs them, and removes them from priv->streams. So, we copy the stream
+   * list to avoid it being modified from underneath us.
+   */
+  tmp = g_ptr_array_sized_new (priv->streams->len);
+
+  for (i = 0; i < priv->streams->len; i++)
+    g_ptr_array_add (tmp, g_ptr_array_index (priv->streams, i));
+
+  for (i = 0; i < tmp->len; i++)
+    {
+      HazeMediaStream *stream = g_ptr_array_index (tmp, i);
+
+      haze_media_stream_error (stream, errno, message, NULL);
+    }
+
+  g_ptr_array_free (tmp, TRUE);
+
+  tp_svc_media_session_handler_return_from_error (context);
+}
+
+static void
 channel_iface_init (gpointer g_iface, gpointer iface_data)
 {
   TpSvcChannelClass *klass = (TpSvcChannelClass *) g_iface;
@@ -1805,5 +1933,18 @@ media_signalling_iface_init (gpointer g_iface, gpointer iface_data)
 #define IMPLEMENT(x) tp_svc_channel_interface_media_signalling_implement_##x (\
     klass, haze_media_channel_##x)
   IMPLEMENT(get_session_handlers);
+#undef IMPLEMENT
+}
+
+static void
+session_handler_iface_init (gpointer g_iface, gpointer iface_data)
+{
+  TpSvcMediaSessionHandlerClass *klass =
+    (TpSvcMediaSessionHandlerClass *) g_iface;
+
+#define IMPLEMENT(x) tp_svc_media_session_handler_implement_##x (\
+    klass, haze_media_channel_##x)
+  IMPLEMENT(error);
+  IMPLEMENT(ready);
 #undef IMPLEMENT
 }
