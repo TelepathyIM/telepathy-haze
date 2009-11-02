@@ -56,6 +56,7 @@ struct _HazeMediaStream {
     GObject parent;
 
     gchar *name;
+    gchar *peer;
 
     TpMediaStreamState connection_state;
 
@@ -103,6 +104,7 @@ void haze_media_stream_accept_pending_local_send (HazeMediaStream *stream);
 HazeMediaStream *haze_media_stream_new (const gchar *object_path,
     PurpleMedia *media,
     const gchar *name,
+    const gchar *peer,
     guint id,
     const gchar *nat_traversal,
     const GPtrArray *relay_info,

@@ -333,18 +333,16 @@ media_state_changed_cb (PurpleMedia *media,
     {
       if (sid != NULL && name != NULL)
         {
+          PurpleMediaSessionType type;
+          HazeMediaStream *stream;
+          gchar *object_path;
+          guint id;
+
           if (purple_media_get_session_type (media, sid) & PURPLE_MEDIA_VIDEO)
             {
               /* Show remote video in its own window */
               purple_media_set_output_window (media, sid, name, 0);
             }
-        }
-      else if (sid != NULL && name == NULL)
-        {
-          PurpleMediaSessionType type;
-          HazeMediaStream *stream;
-          gchar *object_path;
-          guint id;
 
           type = purple_media_get_session_type (priv->media, sid);
 
@@ -354,12 +352,12 @@ media_state_changed_cb (PurpleMedia *media,
               priv->object_path, id);
 
           stream = haze_media_stream_new (object_path, media,
-              sid, id, "", NULL, FALSE);
+              sid, name, id, "", NULL, FALSE);
 
           g_free (object_path);
 
           DEBUG ("%p: created new MediaStream %p for content '%s'",
-              chan, stream, name);
+              chan, stream, sid);
 
           g_ptr_array_add (priv->streams, stream);
 

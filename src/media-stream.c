@@ -49,6 +49,7 @@ enum
 {
   PROP_OBJECT_PATH = 1,
   PROP_NAME,
+  PROP_PEER,
   PROP_ID,
   PROP_MEDIA_TYPE,
   PROP_CONNECTION_STATE,
@@ -109,6 +110,7 @@ HazeMediaStream *
 haze_media_stream_new (const gchar *object_path,
     PurpleMedia *media,
     const gchar *name,
+    const gchar *peer,
     guint id,
     const gchar *nat_traversal,
     const GPtrArray *relay_info,
@@ -129,6 +131,7 @@ haze_media_stream_new (const gchar *object_path,
       "object-path", object_path,
       "media", media,
       "name", name,
+      "peer", peer,
       "id", id,
       "nat-traversal", nat_traversal,
       "relay-info", relay_info,
@@ -214,6 +217,9 @@ haze_media_stream_get_property (GObject    *object,
     case PROP_NAME:
       g_value_set_string (value, stream->name);
       break;
+    case PROP_PEER:
+      g_value_set_string (value, stream->peer);
+      break;
     case PROP_ID:
       g_value_set_uint (value, priv->id);
       break;
@@ -273,6 +279,10 @@ haze_media_stream_set_property (GObject      *object,
     case PROP_NAME:
       g_free (stream->name);
       stream->name = g_value_dup_string (value);
+      break;
+    case PROP_PEER:
+      g_free (stream->peer);
+      stream->peer = g_value_dup_string (value);
       break;
     case PROP_ID:
       priv->id = g_value_get_uint (value);
@@ -363,6 +373,12 @@ haze_media_stream_class_init (HazeMediaStreamClass *haze_media_stream_class)
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_NAME |
       G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_NAME, param_spec);
+
+  param_spec = g_param_spec_string ("peer", "Peer name",
+      "The name for the peer used in the signalling.", NULL,
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_NAME |
+      G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_PEER, param_spec);
 
   param_spec = g_param_spec_uint ("id", "Stream ID",
                                   "A stream number for the stream used in the "
