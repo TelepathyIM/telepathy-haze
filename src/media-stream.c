@@ -27,16 +27,21 @@
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/properties-mixin.h>
+#include <telepathy-glib/svc-media-interfaces.h>
 
 #define DEBUG_FLAG HAZE_DEBUG_MEDIA
 
 #include "debug.h"
 
+static void stream_handler_iface_init (gpointer, gpointer);
+
 G_DEFINE_TYPE_WITH_CODE (HazeMediaStream,
     haze_media_stream,
     G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
-      tp_dbus_properties_mixin_iface_init)
+      tp_dbus_properties_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_MEDIA_STREAM_HANDLER,
+      stream_handler_iface_init)
     )
 
 /* properties */
@@ -517,4 +522,548 @@ haze_media_stream_finalize (GObject *object)
   g_value_unset (&priv->remote_candidates);
 
   G_OBJECT_CLASS (haze_media_stream_parent_class)->finalize (object);
+}
+
+
+/**
+ * haze_media_stream_codec_choice
+ *
+ * Implements D-Bus method CodecChoice
+ * on interface org.freedesktop.Telepathy.Media.StreamHandler
+ */
+static void
+haze_media_stream_codec_choice (TpSvcMediaStreamHandler *iface,
+                                guint codec_id,
+                                DBusGMethodInvocation *context)
+{
+  HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
+  HazeMediaStreamPrivate *priv;
+
+  g_assert (HAZE_IS_MEDIA_STREAM (self));
+
+  priv = self->priv;
+
+  tp_svc_media_stream_handler_return_from_codec_choice (context);
+}
+
+
+gboolean
+haze_media_stream_error (HazeMediaStream *self,
+                         guint errno,
+                         const gchar *message,
+                         GError **error)
+{
+  HazeMediaStreamPrivate *priv;
+
+  g_assert (HAZE_IS_MEDIA_STREAM (self));
+
+  priv = self->priv;
+
+  DEBUG ( "Media.StreamHandler::Error called, error %u (%s) -- emitting signal",
+      errno, message);
+
+// maybe emit an error here?
+
+  return TRUE;
+}
+
+
+/**
+ * haze_media_stream_error
+ *
+ * Implements D-Bus method Error
+ * on interface org.freedesktop.Telepathy.Media.StreamHandler
+ */
+static void
+haze_media_stream_error_async (TpSvcMediaStreamHandler *iface,
+                               guint errno,
+                               const gchar *message,
+                               DBusGMethodInvocation *context)
+{
+  HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
+  GError *error = NULL;
+
+  if (haze_media_stream_error (self, errno, message, &error))
+    {
+      tp_svc_media_stream_handler_return_from_error (context);
+    }
+  else
+    {
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+    }
+}
+
+
+/**
+ * haze_media_stream_hold:
+ *
+ * Tell streaming clients that the stream is going on hold, so they should
+ * stop streaming and free up any resources they are currently holding
+ * (e.g. close hardware devices); or that the stream is coming off hold,
+ * so they should reacquire those resources.
+ */
+void
+haze_media_stream_hold (HazeMediaStream *self,
+                        gboolean hold)
+{
+  tp_svc_media_stream_handler_emit_set_stream_held (self, hold);
+}
+
+
+/**
+ * haze_media_stream_hold_state:
+ *
+ * Called by streaming clients when the stream's hold state has been changed
+ * successfully in response to SetStreamHeld.
+ */
+static void
+haze_media_stream_hold_state (TpSvcMediaStreamHandler *iface,
+                              gboolean hold_state,
+                              DBusGMethodInvocation *context)
+{
+  HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
+  HazeMediaStreamPrivate *priv = self->priv;
+
+  DEBUG ("%p: %s", self, hold_state ? "held" : "unheld");
+  priv->local_hold = hold_state;
+
+  g_object_notify ((GObject *) self, "local-hold");
+
+  tp_svc_media_stream_handler_return_from_hold_state (context);
+}
+
+
+/**
+ * haze_media_stream_unhold_failure:
+ *
+ * Called by streaming clients when an attempt to reacquire the necessary
+ * hardware or software resources to unhold the stream, in response to
+ * SetStreamHeld, has failed.
+ */
+static void
+haze_media_stream_unhold_failure (TpSvcMediaStreamHandler *iface,
+                                  DBusGMethodInvocation *context)
+{
+  HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
+  HazeMediaStreamPrivate *priv = self->priv;
+
+  DEBUG ("%p", self);
+
+  priv->local_hold = TRUE;
+
+//  maybe emit unhold failed here?
+  g_object_notify ((GObject *) self, "local-hold");
+
+  tp_svc_media_stream_handler_return_from_unhold_failure (context);
+}
+
+
+/**
+ * haze_media_stream_native_candidates_prepared
+ *
+ * Implements D-Bus method NativeCandidatesPrepared
+ * on interface org.freedesktop.Telepathy.Media.StreamHandler
+ */
+static void
+haze_media_stream_native_candidates_prepared (TpSvcMediaStreamHandler *iface,
+                                              DBusGMethodInvocation *context)
+{
+  HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
+  HazeMediaStreamPrivate *priv;
+
+  g_assert (HAZE_IS_MEDIA_STREAM (self));
+
+  priv = self->priv;
+
+// emit native candidates prepared here
+
+  tp_svc_media_stream_handler_return_from_native_candidates_prepared (context);
+}
+
+
+/**
+ * haze_media_stream_new_active_candidate_pair
+ *
+ * Implements D-Bus method NewActiveCandidatePair
+ * on interface org.freedesktop.Telepathy.Media.StreamHandler
+ */
+static void
+haze_media_stream_new_active_candidate_pair (TpSvcMediaStreamHandler *iface,
+                                             const gchar *native_candidate_id,
+                                             const gchar *remote_candidate_id,
+                                             DBusGMethodInvocation *context)
+{
+  DEBUG ("called (%s, %s); this is a no-op on Jingle", native_candidate_id,
+      remote_candidate_id);
+
+// emit new active candidate pair here
+
+  tp_svc_media_stream_handler_return_from_new_active_candidate_pair (context);
+}
+
+
+/**
+ * haze_media_stream_new_native_candidate
+ *
+ * Implements D-Bus method NewNativeCandidate
+ * on interface org.freedesktop.Telepathy.Media.StreamHandler
+ */
+static void
+haze_media_stream_new_native_candidate (TpSvcMediaStreamHandler *iface,
+                                        const gchar *candidate_id,
+                                        const GPtrArray *transports,
+                                        DBusGMethodInvocation *context)
+{
+  HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
+  HazeMediaStreamPrivate *priv;
+  guint i;
+
+  g_assert (HAZE_IS_MEDIA_STREAM (self));
+
+  priv = self->priv;
+
+  for (i = 0; i < transports->len; i++)
+    {
+      GValueArray *transport;
+      guint component, type, proto;
+      PurpleMediaCandidate *c;
+      PurpleMediaCandidateType candidate_type =
+          PURPLE_MEDIA_CANDIDATE_TYPE_HOST;
+      PurpleMediaNetworkProtocol protocol = PURPLE_MEDIA_NETWORK_PROTOCOL_UDP;
+
+      transport = g_ptr_array_index (transports, i);
+      component = g_value_get_uint (g_value_array_get_nth (transport, 0));
+      type = g_value_get_uint (g_value_array_get_nth (transport, 7));
+      proto = g_value_get_uint (g_value_array_get_nth (transport, 3));
+
+      if (type == TP_MEDIA_STREAM_TRANSPORT_TYPE_LOCAL)
+        candidate_type = PURPLE_MEDIA_CANDIDATE_TYPE_HOST;
+      else if (type == TP_MEDIA_STREAM_TRANSPORT_TYPE_DERIVED)
+        candidate_type = PURPLE_MEDIA_CANDIDATE_TYPE_SRFLX;
+      else if (type == TP_MEDIA_STREAM_TRANSPORT_TYPE_RELAY)
+        candidate_type = PURPLE_MEDIA_CANDIDATE_TYPE_RELAY;
+      else
+        DEBUG ("Unknown candidate type");
+
+      if (proto == TP_MEDIA_STREAM_BASE_PROTO_UDP)
+        protocol = PURPLE_MEDIA_NETWORK_PROTOCOL_UDP;
+      else if (proto == TP_MEDIA_STREAM_BASE_PROTO_TCP)
+        protocol = PURPLE_MEDIA_NETWORK_PROTOCOL_TCP;
+      else
+        DEBUG ("Unknown network protocol");
+
+      c = purple_media_candidate_new (candidate_id, component, candidate_type,
+          protocol,
+          /* address */
+          g_value_get_string (g_value_array_get_nth (transport, 1)),
+          /* port */
+          g_value_get_uint (g_value_array_get_nth (transport, 2)));
+
+      g_object_set (c, "username",
+          g_value_get_string (g_value_array_get_nth (transport, 8)), NULL);
+      g_object_set (c, "password",
+          g_value_get_string (g_value_array_get_nth (transport, 9)), NULL);
+      g_object_set (c, "priority",
+          g_value_get_double (g_value_array_get_nth (transport, 6)), NULL);
+
+// emit new native candidate here
+    }
+
+  tp_svc_media_stream_handler_return_from_new_native_candidate (context);
+}
+
+static void haze_media_stream_set_local_codecs (TpSvcMediaStreamHandler *,
+    const GPtrArray *codecs, DBusGMethodInvocation *);
+
+/**
+ * haze_media_stream_ready
+ *
+ * Implements D-Bus method Ready
+ * on interface org.freedesktop.Telepathy.Media.StreamHandler
+ */
+static void
+haze_media_stream_ready (TpSvcMediaStreamHandler *iface,
+                         const GPtrArray *codecs,
+                         DBusGMethodInvocation *context)
+{
+  HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
+  HazeMediaStreamPrivate *priv;
+
+  g_assert (HAZE_IS_MEDIA_STREAM (self));
+
+  priv = self->priv;
+
+  DEBUG ("ready called");
+
+  if (priv->ready == FALSE)
+    {
+      g_object_set (self, "ready", TRUE, NULL);
+
+      /* If a new stream is added while the call's on hold, it will have
+       * local_hold set at construct time. So once tp-fs has called Ready(), we
+       * should let it know this stream's on hold.
+       */
+      if (priv->local_hold)
+        haze_media_stream_hold (self, priv->local_hold);
+    }
+  else
+    {
+      DEBUG ("Ready called twice, running plain SetLocalCodecs instead");
+    }
+
+  /* set_local_codecs and ready return the same thing, so we can do... */
+  haze_media_stream_set_local_codecs (iface, codecs, context);
+}
+
+static gboolean
+pass_local_codecs (HazeMediaStream *stream,
+                   const GPtrArray *codecs,
+                   gboolean ready,
+                   GError **error)
+{
+  HazeMediaStreamPrivate *priv = stream->priv;
+  PurpleMediaSessionType type = PURPLE_MEDIA_AUDIO;
+  PurpleMediaCodec *c;
+  guint i;
+
+  DEBUG ("putting list of %d supported codecs from stream-engine into cache",
+      codecs->len);
+
+  g_value_set_boxed (&priv->native_codecs, codecs);
+
+  if (priv->media_type == TP_MEDIA_STREAM_TYPE_AUDIO)
+    type = PURPLE_MEDIA_AUDIO;
+  else if (priv->media_type == TP_MEDIA_STREAM_TYPE_VIDEO)
+    type = PURPLE_MEDIA_VIDEO;
+  else
+    {
+      DEBUG ("Unknown media type");
+      // return error?
+    }
+
+  for (i = 0; i < codecs->len; i++)
+    {
+      GType codec_struct_type = TP_STRUCT_TYPE_MEDIA_STREAM_HANDLER_CODEC;
+
+      GValue codec = { 0, };
+      guint id, clock_rate, channels;
+      gchar *name;
+      GHashTable *params;
+
+      g_value_init (&codec, codec_struct_type);
+      g_value_set_static_boxed (&codec, g_ptr_array_index (codecs, i));
+
+      dbus_g_type_struct_get (&codec,
+          0, &id,
+          1, &name,
+          3, &clock_rate,
+          4, &channels,
+          5, &params,
+          G_MAXUINT);
+
+      c = purple_media_codec_new (id, name, type, clock_rate);
+      g_object_set (c, "channels", &channels, NULL);
+
+      // iterate the params and set each in the codec
+
+      DEBUG ("adding codec: %s", purple_media_codec_to_string (c));
+
+      // emit codecs-changed?
+    }
+
+  return TRUE;
+}
+
+/**
+ * haze_media_stream_set_local_codecs
+ *
+ * Implements D-Bus method SetLocalCodecs
+ * on interface org.freedesktop.Telepathy.Media.StreamHandler
+ */
+static void
+haze_media_stream_set_local_codecs (TpSvcMediaStreamHandler *iface,
+                                    const GPtrArray *codecs,
+                                    DBusGMethodInvocation *context)
+{
+  HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
+  HazeMediaStreamPrivate *priv = self->priv;
+  GError *error = NULL;
+
+  DEBUG ("called");
+
+  /* this should also specify the session_id */
+  if (PURPLE_IS_MEDIA (priv->media) &&
+      purple_media_is_initiator (priv->media, NULL, NULL))
+    {
+      if (!pass_local_codecs (self, codecs, self->priv->created_locally,
+          &error))
+        {
+          DEBUG ("failed: %s", error->message);
+
+          dbus_g_method_return_error (context, error);
+          g_error_free (error);
+          return;
+        }
+    }
+  else
+    {
+      DEBUG ("ignoring local codecs, waiting for codec intersection");
+    }
+
+  tp_svc_media_stream_handler_return_from_set_local_codecs (context);
+}
+
+/**
+ * haze_media_stream_stream_state
+ *
+ * Implements D-Bus method StreamState
+ * on interface org.freedesktop.Telepathy.Media.StreamHandler
+ */
+static void
+haze_media_stream_stream_state (TpSvcMediaStreamHandler *iface,
+                                guint connection_state,
+                                DBusGMethodInvocation *context)
+{
+  HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
+  PurpleMediaState media_state = PURPLE_MEDIA_STATE_END;
+
+  switch (connection_state) {
+    case TP_MEDIA_STREAM_STATE_DISCONNECTED:
+      media_state = PURPLE_MEDIA_STATE_END;
+      break;
+    case TP_MEDIA_STREAM_STATE_CONNECTING:
+      media_state = PURPLE_MEDIA_STATE_NEW;
+      break;
+    case TP_MEDIA_STREAM_STATE_CONNECTED:
+      media_state = PURPLE_MEDIA_STATE_CONNECTED;
+      break;
+    default:
+      DEBUG ("ignoring unknown connection state %u", connection_state);
+      goto OUT;
+  }
+
+  g_object_set (self, "connection-state", connection_state, NULL);
+
+  // emit connection state here
+
+OUT:
+  tp_svc_media_stream_handler_return_from_stream_state (context);
+}
+
+
+/**
+ * haze_media_stream_supported_codecs
+ *
+ * Implements D-Bus method SupportedCodecs
+ * on interface org.freedesktop.Telepathy.Media.StreamHandler
+ */
+static void
+haze_media_stream_supported_codecs (TpSvcMediaStreamHandler *iface,
+                                    const GPtrArray *codecs,
+                                    DBusGMethodInvocation *context)
+{
+  HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
+  HazeMediaStreamPrivate *priv = self->priv;
+  GError *error = NULL;
+
+  DEBUG ("called");
+
+  if (priv->awaiting_intersection)
+    {
+      if (!pass_local_codecs (self, codecs, TRUE, &error))
+        {
+          DEBUG ("failed: %s", error->message);
+
+          dbus_g_method_return_error (context, error);
+          g_error_free (error);
+          return;
+        }
+
+      priv->awaiting_intersection = FALSE;
+    }
+  else
+    {
+      /* If we created the stream, we don't need to send the intersection. If
+       * we didn't create it, but have already sent the intersection once, we
+       * don't need to send it again. In either case, extra calls to
+       * SupportedCodecs are in response to an incoming description-info, which
+       * can only change parameters and which XEP-0167 §10 says is purely
+       * advisory.
+       */
+      DEBUG ("we already sent, or don't need to send, our codecs");
+    }
+
+  tp_svc_media_stream_handler_return_from_supported_codecs (context);
+}
+
+/**
+ * haze_media_stream_codecs_updated
+ *
+ * Implements D-Bus method CodecsUpdated
+ * on interface org.freedesktop.Telepathy.Media.StreamHandler
+ */
+static void
+haze_media_stream_codecs_updated (TpSvcMediaStreamHandler *iface,
+                                  const GPtrArray *codecs,
+                                  DBusGMethodInvocation *context)
+{
+  HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
+  gboolean codecs_set =
+      (g_value_get_boxed (&self->priv->native_codecs) != NULL);
+  GError *error = NULL;
+
+  if (!codecs_set)
+    {
+      GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          "CodecsUpdated may only be called once an initial set of codecs "
+          "has been set" };
+
+      dbus_g_method_return_error (context, &e);
+      return;
+    }
+
+  if (self->priv->awaiting_intersection)
+    {
+      /* When awaiting an intersection the initial set of codecs should be set
+       * by calling SupportedCodecs as that is the canonical set of codecs,
+       * updates are only meaningful afterwards */
+      tp_svc_media_stream_handler_return_from_codecs_updated (context);
+      return;
+    }
+
+  if (pass_local_codecs (self, codecs, self->priv->created_locally, &error))
+    {
+      tp_svc_media_stream_handler_return_from_codecs_updated (context);
+    }
+  else
+    {
+      DEBUG ("failed: %s", error->message);
+
+      dbus_g_method_return_error (context, error);
+      g_error_free (error);
+    }
+}
+
+static void
+stream_handler_iface_init (gpointer g_iface, gpointer iface_data)
+{
+  TpSvcMediaStreamHandlerClass *klass =
+    (TpSvcMediaStreamHandlerClass *) g_iface;
+
+#define IMPLEMENT(x,suffix) tp_svc_media_stream_handler_implement_##x (\
+    klass, haze_media_stream_##x##suffix)
+  IMPLEMENT(codec_choice,);
+  IMPLEMENT(error,_async);
+  IMPLEMENT(hold_state,);
+  IMPLEMENT(native_candidates_prepared,);
+  IMPLEMENT(new_active_candidate_pair,);
+  IMPLEMENT(new_native_candidate,);
+  IMPLEMENT(ready,);
+  IMPLEMENT(set_local_codecs,);
+  IMPLEMENT(stream_state,);
+  IMPLEMENT(supported_codecs,);
+  IMPLEMENT(unhold_failure,);
+  IMPLEMENT(codecs_updated,);
+#undef IMPLEMENT
 }
