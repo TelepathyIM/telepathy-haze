@@ -36,6 +36,7 @@
 #include "mediamanager.h"
 
 static void channel_iface_init (gpointer, gpointer);
+static void media_signalling_iface_init (gpointer, gpointer);
 static void streamed_media_iface_init (gpointer, gpointer);
 static gboolean haze_media_channel_add_member (GObject *obj,
     TpHandle handle,
@@ -51,6 +52,8 @@ G_DEFINE_TYPE_WITH_CODE (HazeMediaChannel, haze_media_channel,
       tp_group_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_STREAMED_MEDIA,
       streamed_media_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_MEDIA_SIGNALLING,
+      media_signalling_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
       tp_dbus_properties_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_EXPORTABLE_CHANNEL, NULL);
@@ -58,6 +61,7 @@ G_DEFINE_TYPE_WITH_CODE (HazeMediaChannel, haze_media_channel,
 
 static const gchar *haze_media_channel_interfaces[] = {
     TP_IFACE_CHANNEL_INTERFACE_GROUP,
+    TP_IFACE_CHANNEL_INTERFACE_MEDIA_SIGNALLING,
     NULL
 };
 
@@ -565,6 +569,9 @@ _latch_to_session (HazeMediaChannel *chan)
        G_CALLBACK(media_state_changed_cb), chan);
   g_signal_connect(G_OBJECT(priv->media), "stream-info",
        G_CALLBACK(media_stream_info_cb), chan);
+
+  tp_svc_channel_interface_media_signalling_emit_new_session_handler (
+      G_OBJECT (chan), priv->object_path, "rtp");
 }
 
 static GObject *
@@ -1713,6 +1720,53 @@ haze_media_channel_remove_member (GObject *obj,
   return TRUE;
 }
 
+/**
+ * haze_media_channel_get_session_handlers
+ *
+ * Implements D-Bus method GetSessionHandlers
+ * on interface org.freedesktop.Telepathy.Channel.Interface.MediaSignalling
+ */
+static void
+haze_media_channel_get_session_handlers (
+    TpSvcChannelInterfaceMediaSignalling *iface,
+    DBusGMethodInvocation *context)
+{
+  HazeMediaChannel *self = HAZE_MEDIA_CHANNEL (iface);
+  HazeMediaChannelPrivate *priv;
+  GPtrArray *ret;
+  GType info_type = TP_STRUCT_TYPE_MEDIA_SESSION_HANDLER_INFO;
+
+  g_assert (HAZE_IS_MEDIA_CHANNEL (self));
+
+  priv = self->priv;
+
+  if (priv->media)
+    {
+      GValue handler = { 0, };
+
+      g_value_init (&handler, info_type);
+      g_value_take_boxed (&handler,
+          dbus_g_type_specialized_construct (info_type));
+
+      dbus_g_type_struct_set (&handler,
+          0, priv->object_path,
+          1, "rtp",
+          G_MAXUINT);
+
+      ret = g_ptr_array_sized_new (1);
+      g_ptr_array_add (ret, g_value_get_boxed (&handler));
+    }
+  else
+    {
+      ret = g_ptr_array_sized_new (0);
+    }
+
+  tp_svc_channel_interface_media_signalling_return_from_get_session_handlers (
+      context, ret);
+  g_ptr_array_foreach (ret, (GFunc) g_value_array_free, NULL);
+  g_ptr_array_free (ret, TRUE);
+}
+
 static void
 channel_iface_init (gpointer g_iface, gpointer iface_data)
 {
@@ -1739,5 +1793,17 @@ streamed_media_iface_init (gpointer g_iface, gpointer iface_data)
   IMPLEMENT(remove_streams);
   IMPLEMENT(request_stream_direction);
   IMPLEMENT(request_streams);
+#undef IMPLEMENT
+}
+
+static void
+media_signalling_iface_init (gpointer g_iface, gpointer iface_data)
+{
+  TpSvcChannelInterfaceMediaSignallingClass *klass =
+    (TpSvcChannelInterfaceMediaSignallingClass *) g_iface;
+
+#define IMPLEMENT(x) tp_svc_channel_interface_media_signalling_implement_##x (\
+    klass, haze_media_channel_##x)
+  IMPLEMENT(get_session_handlers);
 #undef IMPLEMENT
 }
