@@ -23,6 +23,8 @@
 
 #include <glib-object.h>
 
+#include "media-stream.h"
+
 G_BEGIN_DECLS
 
 typedef struct _HazeMediaBackend HazeMediaBackend;
@@ -40,6 +42,8 @@ struct _HazeMediaBackend {
 };
 
 GType haze_media_backend_get_type (void);
+void haze_media_backend_add_media_stream (HazeMediaBackend *self,
+    HazeMediaStream *stream);
 
 /* TYPE MACROS */
 #define HAZE_TYPE_MEDIA_BACKEND \

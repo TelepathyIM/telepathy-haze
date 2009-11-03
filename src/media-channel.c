@@ -23,6 +23,7 @@
 #include "config.h"
 #include "media-channel.h"
 
+#include <libpurple/media/backend-iface.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/channel-iface.h>
@@ -33,6 +34,7 @@
 
 #include "connection.h"
 #include "debug.h"
+#include "media-backend.h"
 #include "media-stream.h"
 #include "mediamanager.h"
 
@@ -334,6 +336,7 @@ media_state_changed_cb (PurpleMedia *media,
       if (sid != NULL && name != NULL)
         {
           PurpleMediaSessionType type;
+          PurpleMediaBackend *backend;
           HazeMediaStream *stream;
           gchar *object_path;
           guint id;
@@ -360,6 +363,11 @@ media_state_changed_cb (PurpleMedia *media,
               chan, stream, sid);
 
           g_ptr_array_add (priv->streams, stream);
+
+          g_object_get (priv->media, "backend", &backend, NULL);
+          haze_media_backend_add_media_stream (
+              HAZE_MEDIA_BACKEND (backend), stream);
+          g_object_unref (backend);
 
           /* if any RequestStreams call was waiting for a stream to be created for
            * that content, return from it successfully */

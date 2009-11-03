@@ -21,11 +21,18 @@
 #include "config.h"
 #include "media-backend.h"
 
+#include <string.h>
+
 #include "media/backend-iface.h"
 
 #include "debug.h"
 
 static void media_backend_iface_init(PurpleMediaBackendIface *iface);
+static void haze_backend_state_changed_cb (PurpleMedia *media,
+                                           PurpleMediaState state,
+                                           const gchar *sid,
+                                           const gchar *name,
+                                           HazeMediaBackend *backend);
 
 G_DEFINE_TYPE_WITH_CODE (HazeMediaBackend,
     haze_media_backend,
@@ -47,6 +54,7 @@ struct _HazeMediaBackendPrivate
 {
   gchar *conference_type;
   PurpleMedia *media;
+  GPtrArray *streams;
 };
 
 static void
@@ -99,6 +107,10 @@ haze_media_backend_set_property (GObject      *object,
     case PROP_MEDIA:
       g_assert (priv->media == NULL);
       priv->media = g_value_dup_object (value);
+
+      if (PURPLE_IS_MEDIA (priv->media))
+        g_signal_connect (priv->media, "state-changed",
+            G_CALLBACK (haze_backend_state_changed_cb), backend);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -154,7 +166,62 @@ haze_media_backend_finalize (GObject *object)
 
   g_free(priv->conference_type);
 
+  if (priv->streams != NULL)
+    g_ptr_array_free (priv->streams, TRUE);
+
   G_OBJECT_CLASS (haze_media_backend_parent_class)->finalize (object);
+}
+
+static HazeMediaStream *
+get_stream_by_name (HazeMediaBackend *self,
+                    const gchar *sid)
+{
+  HazeMediaBackendPrivate *priv = self->priv;
+  guint i;
+
+  for (; i < priv->streams->len; ++i)
+    {
+      HazeMediaStream *stream = g_ptr_array_index (priv->streams, i);
+
+      if (!strcmp (sid, stream->name))
+        return stream;
+    }
+
+  return NULL;
+}
+
+static void
+haze_backend_state_changed_cb (PurpleMedia *media,
+                               PurpleMediaState state,
+                               const gchar *sid,
+                               const gchar *name,
+                               HazeMediaBackend *backend)
+{
+  HazeMediaBackendPrivate *priv = backend->priv;
+
+  if (state == PURPLE_MEDIA_STATE_END && sid != NULL && name == NULL)
+    {
+      HazeMediaStream *stream = get_stream_by_name (backend, sid);
+
+      if (stream != NULL)
+        {
+          g_ptr_array_remove_fast (priv->streams, stream);
+          g_object_unref (stream);
+        }
+    }
+}
+
+void
+haze_media_backend_add_media_stream (HazeMediaBackend *self,
+    HazeMediaStream *stream)
+{
+  HazeMediaBackendPrivate *priv = self->priv;
+
+  if (priv->streams == NULL)
+    priv->streams = g_ptr_array_new ();
+
+  g_object_ref (stream);
+  g_ptr_array_add (priv->streams, stream);
 }
 
 static gboolean
