@@ -247,7 +247,38 @@ static gboolean
 haze_media_backend_codecs_ready (PurpleMediaBackend *self,
                                  const gchar *sid)
 {
-  return FALSE;
+  HazeMediaStream *stream;
+  gboolean ready = FALSE;
+
+  DEBUG ("called");
+
+  if (sid != NULL)
+    {
+      stream = get_stream_by_name (HAZE_MEDIA_BACKEND (self), sid);
+
+      if (stream != NULL)
+        g_object_get (stream, "ready", &ready, NULL);
+    
+      return ready;
+    }
+  else
+    {
+      HazeMediaBackendPrivate *priv = HAZE_MEDIA_BACKEND (self)->priv;
+      guint i;
+
+      for (; i < priv->streams->len; ++i)
+        {
+          stream = g_ptr_array_index (priv->streams, i);
+
+          if (stream != NULL)
+            g_object_get (stream, "ready", &ready, NULL);
+
+          if (!ready)
+            return FALSE;
+        }
+
+      return TRUE;
+    }
 }
 
 static GList *
