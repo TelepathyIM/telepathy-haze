@@ -241,7 +241,16 @@ haze_media_backend_add_remote_candidates (PurpleMediaBackend *self,
                                           const gchar *who,
                                           GList *remote_candidates)
 {
+  HazeMediaStream *stream;
 
+  DEBUG ("called");
+
+  stream = get_stream_by_name (HAZE_MEDIA_BACKEND (self), sid);
+
+  if (stream != NULL)
+    haze_media_stream_add_remote_candidates (stream, remote_candidates);
+  else
+    DEBUG ("Couldn't find stream");
 }
 
 static gboolean

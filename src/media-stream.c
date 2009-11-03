@@ -570,6 +570,84 @@ haze_media_stream_get_codecs (HazeMediaStream *self)
 }
 
 
+void
+haze_media_stream_add_remote_candidates (HazeMediaStream *self,
+                                         GList *remote_candidates)
+{
+  GType transport_struct_type = TP_STRUCT_TYPE_MEDIA_STREAM_HANDLER_TRANSPORT;
+  GType candidate_struct_type = TP_STRUCT_TYPE_MEDIA_STREAM_HANDLER_CANDIDATE;
+  GList *iter = remote_candidates;
+
+  for (; iter; iter = g_list_next (iter))
+    {
+      gchar *address, *username, *password, *candidate_id;
+      GValue candidate = { 0, };
+      GPtrArray *transports;
+      GValue transport = { 0, };
+      PurpleMediaCandidate *c = iter->data;
+      PurpleMediaCandidateType candidate_type;
+      guint type = TP_MEDIA_STREAM_TRANSPORT_TYPE_LOCAL;
+
+      g_value_init (&transport, transport_struct_type);
+      g_value_take_boxed (&transport,
+          dbus_g_type_specialized_construct (transport_struct_type));
+
+      address = purple_media_candidate_get_ip (c);
+      username = purple_media_candidate_get_username (c);
+      password = purple_media_candidate_get_password (c);
+      candidate_type = purple_media_candidate_get_candidate_type (c);
+
+      if (candidate_type == PURPLE_MEDIA_CANDIDATE_TYPE_HOST)
+        type = TP_MEDIA_STREAM_TRANSPORT_TYPE_LOCAL;
+      else if (candidate_type == PURPLE_MEDIA_CANDIDATE_TYPE_SRFLX)
+        type = TP_MEDIA_STREAM_TRANSPORT_TYPE_DERIVED;
+      else if (candidate_type == PURPLE_MEDIA_CANDIDATE_TYPE_RELAY)
+        type = TP_MEDIA_STREAM_TRANSPORT_TYPE_RELAY;
+      else
+        DEBUG ("Unknown candidate type");
+
+      dbus_g_type_struct_set (&transport,
+          0, purple_media_candidate_get_component_id (c),
+          1, address,
+          2, purple_media_candidate_get_port (c),
+          3, purple_media_candidate_get_protocol (c) ==
+              PURPLE_MEDIA_NETWORK_PROTOCOL_UDP ? 0 : 1,
+          4, "RTP",
+          5, "AVP",
+          6, purple_media_candidate_get_priority (c),
+          7, type,
+          8, username,
+          9, password,
+          G_MAXUINT);
+
+      g_free (password);
+      g_free (username);
+      g_free (address);
+
+      transports = g_ptr_array_sized_new (1);
+      g_ptr_array_add (transports, g_value_get_boxed (&transport));
+
+      g_value_init (&candidate, candidate_struct_type);
+      g_value_take_boxed (&candidate,
+          dbus_g_type_specialized_construct (candidate_struct_type));
+
+      candidate_id = purple_media_candidate_get_foundation (c);
+
+      dbus_g_type_struct_set (&candidate,
+          0, candidate_id,
+          1, transports,
+          G_MAXUINT);
+
+      DEBUG ("passing 1 remote candidate to stream engine: %s", candidate_id);
+
+      tp_svc_media_stream_handler_emit_add_remote_candidate (
+          self, candidate_id, transports);
+
+      g_free (candidate_id);
+    }
+}
+
+
 /**
  * haze_media_stream_codec_choice
  *
