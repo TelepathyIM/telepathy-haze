@@ -579,7 +579,7 @@ haze_media_stream_codec_choice (TpSvcMediaStreamHandler *iface,
 
 gboolean
 haze_media_stream_error (HazeMediaStream *self,
-                         guint errno,
+                         guint err_no,
                          const gchar *message,
                          GError **error)
 {
@@ -590,7 +590,7 @@ haze_media_stream_error (HazeMediaStream *self,
   priv = self->priv;
 
   DEBUG ( "Media.StreamHandler::Error called, error %u (%s) -- emitting signal",
-      errno, message);
+      err_no, message);
 
 // maybe emit an error here?
 

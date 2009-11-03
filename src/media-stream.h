@@ -92,7 +92,7 @@ GType haze_media_stream_get_type (void);
 #define MAKE_COMBINED_DIRECTION(d, p) \
     ((CombinedStreamDirection) ((d) | ((p) << 2)))
 
-gboolean haze_media_stream_error (HazeMediaStream *self, guint errno,
+gboolean haze_media_stream_error (HazeMediaStream *self, guint err_no,
     const gchar *message, GError **error);
 
 void haze_media_stream_close (HazeMediaStream *close);
