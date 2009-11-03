@@ -231,7 +231,8 @@ haze_media_backend_add_stream (PurpleMediaBackend *self,
     const gchar *transmitter,
     guint num_params, GParameter *params)
 {
-  return FALSE;
+  DEBUG ("called");
+  return TRUE;
 }
 
 static void
