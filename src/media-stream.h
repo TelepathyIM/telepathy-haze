@@ -111,6 +111,8 @@ HazeMediaStream *haze_media_stream_new (const gchar *object_path,
     gboolean local_hold);
 TpMediaStreamType haze_media_stream_get_media_type (HazeMediaStream *self);
 
+GList *haze_media_stream_get_local_candidates (HazeMediaStream *self);
+
 G_END_DECLS
 
 #endif /* #ifndef __HAZE_MEDIA_STREAM_H__*/

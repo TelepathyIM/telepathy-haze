@@ -23,6 +23,7 @@
 #include "config.h"
 #include "media-stream.h"
 
+#include <libpurple/media/backend-iface.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/interfaces.h>
@@ -76,6 +77,7 @@ struct _HazeMediaStreamPrivate
   guint media_type;
 
   GValue native_codecs;     /* intersected codec list */
+  GList *local_candidates;
 
   /* Whether we're waiting for a codec intersection from the streaming
    * implementation. If FALSE, SupportedCodecs is a no-op.
@@ -509,6 +511,10 @@ haze_media_stream_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
+  for (; priv->local_candidates; priv->local_candidates = g_list_delete_link(
+        priv->local_candidates, priv->local_candidates))
+      g_object_unref (priv->local_candidates->data);
+
   g_object_unref (priv->media);
   priv->media = NULL;
 
@@ -538,6 +544,14 @@ haze_media_stream_finalize (GObject *object)
   g_value_unset (&priv->remote_candidates);
 
   G_OBJECT_CLASS (haze_media_stream_parent_class)->finalize (object);
+}
+
+
+GList *
+haze_media_stream_get_local_candidates (HazeMediaStream *self)
+{
+  HazeMediaStreamPrivate *priv = self->priv;
+  return g_list_copy (priv->local_candidates);
 }
 
 
@@ -687,12 +701,16 @@ haze_media_stream_native_candidates_prepared (TpSvcMediaStreamHandler *iface,
 {
   HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
   HazeMediaStreamPrivate *priv;
+  PurpleMediaBackend *backend;
 
   g_assert (HAZE_IS_MEDIA_STREAM (self));
 
   priv = self->priv;
 
-// emit native candidates prepared here
+  g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
+  g_signal_emit_by_name (backend, "candidates-prepared",
+      self->name, self->peer);
+  g_object_unref (backend);
 
   tp_svc_media_stream_handler_return_from_native_candidates_prepared (context);
 }
@@ -733,11 +751,14 @@ haze_media_stream_new_native_candidate (TpSvcMediaStreamHandler *iface,
 {
   HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
   HazeMediaStreamPrivate *priv;
+  PurpleMediaBackend *backend;
   guint i;
 
   g_assert (HAZE_IS_MEDIA_STREAM (self));
 
   priv = self->priv;
+
+  g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
 
   for (i = 0; i < transports->len; i++)
     {
@@ -783,8 +804,14 @@ haze_media_stream_new_native_candidate (TpSvcMediaStreamHandler *iface,
       g_object_set (c, "priority",
           g_value_get_double (g_value_array_get_nth (transport, 6)), NULL);
 
-// emit new native candidate here
+      DEBUG ("new-candidate: %s %s %p", self->name, self->peer, c);
+
+      priv->local_candidates = g_list_append (priv->local_candidates, c);
+
+      g_signal_emit_by_name (backend, "new-candidate", self->name, self->peer, c);
     }
+
+  g_object_unref (backend);
 
   tp_svc_media_stream_handler_return_from_new_native_candidate (context);
 }
