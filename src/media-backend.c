@@ -286,7 +286,17 @@ static GList *
 haze_media_backend_get_codecs (PurpleMediaBackend *self,
                                const gchar *sid)
 {
-  return NULL;
+  HazeMediaStream *stream;
+  GList *ret = NULL;
+
+  DEBUG ("called");
+
+  stream = get_stream_by_name (HAZE_MEDIA_BACKEND (self), sid);
+
+  if (stream != NULL)
+    ret = haze_media_stream_get_codecs (stream);
+
+  return ret;
 }
 
 static GList *

@@ -77,6 +77,7 @@ struct _HazeMediaStreamPrivate
   guint media_type;
 
   GValue native_codecs;     /* intersected codec list */
+  GList *codecs;
   GList *local_candidates;
 
   /* Whether we're waiting for a codec intersection from the streaming
@@ -515,6 +516,12 @@ haze_media_stream_dispose (GObject *object)
         priv->local_candidates, priv->local_candidates))
       g_object_unref (priv->local_candidates->data);
 
+  if (priv->codecs)
+    {
+      purple_media_codec_list_free (priv->codecs);
+      priv->codecs = NULL;
+    }
+
   g_object_unref (priv->media);
   priv->media = NULL;
 
@@ -552,6 +559,14 @@ haze_media_stream_get_local_candidates (HazeMediaStream *self)
 {
   HazeMediaStreamPrivate *priv = self->priv;
   return g_list_copy (priv->local_candidates);
+}
+
+
+GList *
+haze_media_stream_get_codecs (HazeMediaStream *self)
+{
+  HazeMediaStreamPrivate *priv = self->priv;
+  return purple_media_codec_list_copy (priv->codecs);
 }
 
 
@@ -911,6 +926,8 @@ pass_local_codecs (HazeMediaStream *stream,
       // iterate the params and set each in the codec
 
       DEBUG ("adding codec: %s", purple_media_codec_to_string (c));
+
+      priv->codecs = g_list_append (priv->codecs, c);
 
       // emit codecs-changed?
     }
