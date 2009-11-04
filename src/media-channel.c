@@ -355,7 +355,7 @@ media_state_changed_cb (PurpleMedia *media,
               priv->object_path, id);
 
           stream = haze_media_stream_new (object_path, media,
-              sid, name, id, "", NULL, FALSE);
+              sid, name, id, "ice-udp", NULL, FALSE);
 
           g_free (object_path);
 
