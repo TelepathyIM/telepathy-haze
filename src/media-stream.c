@@ -1065,6 +1065,12 @@ haze_media_stream_ready (TpSvcMediaStreamHandler *iface,
   haze_media_stream_set_local_codecs (iface, codecs, context);
 }
 
+static void
+convert_param (gchar *key, gchar *value, PurpleMediaCodec *codec)
+{
+  purple_media_codec_add_optional_parameter (codec, key, value);
+}
+
 static gboolean
 pass_local_codecs (HazeMediaStream *stream,
                    const GPtrArray *codecs,
@@ -1114,7 +1120,7 @@ pass_local_codecs (HazeMediaStream *stream,
       c = purple_media_codec_new (id, name, type, clock_rate);
       g_object_set (c, "channels", &channels, NULL);
 
-      // iterate the params and set each in the codec
+      g_hash_table_foreach (params, (GHFunc)convert_param, c);
 
       DEBUG ("adding codec: %s", purple_media_codec_to_string (c));
 
