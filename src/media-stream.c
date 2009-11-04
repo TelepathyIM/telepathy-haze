@@ -623,7 +623,7 @@ haze_media_stream_add_remote_candidates (HazeMediaStream *self,
               PURPLE_MEDIA_NETWORK_PROTOCOL_UDP ? 0 : 1,
           4, "RTP",
           5, "AVP",
-          6, purple_media_candidate_get_priority (c),
+          6, (double)purple_media_candidate_get_priority (c),
           7, type,
           8, username,
           9, password,
@@ -1014,7 +1014,8 @@ haze_media_stream_new_native_candidate (TpSvcMediaStreamHandler *iface,
       g_object_set (c, "password",
           g_value_get_string (g_value_array_get_nth (transport, 9)), NULL);
       g_object_set (c, "priority",
-          g_value_get_double (g_value_array_get_nth (transport, 6)), NULL);
+          (guint)g_value_get_double (
+          g_value_array_get_nth (transport, 6)), NULL);
 
       DEBUG ("new-candidate: %s %s %p", self->name, self->peer, c);
 
