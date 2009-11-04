@@ -192,6 +192,12 @@ haze_media_stream_constructor (GType type, guint n_props,
 
   g_assert (priv->media != NULL);
 
+  if (purple_media_get_session_type (priv->media, stream->name) &
+      PURPLE_MEDIA_AUDIO)
+    priv->media_type = TP_MEDIA_STREAM_TYPE_AUDIO;
+  else
+    priv->media_type = TP_MEDIA_STREAM_TYPE_VIDEO;
+
   /* go for the bus */
   bus = tp_get_bus ();
   dbus_g_connection_register_g_object (bus, priv->object_path, obj);
