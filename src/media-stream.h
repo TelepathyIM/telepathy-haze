@@ -115,6 +115,8 @@ GList *haze_media_stream_get_local_candidates (HazeMediaStream *self);
 GList *haze_media_stream_get_codecs (HazeMediaStream *self);
 void haze_media_stream_add_remote_candidates (HazeMediaStream *self,
                                               GList *remote_candidates);
+void haze_media_stream_set_remote_codecs (HazeMediaStream *self,
+                                          GList *remote_codecs);
 
 G_END_DECLS
 

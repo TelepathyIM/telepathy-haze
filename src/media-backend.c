@@ -332,7 +332,18 @@ haze_media_backend_set_remote_codecs (PurpleMediaBackend *self,
                                       const gchar *who,
                                       GList *codecs)
 {
-  return FALSE;
+  HazeMediaStream *stream;
+
+  DEBUG ("called");
+
+  stream = get_stream_by_name (HAZE_MEDIA_BACKEND (self), sid);
+
+  if (stream != NULL)
+    haze_media_stream_set_remote_codecs (stream, codecs);
+  else
+    DEBUG ("Couldn't find stream");
+
+  return TRUE;
 }
 
 static gboolean

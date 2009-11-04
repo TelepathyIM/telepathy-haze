@@ -648,6 +648,67 @@ haze_media_stream_add_remote_candidates (HazeMediaStream *self,
 }
 
 
+void
+haze_media_stream_set_remote_codecs (HazeMediaStream *self,
+                                     GList *remote_codecs)
+{
+  HazeMediaStreamPrivate *priv = self->priv;
+  GType codec_struct_type = TP_STRUCT_TYPE_MEDIA_STREAM_HANDLER_CODEC;
+  GPtrArray *codecs = g_ptr_array_new ();
+  GList *iter = remote_codecs;
+
+  for (; iter; iter = g_list_next (iter))
+    {
+      GValue codec = { 0, };
+      PurpleMediaCodec *c = iter->data;
+      gchar *name;
+      GList *codec_params;
+      GHashTable *params;
+
+      g_value_init (&codec, codec_struct_type);
+      g_value_take_boxed (&codec,
+          dbus_g_type_specialized_construct (codec_struct_type));
+
+      name = purple_media_codec_get_encoding_name (c);
+      codec_params = purple_media_codec_get_optional_parameters (c);
+      params = g_hash_table_new_full (g_str_hash, g_str_equal,
+          g_free, g_free);
+
+      for (; codec_params; codec_params = g_list_next (codec_params))
+        {
+          PurpleKeyValuePair *pair = codec_params->data;
+          g_hash_table_insert (params, pair->key, pair->value);
+        }
+
+      DEBUG ("new remote %s codec: %u '%s' %u %u %u",
+          priv->media_type == TP_MEDIA_STREAM_TYPE_AUDIO ? "audio" : "video",
+          purple_media_codec_get_id (c), name, priv->media_type,
+          purple_media_codec_get_clock_rate (c),
+          purple_media_codec_get_channels (c));
+
+      dbus_g_type_struct_set (&codec,
+          0, purple_media_codec_get_id (c),
+          1, name,
+          2, priv->media_type,
+          3, purple_media_codec_get_clock_rate (c),
+          4, purple_media_codec_get_channels (c),
+          5, params,
+          G_MAXUINT);
+
+      g_free (name);
+      g_hash_table_destroy (params);
+
+      g_ptr_array_add (codecs, g_value_get_boxed (&codec));
+   }
+
+  DEBUG ("passing %d remote codecs to stream-engine", codecs->len);
+
+  tp_svc_media_stream_handler_emit_set_remote_codecs (self, codecs);
+
+  g_ptr_array_free (codecs, TRUE);
+}
+
+
 /**
  * haze_media_stream_codec_choice
  *
