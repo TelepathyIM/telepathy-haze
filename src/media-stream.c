@@ -24,6 +24,7 @@
 #include "media-stream.h"
 
 #include <libpurple/media/backend-iface.h>
+#include <string.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/interfaces.h>
@@ -886,11 +887,58 @@ haze_media_stream_new_active_candidate_pair (TpSvcMediaStreamHandler *iface,
                                              const gchar *remote_candidate_id,
                                              DBusGMethodInvocation *context)
 {
-  DEBUG ("called (%s, %s); this is a no-op on Jingle", native_candidate_id,
-      remote_candidate_id);
+  HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
+  HazeMediaStreamPrivate *priv;
+  PurpleMediaBackend *backend;
+  GList *l_iter;
 
-// emit new active candidate pair here
+  /*
+   * This appears to be called for each pair of components.
+   * I'm not sure how to go about differentiating between the two
+   * components as the ids are the same.
+   */
 
+  DEBUG ("called (%s, %s)", native_candidate_id, remote_candidate_id);
+
+  g_assert (HAZE_IS_MEDIA_STREAM (self));
+
+  priv = self->priv;
+  l_iter = priv->local_candidates;
+  g_object_get (priv->media, "backend", &backend, NULL);
+
+  for (; l_iter; l_iter = g_list_next (l_iter))
+    {
+      PurpleMediaCandidate *lc = l_iter->data;
+      GList *r_iter = priv->remote_candidates;
+
+      for (; r_iter; r_iter = g_list_next (r_iter))
+        {
+          PurpleMediaCandidate *rc = r_iter->data;
+
+          if (purple_media_candidate_get_component_id (lc) ==
+              purple_media_candidate_get_component_id (rc))
+            {
+              gchar *l_name = purple_media_candidate_get_foundation (lc);
+              gchar *r_name = purple_media_candidate_get_foundation (rc);
+
+              if (!strcmp (l_name, native_candidate_id) &&
+                  !strcmp (r_name, remote_candidate_id))
+                {
+                  DEBUG ("Emitting new active candidate pair %d: %s - %s",
+                      purple_media_candidate_get_component_id (lc),
+                      l_name, r_name);
+
+                  g_signal_emit_by_name (backend, "active-candidate-pair",
+                      self->name, self->peer, lc, rc);
+                }
+
+              g_free (l_name);
+              g_free (r_name);
+            }
+        }
+    }
+
+  g_object_unref (backend);
   tp_svc_media_stream_handler_return_from_new_active_candidate_pair (context);
 }
 
