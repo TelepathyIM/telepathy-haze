@@ -506,9 +506,11 @@ haze_media_stream_dispose (GObject *object)
 
   priv->dispose_has_run = TRUE;
 
-  for (; priv->local_candidates; priv->local_candidates = g_list_delete_link(
-        priv->local_candidates, priv->local_candidates))
-      g_object_unref (priv->local_candidates->data);
+  if (priv->local_candidates)
+    {
+      purple_media_candidate_list_free (priv->local_candidates);
+      priv->local_candidates = NULL;
+    }
 
   if (priv->remote_candidates)
     {
