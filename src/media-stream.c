@@ -79,6 +79,7 @@ struct _HazeMediaStreamPrivate
   GValue native_codecs;     /* intersected codec list */
   GList *codecs;
   GList *local_candidates;
+  GList *remote_candidates;
 
   /* Whether we're waiting for a codec intersection from the streaming
    * implementation. If FALSE, SupportedCodecs is a no-op.
@@ -86,7 +87,6 @@ struct _HazeMediaStreamPrivate
   gboolean awaiting_intersection;
 
   GValue remote_codecs;
-  GValue remote_candidates;
 
   guint remote_candidate_count;
 
@@ -158,8 +158,6 @@ haze_media_stream_init (HazeMediaStream *self)
 {
   HazeMediaStreamPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
       HAZE_TYPE_MEDIA_STREAM, HazeMediaStreamPrivate);
-  GType candidate_list_type =
-      TP_ARRAY_TYPE_MEDIA_STREAM_HANDLER_CANDIDATE_LIST;
   GType codec_list_type =
       TP_ARRAY_TYPE_MEDIA_STREAM_HANDLER_CODEC_LIST;
 
@@ -172,10 +170,6 @@ haze_media_stream_init (HazeMediaStream *self)
   g_value_init (&priv->remote_codecs, codec_list_type);
   g_value_take_boxed (&priv->remote_codecs,
       dbus_g_type_specialized_construct (codec_list_type));
-
-  g_value_init (&priv->remote_candidates, candidate_list_type);
-  g_value_take_boxed (&priv->remote_candidates,
-      dbus_g_type_specialized_construct (candidate_list_type));
 
   priv->stun_servers = g_ptr_array_sized_new (1);
 }
@@ -516,6 +510,12 @@ haze_media_stream_dispose (GObject *object)
         priv->local_candidates, priv->local_candidates))
       g_object_unref (priv->local_candidates->data);
 
+  if (priv->remote_candidates)
+    {
+      purple_media_candidate_list_free (priv->remote_candidates);
+      priv->remote_candidates = NULL;
+    }
+
   if (priv->codecs)
     {
       purple_media_codec_list_free (priv->codecs);
@@ -548,7 +548,6 @@ haze_media_stream_finalize (GObject *object)
   g_value_unset (&priv->native_codecs);
 
   g_value_unset (&priv->remote_codecs);
-  g_value_unset (&priv->remote_candidates);
 
   G_OBJECT_CLASS (haze_media_stream_parent_class)->finalize (object);
 }
@@ -574,6 +573,7 @@ void
 haze_media_stream_add_remote_candidates (HazeMediaStream *self,
                                          GList *remote_candidates)
 {
+  HazeMediaStreamPrivate *priv = self->priv;
   GType transport_struct_type = TP_STRUCT_TYPE_MEDIA_STREAM_HANDLER_TRANSPORT;
   GType candidate_struct_type = TP_STRUCT_TYPE_MEDIA_STREAM_HANDLER_CANDIDATE;
   GList *iter = remote_candidates;
@@ -637,6 +637,8 @@ haze_media_stream_add_remote_candidates (HazeMediaStream *self,
           0, candidate_id,
           1, transports,
           G_MAXUINT);
+
+      priv->remote_candidates = g_list_append (priv->remote_candidates, c);
 
       DEBUG ("passing 1 remote candidate to stream engine: %s", candidate_id);
 
