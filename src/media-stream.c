@@ -1129,7 +1129,7 @@ pass_local_codecs (HazeMediaStream *stream,
           G_MAXUINT);
 
       c = purple_media_codec_new (id, name, type, clock_rate);
-      g_object_set (c, "channels", &channels, NULL);
+      g_object_set (c, "channels", channels, NULL);
 
       g_hash_table_foreach (params, (GHFunc)convert_param, c);
 
