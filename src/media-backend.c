@@ -174,7 +174,7 @@ get_stream_by_name (HazeMediaBackend *self,
   HazeMediaBackendPrivate *priv = self->priv;
   guint i;
 
-  for (; i < priv->streams->len; ++i)
+  for (i = 0; i < priv->streams->len; ++i)
     {
       HazeMediaStream *stream = g_ptr_array_index (priv->streams, i);
 
@@ -271,7 +271,7 @@ haze_media_backend_codecs_ready (PurpleMediaBackend *self,
       HazeMediaBackendPrivate *priv = HAZE_MEDIA_BACKEND (self)->priv;
       guint i;
 
-      for (; i < priv->streams->len; ++i)
+      for (i = 0; i < priv->streams->len; ++i)
         {
           stream = g_ptr_array_index (priv->streams, i);
 
