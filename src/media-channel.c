@@ -1473,7 +1473,7 @@ media_channel_request_streams (HazeMediaChannel *self,
     gpointer context)
 {
   HazeMediaChannelPrivate *priv = self->priv;
-  PendingStreamRequest *psr;
+  PendingStreamRequest *psr = NULL;
   GError *error = NULL;
 
   if (types->len == 0)
@@ -1502,18 +1502,29 @@ media_channel_request_streams (HazeMediaChannel *self,
         }
     }
 
-  if (!_haze_media_channel_request_contents (self, contact_handle,
-      types, &error))
-    goto error;
-
+  /*
+   * Pending stream requests can be completed before request_contents returns.
+   * Add the pending stream request up here so it isn't missed.
+   */
   psr = pending_stream_request_new (types, succeeded_cb, failed_cb,
       context);
   priv->pending_stream_requests = g_list_prepend (priv->pending_stream_requests,
       psr);
 
+  if (!_haze_media_channel_request_contents (self, contact_handle,
+      types, &error))
+    goto error;
+
   return;
 
 error:
+  if (psr != NULL)
+    {
+      priv->pending_stream_requests = g_list_remove (
+          priv->pending_stream_requests, psr);
+      pending_stream_request_free (psr);
+    }
+
   DEBUG ("returning error %u: %s", error->code, error->message);
   failed_cb (context, error);
   g_error_free (error);
