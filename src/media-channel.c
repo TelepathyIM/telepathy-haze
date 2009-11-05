@@ -391,7 +391,7 @@ media_state_changed_cb (PurpleMedia *media,
             }
 
           tp_svc_channel_type_streamed_media_emit_stream_added (
-              chan, 0, priv->initial_peer, type & PURPLE_MEDIA_AUDIO ?
+              chan, id, priv->initial_peer, type & PURPLE_MEDIA_AUDIO ?
               TP_MEDIA_STREAM_TYPE_AUDIO : TP_MEDIA_STREAM_TYPE_VIDEO);
 
           if (priv->ready)
