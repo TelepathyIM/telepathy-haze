@@ -106,11 +106,15 @@ haze_media_backend_set_property (GObject      *object,
       break;
     case PROP_MEDIA:
       g_assert (priv->media == NULL);
-      priv->media = g_value_dup_object (value);
+      priv->media = g_value_get_object (value);
 
-      if (PURPLE_IS_MEDIA (priv->media))
-        g_signal_connect (priv->media, "state-changed",
-            G_CALLBACK (haze_backend_state_changed_cb), backend);
+      if (!PURPLE_IS_MEDIA (priv->media))
+        break;
+
+      g_object_add_weak_pointer(G_OBJECT(priv->media),
+          (gpointer*)&priv->media);
+      g_signal_connect (priv->media, "state-changed",
+          G_CALLBACK (haze_backend_state_changed_cb), backend);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -143,16 +147,7 @@ haze_media_backend_class_init (HazeMediaBackendClass *haze_media_backend_class)
 void
 haze_media_backend_dispose (GObject *object)
 {
-  HazeMediaBackend *self = HAZE_MEDIA_BACKEND (object);
-  HazeMediaBackendPrivate *priv = self->priv;
-
   DEBUG ("called");
-
-  if (priv->media != NULL)
-    {
-      g_object_unref (priv->media);
-      priv->media = NULL;
-    }
 
   if (G_OBJECT_CLASS (haze_media_backend_parent_class)->dispose)
     G_OBJECT_CLASS (haze_media_backend_parent_class)->dispose (object);
