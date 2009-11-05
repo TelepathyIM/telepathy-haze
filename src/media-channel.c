@@ -341,12 +341,6 @@ media_state_changed_cb (PurpleMedia *media,
           gchar *object_path;
           guint id;
 
-          if (purple_media_get_session_type (media, sid) & PURPLE_MEDIA_VIDEO)
-            {
-              /* Show remote video in its own window */
-              purple_media_set_output_window (media, sid, name, 0);
-            }
-
           type = purple_media_get_session_type (priv->media, sid);
 
           id = priv->next_stream_id++;
