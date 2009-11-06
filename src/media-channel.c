@@ -1061,7 +1061,7 @@ haze_media_channel_close (HazeMediaChannel *self)
     {
       priv->closed = TRUE;
 
-      if (!priv->media_ended)
+      if (priv->media && !priv->media_ended)
         {
           priv->media_ended = TRUE;
           purple_media_stream_info (priv->media,
