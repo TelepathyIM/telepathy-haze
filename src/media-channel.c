@@ -452,23 +452,6 @@ media_state_changed_cb (PurpleMedia *media,
           TpHandle peer;
           TpIntSet *set;
 
-          /*
-           * This shouldn't be needed once libpurple emits
-           * PURPLE_MEDIA_STATE_END properly
-           */
-          guint id;
-
-          while (priv->streams->len > 0)
-            {
-              HazeMediaStream *stream = g_ptr_array_index (priv->streams, 0);
-              g_object_get (stream, "id", &id, NULL);
-              g_ptr_array_remove_fast (priv->streams, stream);
-              g_object_unref (stream);
-              tp_svc_channel_type_streamed_media_emit_stream_removed (
-                  chan, id);
-            }
-          /* END */
-
           priv->media_ended = TRUE;
 
           peer = priv->initial_peer;
@@ -1295,7 +1278,6 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
 
   for (i = 0; i < media_ids->len; ++i)
     {
-      /* libpurple doesn't correctly support removing individual streams */
       purple_media_end (priv->media, g_ptr_array_index (media_ids, i), NULL);
     }
 
