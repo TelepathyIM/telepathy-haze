@@ -24,6 +24,7 @@
 #include "media-channel.h"
 
 #include <libpurple/media/backend-iface.h>
+#include <libpurple/mediamanager.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/channel-iface.h>
@@ -36,7 +37,6 @@
 #include "debug.h"
 #include "media-backend.h"
 #include "media-stream.h"
-#include "mediamanager.h"
 
 static void channel_iface_init (gpointer, gpointer);
 static void media_signalling_iface_init (gpointer, gpointer);

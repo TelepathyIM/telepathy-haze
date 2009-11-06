@@ -21,9 +21,8 @@
 #include "config.h"
 #include "media-backend.h"
 
+#include <libpurple/media/backend-iface.h>
 #include <string.h>
-
-#include "media/backend-iface.h"
 
 #include "debug.h"
 

@@ -24,11 +24,9 @@
 #define __HAZE_MEDIA_STREAM_H__
 
 #include <glib-object.h>
-
+#include <libpurple/media.h>
 #include <telepathy-glib/dbus-properties-mixin.h>
 #include <telepathy-glib/enums.h>
-
-#include "media.h"
 
 G_BEGIN_DECLS
 

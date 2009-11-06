@@ -22,6 +22,7 @@
 #include "config.h"
 #include "media-manager.h"
 
+#include <libpurple/mediamanager.h>
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
@@ -29,7 +30,6 @@
 #include "connection.h"
 #include "debug.h"
 #include "media-channel.h"
-#include "mediamanager.h"
 
 static void channel_manager_iface_init (gpointer, gpointer);
 static void haze_media_manager_close_all (HazeMediaManager *self);
