@@ -202,6 +202,17 @@ haze_media_stream_constructor (GType type, guint n_props,
   bus = tp_get_bus ();
   dbus_g_connection_register_g_object (bus, priv->object_path, obj);
 
+  if (priv->created_locally)
+    {
+      g_object_set (stream, "combined-direction",
+          MAKE_COMBINED_DIRECTION (TP_MEDIA_STREAM_DIRECTION_BIDIRECTIONAL,
+            0), NULL);
+    }
+  else
+    {
+      priv->awaiting_intersection = TRUE;
+    }
+
   return obj;
 }
 

@@ -394,6 +394,9 @@ media_state_changed_cb (PurpleMedia *media,
               chan, id, priv->initial_peer, type & PURPLE_MEDIA_AUDIO ?
               TP_MEDIA_STREAM_TYPE_AUDIO : TP_MEDIA_STREAM_TYPE_VIDEO);
 
+          tp_svc_channel_type_streamed_media_emit_stream_direction_changed (
+              chan, id, TP_MEDIA_STREAM_DIRECTION_BIDIRECTIONAL, 0);
+
           if (priv->ready)
             _emit_new_stream (chan, stream);
         }
