@@ -135,22 +135,18 @@ void
 haze_debug (const gchar *format,
             ...)
 {
-    gchar *domain;
     gchar *message;
     va_list args;
-
-    domain = g_strdup_printf ("%s/%s", G_LOG_DOMAIN, "haze");
 
     va_start (args, format);
     message = g_strdup_vprintf (format, args);
     va_end (args);
 
-    log_to_debug_sender (domain, G_LOG_LEVEL_DEBUG, message);
+    log_to_debug_sender (G_LOG_DOMAIN "/haze", G_LOG_LEVEL_DEBUG, message);
 
     if (flags & HAZE_DEBUG_HAZE)
         g_log (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, "%s", message);
 
-    g_free (domain);
     g_free (message);
 }
 
