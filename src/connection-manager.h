@@ -40,6 +40,8 @@ struct _HazeConnectionManagerClass {
 
 struct _HazeConnectionManager {
     TpBaseConnectionManager parent;
+
+    gpointer priv;
 };
 
 typedef struct _HazeProtocolInfo HazeProtocolInfo;

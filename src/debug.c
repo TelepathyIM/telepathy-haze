@@ -25,6 +25,7 @@
 
 #include <libpurple/debug.h>
 #include <telepathy-glib/debug.h>
+#include <telepathy-glib/debug-sender.h>
 
 
 typedef enum
@@ -63,81 +64,55 @@ haze_debug_set_flags_from_env ()
 }
 
 
-static char *debug_level_names[] =
+static GLogLevelFlags debug_level_map[] =
 {
-    "all",
-    "misc",
-    "info",
-    "warning",
-    "error",
-    "fatal"
+    G_LOG_LEVEL_DEBUG,    /* PURPLE_DEBUG_ALL */
+    G_LOG_LEVEL_INFO,     /* PURPLE_DEBUG_MISC */
+    G_LOG_LEVEL_MESSAGE,  /* PURPLE_DEBUG_INFO */
+    G_LOG_LEVEL_WARNING,  /* PURPLE_DEBUG_WARNING */
+    G_LOG_LEVEL_CRITICAL, /* PURPLE_DEBUG_ERROR */
+    G_LOG_LEVEL_ERROR,    /* PURPLE_DEBUG_CRITICAL */
 };
+
+static void
+log_to_debug_sender (const gchar *domain,
+                     GLogLevelFlags level,
+                     const gchar *message)
+{
+    TpDebugSender *dbg;
+    GTimeVal now;
+
+    dbg = tp_debug_sender_dup ();
+
+    g_get_current_time (&now);
+
+    tp_debug_sender_add_message (dbg, &now, domain, level, message);
+
+    g_object_unref (dbg);
+}
 
 static void
 haze_debug_print (PurpleDebugLevel level,
                   const char *category,
                   const char *arg_s)
 {
-    char *argh = g_strchomp (g_strdup (arg_s));
-    const char *level_name = debug_level_names[level];
-    switch (level)
-    {
-        case PURPLE_DEBUG_WARNING:
-            g_warning ("%s: %s", category, argh);
-            break;
-        case PURPLE_DEBUG_FATAL:
-            /* g_critical doesn't cause an abort() in haze, so libpurple will
-             * still get to do the honours of blowing us out of the water.
-             */
-            g_critical ("[%s] %s: %s", level_name, category, argh);
-            break;
-        case PURPLE_DEBUG_ERROR:
-        case PURPLE_DEBUG_MISC:
-        case PURPLE_DEBUG_INFO:
-        default:
-            g_message ("[%s] %s: %s", level_name, category, argh);
-            break;
-    }
+    gchar *argh = g_strchomp (g_strdup (arg_s));
+    gchar *domain = g_strdup_printf ("purple/%s", category);
+    GLogLevelFlags log_level = debug_level_map[level];
+
+    log_to_debug_sender (domain, log_level, argh);
+
+    if (flags & HAZE_DEBUG_PURPLE)
+        g_log (domain, log_level, "%s", argh);
+
+    g_free (domain);
     g_free(argh);
-}
-
-static gboolean
-haze_debug_is_enabled (PurpleDebugLevel level,
-                       const char *category)
-{
-    if (!(flags & HAZE_DEBUG_PURPLE))
-        return FALSE;
-
-    if (level == PURPLE_DEBUG_MISC)
-        return FALSE;
-    /* oscar and yahoo, among others, supply a NULL category for some of their
-     * output.  "yay"
-     */
-    if (!category)
-        return FALSE;
-    /* The Jabber prpl produces an unreasonable volume of debug output, so
-     * let's suppress it.
-     */
-    if (!strcmp (category, "jabber"))
-        return FALSE;
-    if (!strcmp (category, "dns") ||
-        !strcmp (category, "dnsquery") ||
-        !strcmp (category, "proxy") ||
-        !strcmp (category, "gnutls") ||
-        !strcmp (category, "prefs") ||
-        !strcmp (category, "util") ||
-        !strcmp (category, "plugins") ||
-        g_str_has_prefix (category, "certificate"))
-    {
-        return FALSE;
-    }
-    return TRUE;
 }
 
 static PurpleDebugUiOps haze_debug_uiops =
 {
     haze_debug_print,
-    haze_debug_is_enabled,
+    NULL,
     /* padding */
     NULL,
     NULL,
@@ -160,13 +135,18 @@ void
 haze_debug (const gchar *format,
             ...)
 {
+    gchar *message;
+    va_list args;
+
+    va_start (args, format);
+    message = g_strdup_vprintf (format, args);
+    va_end (args);
+
+    log_to_debug_sender (G_LOG_DOMAIN "/haze", G_LOG_LEVEL_DEBUG, message);
+
     if (flags & HAZE_DEBUG_HAZE)
-    {
-        va_list args;
-        va_start (args, format);
+        g_log (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, "%s", message);
 
-        g_logv (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, format, args);
-
-        va_end (args);
-    }
+    g_free (message);
 }
+
