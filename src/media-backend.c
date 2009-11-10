@@ -261,8 +261,8 @@ haze_media_backend_codecs_ready (PurpleMediaBackend *self,
       stream = get_stream_by_name (HAZE_MEDIA_BACKEND (self), sid);
 
       if (stream != NULL)
-        g_object_get (stream, "ready", &ready, NULL);
-    
+        g_object_get (stream, "codecs-ready", &ready, NULL);
+
       return ready;
     }
   else
@@ -275,7 +275,7 @@ haze_media_backend_codecs_ready (PurpleMediaBackend *self,
           stream = g_ptr_array_index (priv->streams, i);
 
           if (stream != NULL)
-            g_object_get (stream, "ready", &ready, NULL);
+            g_object_get (stream, "codecs-ready", &ready, NULL);
 
           if (!ready)
             return FALSE;

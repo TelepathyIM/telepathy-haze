@@ -60,6 +60,7 @@ enum
   PROP_COMBINED_DIRECTION,
   PROP_LOCAL_HOLD,
   PROP_MEDIA,
+  PROP_CODECS_READY,
   PROP_STUN_SERVERS,
   PROP_RELAY_INFO,
   PROP_NAT_TRAVERSAL,
@@ -258,6 +259,9 @@ haze_media_stream_get_property (GObject    *object,
       break;
     case PROP_MEDIA:
       g_value_set_object (value, priv->media);
+      break;
+    case PROP_CODECS_READY:
+      g_value_set_boolean (value, priv->codecs != NULL);
       break;
     case PROP_STUN_SERVERS:
       g_value_set_boxed (value, priv->stun_servers);
@@ -498,6 +502,12 @@ haze_media_stream_class_init (HazeMediaStreamClass *haze_media_stream_class)
       "True if this stream was created by the local user", FALSE,
       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CREATED_LOCALLY,
+      param_spec);
+
+  param_spec = g_param_spec_boolean ("codecs-ready", "Codecs ready",
+      "True if the codecs for this stream are ready to be used", FALSE,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_CODECS_READY,
       param_spec);
 
   haze_media_stream_class->dbus_props_class.interfaces = prop_interfaces;
