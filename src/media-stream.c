@@ -80,6 +80,7 @@ struct _HazeMediaStreamPrivate
 
   GValue native_codecs;     /* intersected codec list */
   GList *codecs;
+  GList *remote_codecs;
   GList *local_candidates;
   GList *remote_candidates;
 
@@ -549,6 +550,12 @@ haze_media_stream_dispose (GObject *object)
       priv->codecs = NULL;
     }
 
+  if (priv->remote_codecs)
+    {
+      purple_media_codec_list_free (priv->remote_codecs);
+      priv->remote_codecs = NULL;
+    }
+
   g_object_unref (priv->media);
   priv->media = NULL;
 
@@ -675,14 +682,13 @@ haze_media_stream_add_remote_candidates (HazeMediaStream *self,
 }
 
 
-void
-haze_media_stream_set_remote_codecs (HazeMediaStream *self,
-                                     GList *remote_codecs)
+static void
+pass_remote_codecs (HazeMediaStream *self)
 {
   HazeMediaStreamPrivate *priv = self->priv;
   GType codec_struct_type = TP_STRUCT_TYPE_MEDIA_STREAM_HANDLER_CODEC;
   GPtrArray *codecs = g_ptr_array_new ();
-  GList *iter = remote_codecs;
+  GList *iter = priv->remote_codecs;
 
   for (; iter; iter = g_list_next (iter))
     {
@@ -731,8 +737,23 @@ haze_media_stream_set_remote_codecs (HazeMediaStream *self,
   DEBUG ("passing %d remote codecs to stream-engine", codecs->len);
 
   tp_svc_media_stream_handler_emit_set_remote_codecs (self, codecs);
+}
 
-  g_ptr_array_free (codecs, TRUE);
+
+void
+haze_media_stream_set_remote_codecs (HazeMediaStream *self,
+                                     GList *remote_codecs)
+{
+  HazeMediaStreamPrivate *priv = self->priv;
+  GList *iter = priv->remote_codecs;
+
+  for (; iter; iter = g_list_delete_link (iter, iter))
+    g_object_unref (iter->data);
+
+  priv->remote_codecs = g_list_copy (remote_codecs);
+
+  if (priv->ready == TRUE)
+    pass_remote_codecs (self);
 }
 
 
@@ -1090,6 +1111,7 @@ haze_media_stream_ready (TpSvcMediaStreamHandler *iface,
 
   /* set_local_codecs and ready return the same thing, so we can do... */
   haze_media_stream_set_local_codecs (iface, codecs, context);
+  pass_remote_codecs (self);
 }
 
 static void
