@@ -523,7 +523,6 @@ media_stream_info_cb(PurpleMedia *media,
       TpGroupMixin *mixin = TP_GROUP_MIXIN (chan);
       guint terminator;
       TpIntSet *set;
-      gchar *reason;
 
       if (sid != NULL)
         return;
@@ -533,11 +532,6 @@ media_stream_info_cb(PurpleMedia *media,
       else
         /* This will need to get the handle from name for multi-user calls */
         terminator = priv->initial_peer;
-
-      if (type == PURPLE_MEDIA_INFO_REJECT)
-        reason = "Media session rejected";
-      else
-        reason = "Media session hang up";
 
       set = tp_intset_new ();
 
@@ -549,7 +543,7 @@ media_stream_info_cb(PurpleMedia *media,
           tp_intset_add (set, mixin->self_handle);
 
       tp_group_mixin_change_members ((GObject *) chan,
-          reason, NULL, set, NULL, NULL, terminator,
+          NULL, NULL, set, NULL, NULL, terminator,
           TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
 
       tp_intset_destroy (set);
