@@ -1153,7 +1153,7 @@ pass_local_codecs (HazeMediaStream *stream,
 
       priv->codecs = g_list_append (priv->codecs, c);
 
-      // emit codecs-changed?
+      g_signal_emit_by_name (priv->media, "codecs-changed", stream->name);
     }
 
   return TRUE;
