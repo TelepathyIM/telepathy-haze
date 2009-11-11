@@ -90,9 +90,6 @@ struct _HazeMediaStreamPrivate
 
   guint remote_candidate_count;
 
-  /* source ID for initial codecs/candidates getter */
-  gulong initial_getter_id;
-
   gchar *nat_traversal;
   /* GPtrArray(GValueArray(STRING, UINT)) */
   GPtrArray *stun_servers;
@@ -516,12 +513,6 @@ haze_media_stream_dispose (GObject *object)
 
   if (priv->dispose_has_run)
     return;
-
-  if (priv->initial_getter_id != 0)
-    {
-      g_source_remove (priv->initial_getter_id);
-      priv->initial_getter_id = 0;
-    }
 
   priv->dispose_has_run = TRUE;
 
