@@ -199,6 +199,9 @@ haze_media_stream_constructor (GType type, guint n_props,
   else
     priv->media_type = TP_MEDIA_STREAM_TYPE_VIDEO;
 
+  priv->created_locally = purple_media_is_initiator (
+      priv->media, stream->name, stream->peer);
+
   /* go for the bus */
   bus = tp_get_bus ();
   dbus_g_connection_register_g_object (bus, priv->object_path, obj);
