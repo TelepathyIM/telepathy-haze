@@ -22,6 +22,7 @@
 #include "media-backend.h"
 
 #include <libpurple/media/backend-iface.h>
+#include <telepathy-glib/errors.h>
 #include <telepathy-glib/svc-media-interfaces.h>
 
 #include <string.h>
@@ -367,6 +368,55 @@ haze_media_backend_error (TpSvcMediaSessionHandler *iface,
                           const gchar *message,
                           DBusGMethodInvocation *context)
 {
+  HazeMediaBackend *self = HAZE_MEDIA_BACKEND (iface);
+  HazeMediaBackendPrivate *priv;
+  GPtrArray *tmp;
+  guint i;
+
+  g_assert (HAZE_IS_MEDIA_BACKEND (self));
+
+  priv = self->priv;
+
+  if (priv->media == NULL)
+    {
+      /* This could also be because someone called Error() before the
+       * SessionHandler was announced. But the fact that the SessionHandler is
+       * actually also the Channel, and thus this method is available before
+       * NewSessionHandler is emitted, is an implementation detail. So the
+       * error message describes the only legitimate situation in which this
+       * could arise.
+       */
+      GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "call has already ended" };
+
+      DEBUG ("no session, returning an error.");
+      dbus_g_method_return_error (context, &e);
+      return;
+    }
+
+  DEBUG ("Media.SessionHandler::Error called, error %u (%s) -- "
+      "emitting error on each stream", errno, message);
+
+  purple_media_end (priv->media, NULL, NULL);
+
+  /* Calling haze_media_stream_error () on all the streams will ultimately
+   * cause them all to emit 'closed'. In response to 'closed', stream_close_cb
+   * unrefs them, and removes them from priv->streams. So, we copy the stream
+   * list to avoid it being modified from underneath us.
+   */
+  tmp = g_ptr_array_sized_new (priv->streams->len);
+
+  for (i = 0; i < priv->streams->len; i++)
+    g_ptr_array_add (tmp, g_ptr_array_index (priv->streams, i));
+
+  for (i = 0; i < tmp->len; i++)
+    {
+      HazeMediaStream *stream = g_ptr_array_index (tmp, i);
+
+      haze_media_stream_error (stream, errno, message, NULL);
+    }
+
+  g_ptr_array_free (tmp, TRUE);
+
   tp_svc_media_session_handler_return_from_error (context);
 }
 
