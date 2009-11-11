@@ -61,6 +61,8 @@ struct _HazeMediaBackendPrivate
   gchar *conference_type;
   PurpleMedia *media;
   GPtrArray *streams;
+
+  gboolean ready;
 };
 
 static void
@@ -382,6 +384,21 @@ static void
 haze_media_backend_ready (TpSvcMediaSessionHandler *iface,
                           DBusGMethodInvocation *context)
 {
+  HazeMediaBackend *self = HAZE_MEDIA_BACKEND (iface);
+  HazeMediaBackendPrivate *priv = self->priv;
+
+  if (!priv->ready)
+    {
+      guint i;
+
+      DEBUG ("emitting NewStreamHandler for each stream");
+
+      priv->ready = TRUE;
+
+      for (i = 0; i < priv->streams->len; i++)
+        _emit_new_stream (self, g_ptr_array_index (priv->streams, i));
+    }
+
   tp_svc_media_session_handler_return_from_ready (context);
 }
 
