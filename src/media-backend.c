@@ -22,11 +22,15 @@
 #include "media-backend.h"
 
 #include <libpurple/media/backend-iface.h>
+#include <telepathy-glib/svc-media-interfaces.h>
+
 #include <string.h>
 
 #include "debug.h"
 
 static void media_backend_iface_init(PurpleMediaBackendIface *iface);
+static void session_handler_iface_init (gpointer g_iface,
+                                        gpointer iface_data);
 static void haze_backend_state_changed_cb (PurpleMedia *media,
                                            PurpleMediaState state,
                                            const gchar *sid,
@@ -37,7 +41,9 @@ G_DEFINE_TYPE_WITH_CODE (HazeMediaBackend,
     haze_media_backend,
     G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (PURPLE_TYPE_MEDIA_BACKEND,
-      media_backend_iface_init)
+      media_backend_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_MEDIA_SESSION_HANDLER,
+      session_handler_iface_init);
     )
 
 /* properties */
@@ -349,6 +355,22 @@ haze_media_backend_set_send_codec (PurpleMediaBackend *self,
 }
 
 static void
+haze_media_backend_ready (TpSvcMediaSessionHandler *iface,
+                          DBusGMethodInvocation *context)
+{
+  tp_svc_media_session_handler_return_from_ready (context);
+}
+
+static void
+haze_media_backend_error (TpSvcMediaSessionHandler *iface,
+                          guint errno,
+                          const gchar *message,
+                          DBusGMethodInvocation *context)
+{
+  tp_svc_media_session_handler_return_from_error (context);
+}
+
+static void
 media_backend_iface_init (PurpleMediaBackendIface *iface)
 {
 #define IMPLEMENT(x) iface->x = haze_media_backend_##x
@@ -359,5 +381,18 @@ media_backend_iface_init (PurpleMediaBackendIface *iface)
   IMPLEMENT(get_local_candidates);
   IMPLEMENT(set_remote_codecs);
   IMPLEMENT(set_send_codec);
+#undef IMPLEMENT
+}
+
+static void
+session_handler_iface_init (gpointer g_iface, gpointer iface_data)
+{
+  TpSvcMediaSessionHandlerClass *klass =
+    (TpSvcMediaSessionHandlerClass *) g_iface;
+
+#define IMPLEMENT(x) tp_svc_media_session_handler_implement_##x (\
+    klass, haze_media_backend_##x)
+  IMPLEMENT(error);
+  IMPLEMENT(ready);
 #undef IMPLEMENT
 }
