@@ -88,8 +88,6 @@ struct _HazeMediaStreamPrivate
    */
   gboolean awaiting_intersection;
 
-  GValue remote_codecs;
-
   guint remote_candidate_count;
 
   /* source ID for initial codecs/candidates getter */
@@ -167,10 +165,6 @@ haze_media_stream_init (HazeMediaStream *self)
 
   g_value_init (&priv->native_codecs, codec_list_type);
   g_value_take_boxed (&priv->native_codecs,
-      dbus_g_type_specialized_construct (codec_list_type));
-
-  g_value_init (&priv->remote_codecs, codec_list_type);
-  g_value_take_boxed (&priv->remote_codecs,
       dbus_g_type_specialized_construct (codec_list_type));
 
   priv->stun_servers = g_ptr_array_sized_new (1);
@@ -579,8 +573,6 @@ haze_media_stream_finalize (GObject *object)
     g_boxed_free (TP_ARRAY_TYPE_STRING_VARIANT_MAP_LIST, priv->relay_info);
 
   g_value_unset (&priv->native_codecs);
-
-  g_value_unset (&priv->remote_codecs);
 
   G_OBJECT_CLASS (haze_media_stream_parent_class)->finalize (object);
 }
