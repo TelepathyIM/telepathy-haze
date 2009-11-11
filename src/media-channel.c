@@ -309,6 +309,30 @@ pending_stream_request_free (gpointer data)
 }
 
 static void
+stream_direction_changed_cb (HazeMediaStream *stream,
+                             GParamSpec *pspec,
+                             HazeMediaChannel *chan)
+{
+  guint id;
+  CombinedStreamDirection combined;
+  TpMediaStreamDirection direction;
+  TpMediaStreamPendingSend pending_send;
+
+  g_object_get (stream,
+      "id", &id,
+      "combined-direction", &combined,
+      NULL);
+
+  direction = COMBINED_DIRECTION_GET_DIRECTION (combined);
+  pending_send = COMBINED_DIRECTION_GET_PENDING_SEND (combined);
+
+  DEBUG ("direction: %u, pending_send: %u", direction, pending_send);
+
+  tp_svc_channel_type_streamed_media_emit_stream_direction_changed (
+      chan, id, direction, pending_send);
+}
+
+static void
 media_error_cb (PurpleMedia *media,
                 const gchar *error,
                 HazeMediaChannel *chan)
@@ -390,12 +414,14 @@ media_state_changed_cb (PurpleMedia *media,
                 }
             }
 
+          g_signal_connect (stream, "notify::combined-direction",
+              (GCallback) stream_direction_changed_cb, chan);
+
           tp_svc_channel_type_streamed_media_emit_stream_added (
               chan, id, priv->initial_peer, type & PURPLE_MEDIA_AUDIO ?
               TP_MEDIA_STREAM_TYPE_AUDIO : TP_MEDIA_STREAM_TYPE_VIDEO);
 
-          tp_svc_channel_type_streamed_media_emit_stream_direction_changed (
-              chan, id, TP_MEDIA_STREAM_DIRECTION_BIDIRECTIONAL, 0);
+          stream_direction_changed_cb (stream, NULL, chan);
 
           if (priv->ready)
             _emit_new_stream (chan, stream);
@@ -515,6 +541,15 @@ media_stream_info_cb(PurpleMedia *media,
       /* add the peer to the member list */
       tp_group_mixin_change_members (G_OBJECT (chan), "", set, NULL, NULL,
           NULL, actor, TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
+
+      if (sid != NULL && name == NULL && purple_media_is_initiator (
+          media, sid, name) == FALSE)
+        {
+          HazeMediaStream *stream = find_stream_by_name (chan, sid, NULL);
+          g_object_set (stream, "combined-direction",
+              MAKE_COMBINED_DIRECTION (
+              TP_MEDIA_STREAM_DIRECTION_BIDIRECTIONAL, 0), NULL);
+        }
     }
   else if (type == PURPLE_MEDIA_INFO_REJECT ||
       type == PURPLE_MEDIA_INFO_HANGUP)
