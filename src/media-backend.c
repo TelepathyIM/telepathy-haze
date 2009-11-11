@@ -212,6 +212,29 @@ haze_backend_state_changed_cb (PurpleMedia *media,
     }
 }
 
+static void
+_emit_new_stream (HazeMediaBackend *self,
+                  HazeMediaStream *stream)
+{
+  gchar *object_path;
+  guint id, media_type;
+
+  g_object_get (stream,
+                "object-path", &object_path,
+                "id", &id,
+                "media-type", &media_type,
+                NULL);
+
+  /* all of the streams are bidirectional from farsight's point of view, it's
+   * just in the signalling they change */
+  DEBUG ("emitting MediaSessionHandler:NewStreamHandler signal for %s stream %d",
+      media_type == TP_MEDIA_STREAM_TYPE_AUDIO ? "audio" : "video", id);
+  tp_svc_media_session_handler_emit_new_stream_handler (self,
+      object_path, id, media_type, TP_MEDIA_STREAM_DIRECTION_BIDIRECTIONAL);
+
+  g_free (object_path);
+}
+
 void
 haze_media_backend_add_media_stream (HazeMediaBackend *self,
     HazeMediaStream *stream)
