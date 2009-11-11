@@ -78,7 +78,6 @@ struct _HazeMediaStreamPrivate
   guint id;
   guint media_type;
 
-  GValue native_codecs;     /* intersected codec list */
   GList *codecs;
   GList *remote_codecs;
   GList *local_candidates;
@@ -159,14 +158,8 @@ haze_media_stream_init (HazeMediaStream *self)
 {
   HazeMediaStreamPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self,
       HAZE_TYPE_MEDIA_STREAM, HazeMediaStreamPrivate);
-  GType codec_list_type =
-      TP_ARRAY_TYPE_MEDIA_STREAM_HANDLER_CODEC_LIST;
 
   self->priv = priv;
-
-  g_value_init (&priv->native_codecs, codec_list_type);
-  g_value_take_boxed (&priv->native_codecs,
-      dbus_g_type_specialized_construct (codec_list_type));
 
   priv->stun_servers = g_ptr_array_sized_new (1);
 }
@@ -578,8 +571,6 @@ haze_media_stream_finalize (GObject *object)
 
   if (priv->relay_info != NULL)
     g_boxed_free (TP_ARRAY_TYPE_STRING_VARIANT_MAP_LIST, priv->relay_info);
-
-  g_value_unset (&priv->native_codecs);
 
   G_OBJECT_CLASS (haze_media_stream_parent_class)->finalize (object);
 }
@@ -1146,8 +1137,6 @@ pass_local_codecs (HazeMediaStream *stream,
   DEBUG ("putting list of %d supported codecs from stream-engine into cache",
       codecs->len);
 
-  g_value_set_boxed (&priv->native_codecs, codecs);
-
   if (priv->media_type == TP_MEDIA_STREAM_TYPE_AUDIO)
     type = PURPLE_MEDIA_AUDIO;
   else if (priv->media_type == TP_MEDIA_STREAM_TYPE_VIDEO)
@@ -1327,11 +1316,9 @@ haze_media_stream_codecs_updated (TpSvcMediaStreamHandler *iface,
                                   DBusGMethodInvocation *context)
 {
   HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
-  gboolean codecs_set =
-      (g_value_get_boxed (&self->priv->native_codecs) != NULL);
   GError *error = NULL;
 
-  if (!codecs_set)
+  if (self->priv->codecs == NULL)
     {
       GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
           "CodecsUpdated may only be called once an initial set of codecs "
