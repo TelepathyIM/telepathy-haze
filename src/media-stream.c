@@ -601,14 +601,13 @@ haze_media_stream_get_codecs (HazeMediaStream *self)
 }
 
 
-void
-haze_media_stream_add_remote_candidates (HazeMediaStream *self,
-                                         GList *remote_candidates)
+static void
+pass_remote_candidates (HazeMediaStream *self)
 {
   HazeMediaStreamPrivate *priv = self->priv;
   GType transport_struct_type = TP_STRUCT_TYPE_MEDIA_STREAM_HANDLER_TRANSPORT;
   GType candidate_struct_type = TP_STRUCT_TYPE_MEDIA_STREAM_HANDLER_CANDIDATE;
-  GList *iter = remote_candidates;
+  GList *iter = priv->remote_candidates;
 
   for (; iter; iter = g_list_next (iter))
     {
@@ -670,8 +669,6 @@ haze_media_stream_add_remote_candidates (HazeMediaStream *self,
           1, transports,
           G_MAXUINT);
 
-      priv->remote_candidates = g_list_append (priv->remote_candidates, c);
-
       DEBUG ("passing 1 remote candidate to stream engine: %s", candidate_id);
 
       tp_svc_media_stream_handler_emit_add_remote_candidate (
@@ -679,6 +676,20 @@ haze_media_stream_add_remote_candidates (HazeMediaStream *self,
 
       g_free (candidate_id);
     }
+}
+
+
+void
+haze_media_stream_add_remote_candidates (HazeMediaStream *self,
+                                         GList *remote_candidates)
+{
+  HazeMediaStreamPrivate *priv = self->priv;
+
+  priv->remote_candidates = g_list_concat (
+      priv->remote_candidates, remote_candidates);
+
+  if (priv->ready == TRUE)
+    pass_remote_candidates (self);
 }
 
 
@@ -1112,6 +1123,7 @@ haze_media_stream_ready (TpSvcMediaStreamHandler *iface,
   /* set_local_codecs and ready return the same thing, so we can do... */
   haze_media_stream_set_local_codecs (iface, codecs, context);
   pass_remote_codecs (self);
+  pass_remote_candidates (self);
 }
 
 static void
