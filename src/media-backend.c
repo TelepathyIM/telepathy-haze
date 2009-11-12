@@ -65,6 +65,7 @@ struct _HazeMediaBackendPrivate
   PurpleMedia *media;
   GPtrArray *streams;
 
+  guint next_stream_id;
   gboolean ready;
 };
 
@@ -75,6 +76,9 @@ haze_media_backend_init (HazeMediaBackend *self)
       HAZE_TYPE_MEDIA_BACKEND, HazeMediaBackendPrivate);
 
   self->priv = priv;
+
+  priv->next_stream_id = 1;
+  priv->streams = g_ptr_array_sized_new (1);
 }
 
 static void
@@ -191,7 +195,8 @@ haze_media_backend_finalize (GObject *object)
   HazeMediaBackend *self = HAZE_MEDIA_BACKEND (object);
   HazeMediaBackendPrivate *priv = self->priv;
 
-  g_free(priv->conference_type);
+  g_free (priv->conference_type);
+  g_free (priv->object_path);
 
   if (priv->streams != NULL)
     g_ptr_array_free (priv->streams, TRUE);
