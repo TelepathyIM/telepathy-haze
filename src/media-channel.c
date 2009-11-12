@@ -354,33 +354,20 @@ media_state_changed_cb (PurpleMedia *media,
     {
       if (sid != NULL && name != NULL)
         {
-          PurpleMediaSessionType type;
-          PurpleMediaBackend *backend;
+          HazeMediaBackend *backend;
           HazeMediaStream *stream;
-          gchar *object_path;
+          TpMediaStreamType type;
           guint id;
 
-          type = purple_media_get_session_type (priv->media, sid);
-
-          id = priv->next_stream_id++;
-
-          object_path = g_strdup_printf ("%s/MediaStream%u",
-              priv->object_path, id);
-
-          stream = haze_media_stream_new (object_path, media,
-              sid, name, id, "ice-udp", NULL, FALSE);
-
-          g_free (object_path);
-
-          DEBUG ("%p: created new MediaStream %p for content '%s'",
-              chan, stream, sid);
+          g_object_get (priv->media, "backend", &backend, NULL);
+          stream = haze_media_backend_get_stream_by_name (backend, sid);
+          g_object_ref (stream);
+          g_object_unref (backend);
 
           g_ptr_array_add (priv->streams, stream);
 
-          g_object_get (priv->media, "backend", &backend, NULL);
-          haze_media_backend_add_media_stream (
-              HAZE_MEDIA_BACKEND (backend), stream);
-          g_object_unref (backend);
+          g_object_get (G_OBJECT (stream), "id", &id, NULL);
+          type = haze_media_stream_get_media_type (stream);
 
           /* if any RequestStreams call was waiting for a stream to be created for
            * that content, return from it successfully */
@@ -390,9 +377,7 @@ media_state_changed_cb (PurpleMedia *media,
               while (iter != NULL)
                {
                   if (pending_stream_request_maybe_satisfy (iter->data,
-                        chan, type & PURPLE_MEDIA_AUDIO ?
-                        TP_MEDIA_STREAM_TYPE_AUDIO :
-                        TP_MEDIA_STREAM_TYPE_VIDEO, stream))
+                        chan, type, stream))
                     {
                       GList *dead = iter;
 
@@ -413,8 +398,7 @@ media_state_changed_cb (PurpleMedia *media,
               (GCallback) stream_direction_changed_cb, chan);
 
           tp_svc_channel_type_streamed_media_emit_stream_added (
-              chan, id, priv->initial_peer, type & PURPLE_MEDIA_AUDIO ?
-              TP_MEDIA_STREAM_TYPE_AUDIO : TP_MEDIA_STREAM_TYPE_VIDEO);
+              chan, id, priv->initial_peer, type);
 
           stream_direction_changed_cb (stream, NULL, chan);
         }

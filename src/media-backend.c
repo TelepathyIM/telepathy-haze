@@ -222,6 +222,14 @@ get_stream_by_name (HazeMediaBackend *self,
   return NULL;
 }
 
+/* Probably a temporary function */
+HazeMediaStream *
+haze_media_backend_get_stream_by_name (HazeMediaBackend *self,
+                    const gchar *sid)
+{
+  return get_stream_by_name (self, sid);
+}
+
 static void
 haze_backend_state_changed_cb (PurpleMedia *media,
                                PurpleMediaState state,
@@ -289,7 +297,36 @@ haze_media_backend_add_stream (PurpleMediaBackend *self,
     const gchar *transmitter,
     guint num_params, GParameter *params)
 {
+  HazeMediaBackendPrivate *priv = HAZE_MEDIA_BACKEND (self)->priv;
+  HazeMediaStream *stream;
+  gchar *object_path;
+  guint media_type, id;
+
   DEBUG ("called");
+
+  id = priv->next_stream_id++;
+
+  object_path = g_strdup_printf ("%s/MediaStream%u",
+      priv->object_path, id);
+
+  if (type & PURPLE_MEDIA_AUDIO)
+    media_type = TP_MEDIA_STREAM_TYPE_AUDIO;
+  else
+    media_type = TP_MEDIA_STREAM_TYPE_VIDEO;
+
+  stream = haze_media_stream_new (object_path, priv->media,
+      sid, who, media_type, id, initiator, "ice-udp", NULL, FALSE);
+
+  g_free (object_path);
+
+  DEBUG ("%p: created new MediaStream %p for sid '%s'",
+      self, stream, sid);
+
+  g_ptr_array_add (priv->streams, stream);
+
+  if (priv->ready)
+      _emit_new_stream (HAZE_MEDIA_BACKEND (self), stream);
+
   return TRUE;
 }
 
