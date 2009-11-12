@@ -248,6 +248,9 @@ haze_media_backend_add_media_stream (HazeMediaBackend *self,
 
   g_object_ref (stream);
   g_ptr_array_add (priv->streams, stream);
+
+  if (priv->ready)
+      _emit_new_stream (self, stream);
 }
 
 static gboolean
