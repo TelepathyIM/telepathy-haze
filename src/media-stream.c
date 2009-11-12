@@ -294,6 +294,9 @@ haze_media_stream_set_property (GObject      *object,
     case PROP_ID:
       priv->id = g_value_get_uint (value);
       break;
+    case PROP_MEDIA_TYPE:
+      priv->media_type = g_value_get_uint (value);
+      break;
     case PROP_CONNECTION_STATE:
       DEBUG ("stream %s connection state %d",
           stream->name, stream->connection_state);
@@ -316,6 +319,9 @@ haze_media_stream_set_property (GObject      *object,
     case PROP_NAT_TRAVERSAL:
       g_assert (priv->nat_traversal == NULL);
       priv->nat_traversal = g_value_dup_string (value);
+      break;
+    case PROP_CREATED_LOCALLY:
+      priv->created_locally = g_value_get_boolean (value);
       break;
     case PROP_RELAY_INFO:
       g_assert (priv->relay_info == NULL);
@@ -401,7 +407,7 @@ haze_media_stream_class_init (HazeMediaStreamClass *haze_media_stream_class)
       "A constant indicating which media type the stream carries.",
       TP_MEDIA_STREAM_TYPE_AUDIO, TP_MEDIA_STREAM_TYPE_VIDEO,
       TP_MEDIA_STREAM_TYPE_AUDIO,
-      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_MEDIA_TYPE, param_spec);
 
   param_spec = g_param_spec_uint ("connection-state", "Stream connection state",
@@ -488,7 +494,7 @@ haze_media_stream_class_init (HazeMediaStreamClass *haze_media_stream_class)
 
   param_spec = g_param_spec_boolean ("created-locally", "Created locally?",
       "True if this stream was created by the local user", FALSE,
-      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_CREATED_LOCALLY,
       param_spec);
 
