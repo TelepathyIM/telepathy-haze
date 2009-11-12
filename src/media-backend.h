@@ -42,8 +42,6 @@ struct _HazeMediaBackend {
 };
 
 GType haze_media_backend_get_type (void);
-void haze_media_backend_add_media_stream (HazeMediaBackend *self,
-    HazeMediaStream *stream);
 HazeMediaStream *haze_media_backend_get_stream_by_name (
     HazeMediaBackend *self,
     const gchar *sid);

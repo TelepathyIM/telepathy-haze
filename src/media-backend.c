@@ -274,22 +274,6 @@ _emit_new_stream (HazeMediaBackend *self,
   g_free (object_path);
 }
 
-void
-haze_media_backend_add_media_stream (HazeMediaBackend *self,
-    HazeMediaStream *stream)
-{
-  HazeMediaBackendPrivate *priv = self->priv;
-
-  if (priv->streams == NULL)
-    priv->streams = g_ptr_array_new ();
-
-  g_object_ref (stream);
-  g_ptr_array_add (priv->streams, stream);
-
-  if (priv->ready)
-      _emit_new_stream (self, stream);
-}
-
 static gboolean
 haze_media_backend_add_stream (PurpleMediaBackend *self,
     const gchar *sid, const gchar *who,
