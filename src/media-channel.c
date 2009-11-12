@@ -1730,7 +1730,7 @@ haze_media_channel_get_session_handlers (
       gchar *object_path;
 
       g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
-      object_path = g_strdup_printf ("%s/MediaSession0", priv->object_path);
+      g_object_get (G_OBJECT (backend), "object-path", &object_path, NULL);
       g_object_unref (backend);
 
       g_value_init (&handler, info_type);
