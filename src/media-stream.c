@@ -111,7 +111,9 @@ haze_media_stream_new (const gchar *object_path,
     PurpleMedia *media,
     const gchar *name,
     const gchar *peer,
+    guint media_type,
     guint id,
+    gboolean created_locally,
     const gchar *nat_traversal,
     const GPtrArray *relay_info,
     gboolean local_hold)
@@ -132,7 +134,9 @@ haze_media_stream_new (const gchar *object_path,
       "media", media,
       "name", name,
       "peer", peer,
+      "media-type", media_type,
       "id", id,
+      "created-locally", created_locally,
       "nat-traversal", nat_traversal,
       "relay-info", relay_info,
       "local-hold", local_hold,
@@ -177,15 +181,6 @@ haze_media_stream_constructor (GType type, guint n_props,
   priv = stream->priv;
 
   g_assert (priv->media != NULL);
-
-  if (purple_media_get_session_type (priv->media, stream->name) &
-      PURPLE_MEDIA_AUDIO)
-    priv->media_type = TP_MEDIA_STREAM_TYPE_AUDIO;
-  else
-    priv->media_type = TP_MEDIA_STREAM_TYPE_VIDEO;
-
-  priv->created_locally = purple_media_is_initiator (
-      priv->media, stream->name, stream->peer);
 
   /* go for the bus */
   bus = tp_get_bus ();
