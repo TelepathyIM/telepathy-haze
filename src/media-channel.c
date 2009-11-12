@@ -1167,67 +1167,8 @@ haze_media_channel_list_streams (TpSvcChannelTypeStreamedMedia *iface,
     }
   else
     {
-      GType info_type = TP_STRUCT_TYPE_MEDIA_STREAM_INFO;
-      GList *ids = purple_media_get_session_ids (priv->media);
-      guint id = 0;
-      ret = g_ptr_array_sized_new (g_list_length (ids));
-
-      for (; ids != NULL; ids = g_list_delete_link (ids, ids))
-        {
-          const gchar *media_id = ids->data;
-          GValue entry = { 0, };
-          TpHandle peer;
-          TpMediaStreamType type;
-          TpMediaStreamState connection_state;
-          TpMediaStreamDirection direction = TP_MEDIA_STREAM_DIRECTION_NONE;
-          TpMediaStreamPendingSend pending_send = 0;
-          PurpleMediaSessionType media_type;
-
-          peer = priv->initial_peer;
-
-          media_type = purple_media_get_session_type (priv->media, media_id);
-
-          if (media_type & PURPLE_MEDIA_AUDIO)
-            type = TP_MEDIA_STREAM_TYPE_AUDIO;
-          else
-            type = TP_MEDIA_STREAM_TYPE_VIDEO;
-
-          /* Need to figure out how to query or store the state */
-          connection_state = TP_MEDIA_STREAM_STATE_CONNECTED;
-
-          if (media_type &
-              (PURPLE_MEDIA_SEND_AUDIO || PURPLE_MEDIA_SEND_VIDEO))
-            direction |= TP_MEDIA_STREAM_DIRECTION_SEND;
-
-          if (media_type &
-              (PURPLE_MEDIA_RECV_AUDIO || PURPLE_MEDIA_RECV_VIDEO))
-            direction |= TP_MEDIA_STREAM_DIRECTION_RECEIVE;
-
-          if (!purple_media_accepted (priv->media, media_id, NULL))
-            {
-              if (priv->creator == peer)
-                pending_send = TP_MEDIA_STREAM_PENDING_LOCAL_SEND;
-              else
-                pending_send = TP_MEDIA_STREAM_PENDING_REMOTE_SEND;
-            }
-
-          g_value_init (&entry, info_type);
-          g_value_take_boxed (&entry,
-              dbus_g_type_specialized_construct (info_type));
-
-          dbus_g_type_struct_set (&entry,
-              0, id,
-              1, peer,
-              2, type,
-              3, connection_state,
-              4, direction,
-              5, pending_send,
-              G_MAXUINT);
-
-          g_ptr_array_add (ret, g_value_get_boxed (&entry));
-
-          ++id;
-        }
+      ret = make_stream_list (self, priv->streams->len,
+          (HazeMediaStream **) priv->streams->pdata);
     }
 
   tp_svc_channel_type_streamed_media_return_from_list_streams (context, ret);
