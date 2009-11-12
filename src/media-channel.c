@@ -1792,15 +1792,23 @@ haze_media_channel_get_session_handlers (
   if (priv->media)
     {
       GValue handler = { 0, };
+      HazeMediaBackend *backend;
+      gchar *object_path;
+
+      g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
+      object_path = g_strdup_printf ("%s/MediaSession0", priv->object_path);
+      g_object_unref (backend);
 
       g_value_init (&handler, info_type);
       g_value_take_boxed (&handler,
           dbus_g_type_specialized_construct (info_type));
 
       dbus_g_type_struct_set (&handler,
-          0, priv->object_path,
+          0, object_path,
           1, "rtp",
           G_MAXUINT);
+
+      g_free (object_path);
 
       ret = g_ptr_array_sized_new (1);
       g_ptr_array_add (ret, g_value_get_boxed (&handler));
