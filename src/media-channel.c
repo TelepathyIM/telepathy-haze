@@ -422,9 +422,6 @@ media_state_changed_cb (PurpleMedia *media,
               TP_MEDIA_STREAM_TYPE_AUDIO : TP_MEDIA_STREAM_TYPE_VIDEO);
 
           stream_direction_changed_cb (stream, NULL, chan);
-
-          if (priv->ready)
-            _emit_new_stream (chan, stream);
         }
     }
 
@@ -588,6 +585,9 @@ static void
 _latch_to_session (HazeMediaChannel *chan)
 {
   HazeMediaChannelPrivate *priv = chan->priv;
+  DBusGConnection *bus;
+  HazeMediaBackend *backend;
+  gchar *object_path;
 
   g_assert (priv->media != NULL);
 
@@ -600,8 +600,17 @@ _latch_to_session (HazeMediaChannel *chan)
   g_signal_connect(G_OBJECT(priv->media), "stream-info",
        G_CALLBACK(media_stream_info_cb), chan);
 
+  object_path = g_strdup_printf ("%s/MediaSession0", priv->object_path);
+  bus = tp_get_bus ();
+
+  g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
+  dbus_g_connection_register_g_object (bus, object_path, G_OBJECT(backend));
+  g_object_unref (backend);
+
   tp_svc_channel_interface_media_signalling_emit_new_session_handler (
-      G_OBJECT (chan), priv->object_path, "rtp");
+      G_OBJECT (chan), object_path, "rtp");
+
+  g_free (object_path);
 }
 
 static GObject *
