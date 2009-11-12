@@ -22,6 +22,7 @@
 #include "media-backend.h"
 
 #include <libpurple/media/backend-iface.h>
+#include <telepathy-glib/dbus.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/svc-media-interfaces.h>
 
@@ -52,6 +53,7 @@ enum
 {
   PROP_CONFERENCE_TYPE = 1,
   PROP_MEDIA,
+  PROP_OBJECT_PATH,
   LAST_PROPERTY
 };
 
@@ -59,6 +61,7 @@ enum
 struct _HazeMediaBackendPrivate
 {
   gchar *conference_type;
+  gchar *object_path;
   PurpleMedia *media;
   GPtrArray *streams;
 
@@ -90,6 +93,9 @@ haze_media_backend_get_property (GObject    *object,
       break;
     case PROP_MEDIA:
       g_value_set_object (value, priv->media);
+      break;
+    case PROP_OBJECT_PATH:
+      g_value_set_string (value, priv->object_path);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -124,6 +130,14 @@ haze_media_backend_set_property (GObject      *object,
       g_signal_connect (priv->media, "state-changed",
           G_CALLBACK (haze_backend_state_changed_cb), backend);
       break;
+    case PROP_OBJECT_PATH:
+      g_assert (priv->object_path == NULL);
+      priv->object_path = g_value_dup_string (value);
+
+      if (priv->object_path != NULL)
+        dbus_g_connection_register_g_object (tp_get_bus (),
+            priv->object_path, G_OBJECT(backend));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -137,6 +151,7 @@ static void
 haze_media_backend_class_init (HazeMediaBackendClass *haze_media_backend_class)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (haze_media_backend_class);
+  GParamSpec *param_spec;
 
   g_type_class_add_private (haze_media_backend_class,
       sizeof (HazeMediaBackendPrivate));
@@ -150,6 +165,15 @@ haze_media_backend_class_init (HazeMediaBackendClass *haze_media_backend_class)
   g_object_class_override_property(object_class, PROP_CONFERENCE_TYPE,
       "conference-type");
   g_object_class_override_property(object_class, PROP_MEDIA, "media");
+
+  param_spec = g_param_spec_string ("object-path", "D-Bus object path",
+                                    "The D-Bus object path used for this "
+                                    "object on the bus.",
+                                    NULL,
+                                    G_PARAM_READWRITE |
+                                    G_PARAM_STATIC_NAME |
+                                    G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_OBJECT_PATH, param_spec);
 }
 
 void

@@ -580,7 +580,6 @@ static void
 _latch_to_session (HazeMediaChannel *chan)
 {
   HazeMediaChannelPrivate *priv = chan->priv;
-  DBusGConnection *bus;
   HazeMediaBackend *backend;
   gchar *object_path;
 
@@ -596,10 +595,9 @@ _latch_to_session (HazeMediaChannel *chan)
        G_CALLBACK(media_stream_info_cb), chan);
 
   object_path = g_strdup_printf ("%s/MediaSession0", priv->object_path);
-  bus = tp_get_bus ();
 
   g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
-  dbus_g_connection_register_g_object (bus, object_path, G_OBJECT(backend));
+  g_object_set (G_OBJECT (backend), "object-path", object_path, NULL);
   g_object_unref (backend);
 
   tp_svc_channel_interface_media_signalling_emit_new_session_handler (
