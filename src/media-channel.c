@@ -1173,8 +1173,7 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
 {
   HazeMediaChannel *obj = HAZE_MEDIA_CHANNEL (iface);
   HazeMediaChannelPrivate *priv;
-  GList *ids;
-  guint len, i;
+  guint i, j;
   GPtrArray *media_ids;
   const gchar *target_id;
 
@@ -1203,22 +1202,32 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
       return;
     }
 
-  ids = purple_media_get_session_ids (priv->media);
-  len = g_list_length (ids);
   media_ids = g_ptr_array_new ();
 
   for (i = 0; i < streams->len; ++i)
     {
       guint id = g_array_index (streams, guint, i);
-      if (id < len)
-        g_ptr_array_add (media_ids, g_list_nth_data (ids, id));
-      else
+
+      for (j = 0; j < priv->streams->len; j++)
+        {
+          HazeMediaStream *stream = g_ptr_array_index (priv->streams, j);
+          guint stream_id;
+
+          g_object_get (G_OBJECT (stream), "id", &stream_id, NULL);
+
+          if (id == stream_id)
+            {
+              g_ptr_array_add (media_ids, stream->name);
+              break;
+            }
+        }
+
+      if (j >= priv->streams->len)
         {
           GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "Requested stream wasn't found" };
           DEBUG ("%s", e.message);
           dbus_g_method_return_error (context, &e);
-          g_list_free (ids);
           g_ptr_array_free (media_ids, TRUE);
           return;
         }
@@ -1226,7 +1235,6 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
 
   for (i = 0; i < media_ids->len; ++i)
     {
-      guint j;
       gchar *id = g_ptr_array_index (media_ids, i);
       for (j = i + 1; j < media_ids->len; ++j)
         {
@@ -1243,7 +1251,6 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
       purple_media_end (priv->media, g_ptr_array_index (media_ids, i), NULL);
     }
 
-  g_list_free (ids);
   g_ptr_array_free (media_ids, TRUE);
   tp_svc_channel_type_streamed_media_return_from_remove_streams (context);
 }
