@@ -408,6 +408,7 @@ media_state_changed_cb (PurpleMedia *media,
   if (sid != NULL && name == NULL)
     {
       TpMediaStreamState tp_state;
+      HazeMediaBackend *backend;
       HazeMediaStream *stream;
 
       if (state == PURPLE_MEDIA_STATE_NEW)
@@ -422,7 +423,10 @@ media_state_changed_cb (PurpleMedia *media,
           return;
         }
 
-      stream = find_stream_by_name (chan, sid, NULL);
+      g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
+      stream = haze_media_backend_get_stream_by_name (backend, sid);
+      g_object_unref (backend);
+
       if (stream != NULL)
         {
           guint id;
@@ -436,7 +440,12 @@ media_state_changed_cb (PurpleMedia *media,
     {
       if (sid != NULL && name == NULL)
         {
-          HazeMediaStream *stream = find_stream_by_name (chan, sid, NULL);
+          HazeMediaBackend *backend;
+          HazeMediaStream *stream;
+
+          g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
+          stream = haze_media_backend_get_stream_by_name (backend, sid);
+          g_object_unref (backend);
 
           if (stream != NULL)
             {
@@ -520,7 +529,13 @@ media_stream_info_cb(PurpleMedia *media,
       if (sid != NULL && name == NULL && purple_media_is_initiator (
           media, sid, name) == FALSE)
         {
-          HazeMediaStream *stream = find_stream_by_name (chan, sid, NULL);
+          HazeMediaBackend *backend;
+          HazeMediaStream *stream;
+
+          g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
+          stream = haze_media_backend_get_stream_by_name (backend, sid);
+          g_object_unref (backend);
+
           g_object_set (stream, "combined-direction",
               MAKE_COMBINED_DIRECTION (
               TP_MEDIA_STREAM_DIRECTION_BIDIRECTIONAL, 0), NULL);
