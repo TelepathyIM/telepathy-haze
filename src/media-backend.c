@@ -233,7 +233,6 @@ get_stream_by_name (HazeMediaBackend *self,
   return NULL;
 }
 
-/* Probably a temporary function */
 HazeMediaStream *
 haze_media_backend_get_stream_by_name (HazeMediaBackend *self,
                     const gchar *sid)
