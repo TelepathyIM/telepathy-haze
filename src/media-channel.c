@@ -130,35 +130,6 @@ haze_media_channel_init (HazeMediaChannel *self)
   priv->next_stream_id = 1;
 }
 
-static HazeMediaStream *
-find_stream_by_name (HazeMediaChannel *self,
-                     const gchar *name,
-                     GError **error)
-{
-  HazeMediaChannelPrivate *priv = self->priv;
-  HazeMediaBackend *backend;
-  GPtrArray *streams;
-  guint i;
-
-  g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
-  g_object_get (G_OBJECT (backend), "streams", &streams, NULL);
-  g_object_unref (backend);
-
-  for (i = 0; i < streams->len; i++)
-    {
-      HazeMediaStream *stream = g_ptr_array_index (streams, i);
-      const gchar *stream_id;
-
-      g_object_get (stream, "name", &stream_id, NULL);
-      if (g_str_equal (name, stream_id))
-        return stream;
-    }
-
-  g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-      "given stream name %s does not exist", name);
-  return NULL;
-}
-
 /**
  * make_stream_list:
  *
