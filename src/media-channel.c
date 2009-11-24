@@ -138,11 +138,17 @@ find_stream_by_name (HazeMediaChannel *self,
                      GError **error)
 {
   HazeMediaChannelPrivate *priv = self->priv;
+  HazeMediaBackend *backend;
+  GPtrArray *streams;
   guint i;
 
-  for (i = 0; i < priv->streams->len; i++)
+  g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
+  g_object_get (G_OBJECT (backend), "streams", &streams, NULL);
+  g_object_unref (backend);
+
+  for (i = 0; i < streams->len; i++)
     {
-      HazeMediaStream *stream = g_ptr_array_index (priv->streams, i);
+      HazeMediaStream *stream = g_ptr_array_index (streams, i);
       const gchar *stream_id;
 
       g_object_get (stream, "name", &stream_id, NULL);
