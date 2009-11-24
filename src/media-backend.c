@@ -54,6 +54,7 @@ enum
   PROP_CONFERENCE_TYPE = 1,
   PROP_MEDIA,
   PROP_OBJECT_PATH,
+  PROP_STREAMS,
   LAST_PROPERTY
 };
 
@@ -100,6 +101,9 @@ haze_media_backend_get_property (GObject    *object,
       break;
     case PROP_OBJECT_PATH:
       g_value_set_string (value, priv->object_path);
+      break;
+    case PROP_STREAMS:
+      g_value_set_pointer (value, priv->streams);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -178,6 +182,13 @@ haze_media_backend_class_init (HazeMediaBackendClass *haze_media_backend_class)
                                     G_PARAM_STATIC_NAME |
                                     G_PARAM_STATIC_BLURB);
   g_object_class_install_property (object_class, PROP_OBJECT_PATH, param_spec);
+
+  param_spec = g_param_spec_pointer ("streams", "Streams",
+                                   "List of streams handled by this backend.",
+                                   G_PARAM_READABLE |
+                                   G_PARAM_STATIC_NAME |
+                                   G_PARAM_STATIC_BLURB);
+  g_object_class_install_property (object_class, PROP_STREAMS, param_spec);
 }
 
 void
