@@ -1151,8 +1151,16 @@ haze_media_channel_list_streams (TpSvcChannelTypeStreamedMedia *iface,
     }
   else
     {
-      ret = make_stream_list (self, priv->streams->len,
-          (HazeMediaStream **) priv->streams->pdata);
+      HazeMediaBackend *backend;
+      GPtrArray *streams;
+
+      g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
+      g_object_get (G_OBJECT (backend), "streams", &streams, NULL);
+
+      ret = make_stream_list (self, streams->len,
+          (HazeMediaStream **) streams->pdata);
+
+      g_object_unref (backend);
     }
 
   tp_svc_channel_type_streamed_media_return_from_list_streams (context, ret);
