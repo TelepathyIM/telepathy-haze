@@ -102,7 +102,6 @@ struct _HazeMediaChannelPrivate
 
   guint next_stream_id;
 
-  GPtrArray *streams;
   /* list of PendingStreamRequest* in no particular order */
   GList *pending_stream_requests;
 
@@ -129,7 +128,6 @@ haze_media_channel_init (HazeMediaChannel *self)
   self->priv = priv;
 
   priv->next_stream_id = 1;
-  priv->streams = g_ptr_array_sized_new (1);
 }
 
 static HazeMediaStream *
@@ -367,10 +365,7 @@ media_state_changed_cb (PurpleMedia *media,
 
           g_object_get (priv->media, "backend", &backend, NULL);
           stream = haze_media_backend_get_stream_by_name (backend, sid);
-          g_object_ref (stream);
           g_object_unref (backend);
-
-          g_ptr_array_add (priv->streams, stream);
 
           g_object_get (G_OBJECT (stream), "id", &id, NULL);
           type = haze_media_stream_get_media_type (stream);
@@ -447,8 +442,6 @@ media_state_changed_cb (PurpleMedia *media,
             {
               guint id;
               g_object_get (stream, "id", &id, NULL);
-              g_ptr_array_remove (priv->streams, stream);
-              g_object_unref (stream);
               tp_svc_channel_type_streamed_media_emit_stream_removed (
                   chan, id);
             }
@@ -1016,14 +1009,6 @@ haze_media_channel_dispose (GObject *object)
   if (priv->media != NULL)
     g_object_unref (priv->media);
   priv->media = NULL;
-
-  /* All of the streams should have closed in response to the contents being
-   * removed when the call ended.
-   */
-  g_assert (priv->streams->len == 0);
-
-  g_ptr_array_free (priv->streams, TRUE);
-  priv->streams = NULL;
 
   if (G_OBJECT_CLASS (haze_media_channel_parent_class)->dispose)
     G_OBJECT_CLASS (haze_media_channel_parent_class)->dispose (object);
