@@ -1181,6 +1181,8 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
 {
   HazeMediaChannel *obj = HAZE_MEDIA_CHANNEL (iface);
   HazeMediaChannelPrivate *priv;
+  HazeMediaBackend *backend;
+  GPtrArray *backend_streams;
   guint i, j;
   GPtrArray *media_ids;
   const gchar *target_id;
@@ -1212,13 +1214,17 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
 
   media_ids = g_ptr_array_new ();
 
+  g_object_get (G_OBJECT (priv->media), "backend", &backend, NULL);
+  g_object_get (G_OBJECT (backend), "streams", &backend_streams, NULL);
+  g_object_unref (backend);
+
   for (i = 0; i < streams->len; ++i)
     {
       guint id = g_array_index (streams, guint, i);
 
-      for (j = 0; j < priv->streams->len; j++)
+      for (j = 0; j < backend_streams->len; j++)
         {
-          HazeMediaStream *stream = g_ptr_array_index (priv->streams, j);
+          HazeMediaStream *stream = g_ptr_array_index (backend_streams, j);
           guint stream_id;
 
           g_object_get (G_OBJECT (stream), "id", &stream_id, NULL);
@@ -1230,7 +1236,7 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
             }
         }
 
-      if (j >= priv->streams->len)
+      if (j >= backend_streams->len)
         {
           GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
               "Requested stream wasn't found" };
