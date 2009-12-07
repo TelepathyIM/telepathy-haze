@@ -176,8 +176,7 @@ haze_media_backend_class_init (HazeMediaBackendClass *haze_media_backend_class)
                                     "object on the bus.",
                                     NULL,
                                     G_PARAM_READWRITE |
-                                    G_PARAM_STATIC_NAME |
-                                    G_PARAM_STATIC_BLURB);
+                                    G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_OBJECT_PATH, param_spec);
 
   param_spec = g_param_spec_pointer ("streams", "Streams",
