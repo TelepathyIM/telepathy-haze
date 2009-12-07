@@ -625,7 +625,9 @@ pass_remote_candidates (HazeMediaStream *self)
           1, address,
           2, purple_media_candidate_get_port (c),
           3, purple_media_candidate_get_protocol (c) ==
-              PURPLE_MEDIA_NETWORK_PROTOCOL_UDP ? 0 : 1,
+              PURPLE_MEDIA_NETWORK_PROTOCOL_UDP ?
+              TP_MEDIA_STREAM_BASE_PROTO_UDP :
+              TP_MEDIA_STREAM_BASE_PROTO_TCP,
           4, "RTP",
           5, "AVP",
           6, (double)purple_media_candidate_get_priority (c),
