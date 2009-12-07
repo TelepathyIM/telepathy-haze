@@ -103,7 +103,7 @@ haze_media_backend_get_property (GObject    *object,
       g_value_set_string (value, priv->object_path);
       break;
     case PROP_STREAMS:
-      g_value_set_pointer (value, priv->streams);
+      g_value_set_boxed (value, priv->streams);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -179,8 +179,9 @@ haze_media_backend_class_init (HazeMediaBackendClass *haze_media_backend_class)
                                     G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_OBJECT_PATH, param_spec);
 
-  param_spec = g_param_spec_pointer ("streams", "Streams",
+  param_spec = g_param_spec_boxed ("streams", "Streams",
                                    "List of streams handled by this backend.",
+                                   G_TYPE_PTR_ARRAY,
                                    G_PARAM_READABLE |
                                    G_PARAM_STATIC_NAME |
                                    G_PARAM_STATIC_BLURB);
