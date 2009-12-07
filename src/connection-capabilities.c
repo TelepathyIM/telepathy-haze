@@ -353,13 +353,6 @@ haze_connection_capabilities_iface_init (gpointer g_iface,
 #undef IMPLEMENT
 }
 
-static void *
-haze_connection_capabilities_get_handle (void)
-{
-  static int handle;
-  return &handle;
-}
-
 static void
 caps_changed_cb (PurpleBuddy *buddy,
                  PurpleMediaCaps caps,
@@ -382,8 +375,7 @@ void
 haze_connection_capabilities_class_init (GObjectClass *object_class)
 {
   purple_signal_connect (purple_blist_get_handle (), "buddy-caps-changed",
-      haze_connection_capabilities_get_handle (),
-      PURPLE_CALLBACK (caps_changed_cb), NULL);
+      object_class, PURPLE_CALLBACK (caps_changed_cb), NULL);
 }
 
 void
