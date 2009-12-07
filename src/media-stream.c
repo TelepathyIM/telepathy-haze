@@ -1188,9 +1188,8 @@ haze_media_stream_set_local_codecs (TpSvcMediaStreamHandler *iface,
 
   DEBUG ("called");
 
-  /* this should also specify the session_id */
   if (PURPLE_IS_MEDIA (priv->media) &&
-      purple_media_is_initiator (priv->media, NULL, NULL))
+      purple_media_is_initiator (priv->media, self->name, self->peer))
     {
       if (!pass_local_codecs (self, codecs, self->priv->created_locally,
           &error))
