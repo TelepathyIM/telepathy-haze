@@ -1085,8 +1085,10 @@ haze_media_stream_ready (TpSvcMediaStreamHandler *iface,
       g_object_set (self, "ready", TRUE, NULL);
 
       tp_svc_media_stream_handler_emit_set_stream_playing (self, TRUE);
-      /* There's likely a much better time to set sending */
-      tp_svc_media_stream_handler_emit_set_stream_sending (self, TRUE);
+
+      if (purple_media_get_session_type (priv->media, self->name) &
+          (PURPLE_MEDIA_SEND_AUDIO | PURPLE_MEDIA_SEND_VIDEO))
+        tp_svc_media_stream_handler_emit_set_stream_sending (self, TRUE);
 
       /* If a new stream is added while the call's on hold, it will have
        * local_hold set at construct time. So once tp-fs has called Ready(), we
