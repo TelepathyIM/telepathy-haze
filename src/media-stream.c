@@ -1134,10 +1134,7 @@ pass_local_codecs (HazeMediaStream *stream,
   else if (priv->media_type == TP_MEDIA_STREAM_TYPE_VIDEO)
     type = PURPLE_MEDIA_VIDEO;
   else
-    {
-      DEBUG ("Unknown media type");
-      // return error?
-    }
+    g_assert_not_reached ();
 
   for (i = 0; i < codecs->len; i++)
     {
