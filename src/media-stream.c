@@ -780,16 +780,12 @@ haze_media_stream_error (HazeMediaStream *self,
                          const gchar *message,
                          GError **error)
 {
-  HazeMediaStreamPrivate *priv;
-
   g_assert (HAZE_IS_MEDIA_STREAM (self));
-
-  priv = self->priv;
 
   DEBUG ( "Media.StreamHandler::Error called, error %u (%s) -- emitting signal",
       err_no, message);
 
-// maybe emit an error here?
+  purple_media_error (self->priv->media, message);
 
   return TRUE;
 }
