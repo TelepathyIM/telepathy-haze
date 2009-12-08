@@ -752,6 +752,38 @@ haze_media_stream_set_remote_codecs (HazeMediaStream *self,
     pass_remote_codecs (self);
 }
 
+void
+haze_media_stream_add_stun_server (HazeMediaStream *self,
+                                   const gchar *stun_ip,
+                                   guint stun_port)
+{
+  HazeMediaStreamPrivate *priv = self->priv;
+  GValueArray *va;
+  GValue ip = {0}, port = {0};
+
+  if (stun_ip == NULL || stun_ip[0] == 0)
+    {
+      DEBUG ("Invalid STUN address passed: %s", stun_ip);
+      return;
+    }
+  else if (stun_port > 65535)
+    {
+      DEBUG ("Invalid STUN port passed: %d", stun_port);
+      return;
+    }
+
+  g_value_init (&ip, G_TYPE_STRING);
+  g_value_set_string (&ip, stun_ip);
+  g_value_init (&port, G_TYPE_UINT);
+  g_value_set_uint (&port, stun_port);
+
+  va = g_value_array_new (2);
+  g_value_array_append (va, &ip);
+  g_value_array_append (va, &port);
+
+  g_ptr_array_add (priv->stun_servers, va);
+}
+
 
 /**
  * haze_media_stream_codec_choice

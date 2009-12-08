@@ -117,6 +117,9 @@ void haze_media_stream_add_remote_candidates (HazeMediaStream *self,
                                               GList *remote_candidates);
 void haze_media_stream_set_remote_codecs (HazeMediaStream *self,
                                           GList *remote_codecs);
+void haze_media_stream_add_stun_server (HazeMediaStream *self,
+                                        const gchar *stun_ip,
+                                        guint stun_port);
 
 G_END_DECLS
 
