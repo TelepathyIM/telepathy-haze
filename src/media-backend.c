@@ -291,8 +291,8 @@ haze_media_backend_add_stream (PurpleMediaBackend *self,
   HazeMediaBackendPrivate *priv = HAZE_MEDIA_BACKEND (self)->priv;
   HazeMediaStream *stream;
   gchar *object_path;
-  guint media_type, id;
-  const gchar *nat_traversal = NULL;
+  guint media_type, id, stun_port = 3478; /* default stun port */
+  const gchar *nat_traversal = NULL, *stun_server = NULL;
 
   DEBUG ("called");
 
@@ -335,6 +335,16 @@ haze_media_backend_add_stream (PurpleMediaBackend *self,
                   g_assert_not_reached ();
                 }
             }
+          else if (!strcmp (params[i].name, "stun-ip") &&
+              G_VALUE_HOLDS (&params[i].value, G_TYPE_STRING))
+            {
+              stun_server = g_value_get_string (&params[i].value);
+            }
+          else if (!strcmp (params[i].name, "stun-port") &&
+              G_VALUE_HOLDS (&params[i].value, G_TYPE_UINT))
+            {
+              stun_port = g_value_get_uint (&params[i].value);
+            }
         }
 
       if (nat_traversal == NULL)
@@ -351,6 +361,9 @@ haze_media_backend_add_stream (PurpleMediaBackend *self,
 
   stream = haze_media_stream_new (object_path, priv->media,
       sid, who, media_type, id, initiator, nat_traversal, NULL, FALSE);
+
+  if (stun_server != NULL)
+    haze_media_stream_add_stun_server (stream, stun_server, stun_port);
 
   g_free (object_path);
 
