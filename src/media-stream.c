@@ -670,7 +670,8 @@ haze_media_stream_add_remote_candidates (HazeMediaStream *self,
   HazeMediaStreamPrivate *priv = self->priv;
 
   priv->remote_candidates = g_list_concat (
-      priv->remote_candidates, remote_candidates);
+      priv->remote_candidates,
+      purple_media_candidate_list_copy (remote_candidates));
 
   if (priv->ready == TRUE)
     pass_remote_candidates (self);
