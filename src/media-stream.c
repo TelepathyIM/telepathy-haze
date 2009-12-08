@@ -746,7 +746,7 @@ haze_media_stream_set_remote_codecs (HazeMediaStream *self,
   for (; iter; iter = g_list_delete_link (iter, iter))
     g_object_unref (iter->data);
 
-  priv->remote_codecs = g_list_copy (remote_codecs);
+  priv->remote_codecs = purple_media_codec_list_copy (remote_codecs);
 
   if (priv->ready == TRUE)
     pass_remote_codecs (self);
