@@ -292,6 +292,7 @@ haze_media_backend_add_stream (PurpleMediaBackend *self,
   HazeMediaStream *stream;
   gchar *object_path;
   guint media_type, id;
+  const gchar *nat_traversal = NULL;
 
   DEBUG ("called");
 
@@ -305,8 +306,51 @@ haze_media_backend_add_stream (PurpleMediaBackend *self,
   else
     media_type = TP_MEDIA_STREAM_TYPE_VIDEO;
 
+  if (!strcmp (transmitter, "nice"))
+    {
+      guint i;
+
+      for (i = 0; i < num_params; ++i)
+        {
+          if (!strcmp (params[i].name, "compatibility-mode") &&
+              G_VALUE_HOLDS (&params[i].value, G_TYPE_UINT))
+            {
+              guint mode = g_value_get_uint (&params[i].value);
+
+              switch (mode)
+                {
+                case 0: /* NICE_COMPATIBILITY_DRAFT19 */
+                  nat_traversal = "ice-udp";
+                  break;
+                case 1: /* NICE_COMPATIBILITY_GOOGLE */
+                  nat_traversal = "gtalk-p2p";
+                  break;
+                case 2: /* NICE_COMPATIBILITY_MSN */
+                  nat_traversal = "wlm-8.5";
+                  break;
+                case 3: /* NICE_COMPATIBILITY_WLM2009 */
+                  nat_traversal = "wlm-2009";
+                  break;
+                default:
+                  g_assert_not_reached ();
+                }
+            }
+        }
+
+      if (nat_traversal == NULL)
+        nat_traversal = "ice-udp";
+    }
+  else if (!strcmp (transmitter, "rawudp"))
+    {
+      nat_traversal = "none";
+    }
+  else
+    {
+      g_assert_not_reached ();
+    }
+
   stream = haze_media_stream_new (object_path, priv->media,
-      sid, who, media_type, id, initiator, "ice-udp", NULL, FALSE);
+      sid, who, media_type, id, initiator, nat_traversal, NULL, FALSE);
 
   g_free (object_path);
 
