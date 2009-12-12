@@ -295,6 +295,8 @@ new_im_channel (HazeImChannelFactory *self,
 
     g_hash_table_insert (self->priv->channels, GINT_TO_POINTER (handle), chan);
 
+    haze_im_channel_start (chan);
+
     if (request_token != NULL)
         requests = g_slist_prepend (requests, request_token);
 

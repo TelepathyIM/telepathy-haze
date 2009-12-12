@@ -564,7 +564,6 @@ haze_im_channel_constructor (GType type, guint n_props,
     HazeIMChannelPrivate *priv;
     TpHandleRepoIface *contact_handles;
     TpBaseConnection *conn;
-    const char *recipient;
     DBusGConnection *bus;
 
     obj = G_OBJECT_CLASS (haze_im_channel_parent_class)->
@@ -587,10 +586,6 @@ haze_im_channel_constructor (GType type, guint n_props,
     bus = tp_get_bus ();
     dbus_g_connection_register_g_object (bus, priv->object_path, obj);
 
-    recipient = tp_handle_inspect(contact_handles, priv->handle);
-    priv->conv = purple_conversation_new (PURPLE_CONV_TYPE_IM,
-                                          priv->conn->account,
-                                          recipient);
     priv->closed = FALSE;
     priv->dispose_has_run = FALSE;
 
@@ -731,6 +726,22 @@ haze_im_channel_init (HazeIMChannel *self)
 {
     self->priv = G_TYPE_INSTANCE_GET_PRIVATE (self, HAZE_TYPE_IM_CHANNEL,
                                               HazeIMChannelPrivate);
+}
+
+void
+haze_im_channel_start (HazeIMChannel *self)
+{
+    const char *recipient;
+    HazeIMChannelPrivate *priv = self->priv;
+    TpHandleRepoIface *contact_handles;
+    TpBaseConnection *base_conn = (TpBaseConnection *) priv->conn;
+
+    contact_handles = tp_base_connection_get_handles (base_conn,
+        TP_HANDLE_TYPE_CONTACT);
+    recipient = tp_handle_inspect(contact_handles, priv->handle);
+    priv->conv = purple_conversation_new (PURPLE_CONV_TYPE_IM,
+                                          priv->conn->account,
+                                          recipient);
 }
 
 static TpMessage *
