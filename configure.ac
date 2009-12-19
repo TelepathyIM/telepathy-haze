@@ -23,8 +23,17 @@ AC_INIT([telepathy-haze], [haze_version],
 
 AC_CONFIG_MACRO_DIR([m4])
 
+AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([1.9 -Wno-portability])
-AM_CONFIG_HEADER(config.h)
+AM_CONFIG_HEADER([config.h])
+AC_CONFIG_FILES([Makefile
+		 src/Makefile
+		 data/Makefile
+		 m4/Makefile
+		 tests/Makefile
+		 tests/twisted/Makefile
+		 tools/Makefile
+                 ])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 
@@ -56,16 +65,8 @@ AC_ARG_ENABLE(leaky-request-stubs,
 AC_SUBST(ENABLE_LEAKY_REQUEST_STUBS)
 
 PKG_CHECK_MODULES(PURPLE,[purple >= 2.1.1])
-AC_SUBST(PURPLE_CFLAGS)
-AC_SUBST(PURPLE_LIBS)
-
 PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.7.36])
-AC_SUBST(TP_GLIB_CFLAGS)
-AC_SUBST(TP_GLIB_LIBS)
-
 PKG_CHECK_MODULES(DBUS_GLIB,[dbus-glib-1 >= 0.73])
-AC_SUBST(DBUS_GLIB_CFLAGS)
-AC_SUBST(DBUS_GLIB_LIBS)
 
 AC_CHECK_LIB(purple, purple_dbus_uninit,
   [ AC_DEFINE(HAVE_PURPLE_DBUS_UNINIT, [],
@@ -93,11 +94,4 @@ AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 #AC_SUBST(DBUS_SERVICES_DIR)
 #AC_DEFINE_UNQUOTED(DBUS_SERVICES_DIR, "$DBUS_SERVICES_DIR", [DBus services directory])
 
-AC_OUTPUT([Makefile
-           src/Makefile
-           data/Makefile
-           m4/Makefile
-	   tests/Makefile
-	   tests/twisted/Makefile
-	   tools/Makefile
-           ])
+AC_OUTPUT
