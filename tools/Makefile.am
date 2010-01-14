@@ -1,8 +1,35 @@
 EXTRA_DIST = \
     with-session-bus.sh \
-    shave.mk
+    shave.mk \
+    c-constants-gen.py \
+    check-coding-style.mk \
+    check-c-style.sh \
+    check-misc.sh \
+    check-whitespace.sh \
+    doc-generator.xsl \
+    glib-ginterface-gen.py \
+    glib-gtypes-generator.py \
+    glib-interfaces-gen.py \
+    glib-signals-marshal-gen.py \
+    identity.xsl \
+    lcov.am \
+    libglibcodegen.py \
+    libtpcodegen.py \
+    telepathy.am \
+    xep.xsl
+
+CLEANFILES = *.pyc *.pyo
 
 all: $(EXTRA_DIST)
+
+libglibcodegen.py: libtpcodegen.py
+	test -e $<
+	$(AM_V_GEN)touch $@
+
+glib-ginterface-gen.py glib-gtypes-generator.py glib-interfaces-gen.py \
+glib-signals-marshal-gen.py c-constants-gen.py: %: libglibcodegen.py
+	test -e $<
+	$(AM_V_GEN)touch $@
 
 TELEPATHY_GLIB_SRCDIR = $(top_srcdir)/../telepathy-glib
 maintainer-update-from-telepathy-glib:

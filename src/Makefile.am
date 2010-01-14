@@ -37,6 +37,8 @@ telepathy_haze_SOURCES = main.c \
                          request.c \
                          request.h
 
+telepathy_haze_LDADD = $(top_builddir)/extensions/libhaze-extensions.la
+
 AM_CFLAGS = \
 	-DG_LOG_DOMAIN=\"haze\" \
 	$(ERROR_CFLAGS) \
