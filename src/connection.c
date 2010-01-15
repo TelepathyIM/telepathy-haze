@@ -39,7 +39,9 @@
 #include "connection-presence.h"
 #include "connection-aliasing.h"
 #include "connection-avatars.h"
+#include "connection-mail.h"
 #include "contact-list-channel.h"
+#include "extensions/extensions.h"
 
 enum
 {
@@ -64,6 +66,8 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_avatars_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
         tp_contacts_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE (HAZE_TYPE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
+        haze_connection_mail_iface_init);
     );
 
 typedef struct _HazeConnectionPrivate
@@ -501,6 +505,7 @@ haze_connection_constructor (GType type,
     haze_connection_aliasing_init (object);
     haze_connection_avatars_init (object);
     haze_connection_presence_init (object);
+    haze_connection_mail_init (object);
 
     return (GObject *)self;
 }

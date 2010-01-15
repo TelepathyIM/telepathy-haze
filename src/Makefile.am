@@ -22,6 +22,8 @@ telepathy_haze_SOURCES = main.c \
                          connection-avatars.h \
                          connection-presence.c \
                          connection-presence.h \
+                         connection-mail.h \
+                         connection-mail.c \
                          connection.c \
                          connection.h \
                          contact-list.c \
@@ -40,6 +42,8 @@ telepathy_haze_SOURCES = main.c \
 telepathy_haze_LDADD = $(top_builddir)/extensions/libhaze-extensions.la
 
 AM_CFLAGS = \
+	-I$(top_srcdir) \
+	-I$(top_builddir) \
 	-DG_LOG_DOMAIN=\"haze\" \
 	$(ERROR_CFLAGS) \
 	@PURPLE_CFLAGS@ \
