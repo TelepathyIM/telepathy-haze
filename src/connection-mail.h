@@ -30,6 +30,12 @@ void haze_connection_mail_init (GObject *object);
 void haze_connection_mail_properties_getter (GObject *object, GQuark interface,
         GQuark name, GValue *value, gpointer getter_data);
 
+gpointer haze_connection_mail_notify_email (PurpleConnection *gc, 
+        const char *subject, const char *from, const char *to, const char *url);
+gpointer haze_connection_mail_notify_emails (PurpleConnection *gc, 
+        size_t count, gboolean detailed, const char **subjects, 
+        const char **froms, const char **tos, const char **urls); 
+
 G_END_DECLS
 
 #endif /* __HAZE_CONNECTION_MAIL_H__ */

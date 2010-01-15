@@ -127,3 +127,37 @@ haze_connection_mail_properties_getter (GObject *object,
     else
         g_assert (!"Unknown mail notification property, please file a bug.");
 }
+
+
+static inline const gchar *
+_account_name (PurpleConnection *gc)
+{
+    return purple_account_get_username (purple_connection_get_account (gc));
+}
+
+gpointer
+haze_connection_mail_notify_email (PurpleConnection *gc,
+        const char *subject,
+        const char *from,
+        const char *to,
+        const char *url)
+{
+    DEBUG ("[%s] from: %s; to: %s; subject: %s; url: %s", _account_name (gc),
+            from, to, subject, url);
+    return NULL;
+}
+
+
+gpointer
+haze_connection_mail_notify_emails (PurpleConnection *gc,
+        size_t count,
+        gboolean detailed,
+        const char **subjects,
+        const char **froms,
+        const char **tos,
+        const char **urls)
+{
+    DEBUG ("[%s] %" G_GSIZE_FORMAT " new emails", _account_name (gc), count);
+    return NULL;
+}
+
