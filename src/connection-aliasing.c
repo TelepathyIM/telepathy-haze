@@ -177,6 +177,42 @@ struct _g_hash_table_foreach_all_in_my_brain
 };
 
 static void
+set_alias_succeess_cb (PurpleAccount *account,
+                       const char *new_alias)
+{
+    TpBaseConnection *base_conn;
+    GPtrArray *aliases;
+    GValue entry = {0, };
+
+    base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
+
+    g_value_init (&entry, HAZE_TP_ALIAS_PAIR_TYPE);
+    g_value_take_boxed (&entry,
+        dbus_g_type_specialized_construct (HAZE_TP_ALIAS_PAIR_TYPE));
+
+    dbus_g_type_struct_set (&entry,
+        0, base_conn->self_handle,
+        1, new_alias,
+        G_MAXUINT);
+
+    aliases = g_ptr_array_sized_new (1);
+    g_ptr_array_add (aliases, g_value_get_boxed (&entry));
+
+    tp_svc_connection_interface_aliasing_emit_aliases_changed (base_conn,
+        aliases);
+
+    g_value_unset (&entry);
+    g_ptr_array_free (aliases, TRUE);
+}
+
+static void
+set_alias_failure_cb (PurpleAccount *account,
+                      const char *error)
+{
+    DEBUG ("couldn't set alias: %s\n", error);
+}
+
+static void
 set_aliases_foreach (gpointer key,
                      gpointer value,
                      gpointer user_data)
@@ -198,9 +234,10 @@ set_aliases_foreach (gpointer key,
     }
     else if (handle == TP_BASE_CONNECTION (data->conn)->self_handle)
     {
-        g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-            "Sadly, there's no general API in libpurple to set your own "
-            "server alias.");
+        purple_account_set_public_alias (data->conn->account,
+                                         new_alias,
+                                         set_alias_succeess_cb,
+                                         set_alias_failure_cb);
     }
     else
     {
