@@ -1,5 +1,5 @@
-#ifndef _GABBLE_EXTENSIONS_H
-#define _GABBLE_EXTENSIONS_H
+#ifndef _HAZE_EXTENSIONS_H
+#define _HAZE_EXTENSIONS_H
 
 #include "extensions/_gen/enums.h"
 #include "extensions/_gen/svc.h"
@@ -11,5 +11,5 @@ G_BEGIN_DECLS
 
 G_END_DECLS
 
-#endif /* _GABBLE_EXTENSIONS_H */
+#endif /* _HAZE_EXTENSIONS_H */
 
