@@ -565,6 +565,20 @@ haze_connection_class_init (HazeConnectionClass *klass)
          */
         TP_IFACE_CONNECTION_INTERFACE_ALIASING,
         NULL };
+    static TpDBusPropertiesMixinPropImpl mail_props[] = {
+        { "Capabilities", NULL, NULL },
+        { "UnreadMailCount", NULL, NULL },
+        { "UnreadMails", NULL, NULL },
+        { NULL }
+    };
+    static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+        { HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
+            haze_connection_mail_properties_getter,
+            NULL,
+            mail_props,
+        },
+        { NULL }
+    };
 
     DEBUG ("Initializing (HazeConnectionClass *)%p", klass);
 
@@ -605,7 +619,9 @@ haze_connection_class_init (HazeConnectionClass *klass)
     g_object_class_install_property (object_class, PROP_PROTOCOL_INFO,
                                      param_spec);
 
-    tp_dbus_properties_mixin_class_init (object_class, 0);
+    klass->properties_class.interfaces = prop_interfaces;
+    tp_dbus_properties_mixin_class_init (object_class,
+        G_STRUCT_OFFSET (HazeConnectionClass, properties_class));
 
     tp_contacts_mixin_class_init (object_class,
         G_STRUCT_OFFSET (HazeConnectionClass, contacts_class));

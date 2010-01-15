@@ -51,6 +51,7 @@ typedef struct _HazeConnectionClass HazeConnectionClass;
 
 struct _HazeConnectionClass {
     TpBaseConnectionClass parent_class;
+    TpDBusPropertiesMixinClass properties_class;
     TpContactsMixinClass contacts_class;
     TpPresenceMixinClass presence_class;
 };
