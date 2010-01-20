@@ -20,12 +20,15 @@
 
 #include "extensions/extensions.h"
 
-#include <telepathy-glib/svc-connection.h>
+#include <telepathy-glib/dbus.h>
 #include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/svc-connection.h>
 
 #include "connection.h"
 #include "connection-mail.h"
 #include "debug.h"
+
+#include <string.h>
 
 enum
 {
@@ -35,6 +38,7 @@ enum
     NUM_OF_PROP,
 };
 
+
 static GPtrArray empty_array = { 0 };
 
 
@@ -42,7 +46,9 @@ static void
 haze_connection_mail_subscribe (HazeSvcConnectionInterfaceMailNotification *iface,
         DBusGMethodInvocation *context)
 {
-    /* TODO */
+    /* Nothing do do, no resources attached to mail notification */
+    haze_svc_connection_interface_mail_notification_return_from_subscribe (
+      context);
 }
 
 
@@ -50,7 +56,9 @@ static void
 haze_connection_mail_unsubscribe (HazeSvcConnectionInterfaceMailNotification *iface,
         DBusGMethodInvocation *context)
 {
-    /* TODO */
+    /* Nothing do do, no resources attached to mail notification */
+    haze_svc_connection_interface_mail_notification_return_from_unsubscribe (
+        context);
 }
 
 
@@ -59,7 +67,9 @@ haze_connection_mail_request_inbox_url (
         HazeSvcConnectionInterfaceMailNotification *iface,
         DBusGMethodInvocation *context)
 {
-    /* TODO */
+    GError e = {TP_ERRORS, TP_ERROR_NOT_CAPABLE,
+        "LibPurple does not provide Inbox URL"};
+    dbus_g_method_return_error (context, &e);
 }
 
 
@@ -70,6 +80,18 @@ haze_connection_mail_request_mail_url (
         const gchar *in_url_data,
         DBusGMethodInvocation *context)
 {
+    GValueArray *result;
+
+    result = tp_value_array_build (3,
+        G_TYPE_STRING, in_url_data,
+        G_TYPE_UINT, HAZE_HTTP_METHOD_GET,
+        HAZE_ARRAY_TYPE_HTTP_POST_DATA_LIST, &empty_array,
+        G_TYPE_INVALID);
+
+    haze_svc_connection_interface_mail_notification_return_from_request_inbox_url (
+        context, result);
+
+    g_value_array_free (result);
     /* TODO */
 }
 
@@ -77,7 +99,7 @@ haze_connection_mail_request_mail_url (
 void
 haze_connection_mail_init (GObject *conn)
 {
-    /* TODO */
+    /* nothing to do */
 }
 
 
@@ -108,18 +130,19 @@ haze_connection_mail_properties_getter (GObject *object,
 
     if (G_UNLIKELY (prop_quarks[0] == 0))
         {
-            prop_quarks[PROP_CAPABILITIES] = 
+            prop_quarks[PROP_CAPABILITIES] =
                 g_quark_from_static_string ("Capabilities");
-            prop_quarks[PROP_UNREAD_MAIL_COUNT] = 
+            prop_quarks[PROP_UNREAD_MAIL_COUNT] =
                 g_quark_from_static_string ("UnreadMailCount");
-            prop_quarks[PROP_UNREAD_MAILS] = 
+            prop_quarks[PROP_UNREAD_MAILS] =
                 g_quark_from_static_string ("UnreadMails");
         }
 
     DEBUG ("MailNotification get property %s", g_quark_to_string (name));
 
     if (name == prop_quarks[PROP_CAPABILITIES])
-        g_value_set_uint (value, 0);
+        g_value_set_uint (value,
+            HAZE_MAIL_NOTIFICATION_HAS_SIGNAL_MAILSRECEIVED);
     else if (name == prop_quarks[PROP_UNREAD_MAIL_COUNT])
         g_value_set_uint (value, 0);
     else if (name == prop_quarks[PROP_UNREAD_MAILS])
@@ -130,26 +153,49 @@ haze_connection_mail_properties_getter (GObject *object,
 
 
 static inline const gchar *
-_account_name (PurpleConnection *gc)
+_account_name (PurpleConnection *pc)
 {
-    return purple_account_get_username (purple_connection_get_account (gc));
+    return purple_account_get_username (purple_connection_get_account (pc));
 }
 
 gpointer
-haze_connection_mail_notify_email (PurpleConnection *gc,
+haze_connection_mail_notify_email (PurpleConnection *pc,
         const char *subject,
         const char *from,
         const char *to,
         const char *url)
 {
-    DEBUG ("[%s] from: %s; to: %s; subject: %s; url: %s", _account_name (gc),
-            from, to, subject, url);
-    return NULL;
+    return haze_connection_mail_notify_emails (pc, 1, TRUE,
+            &subject, &from, &to, &url);
+}
+
+
+static GPtrArray *
+wrap_mail_address (const char *name_str, const char *addr_str)
+{
+    GPtrArray *addr_array;
+    GType addr_type = HAZE_STRUCT_TYPE_MAIL_ADDRESS;
+    GValue addr = {0};
+
+    addr_array = g_ptr_array_new ();
+
+    g_value_init (&addr, addr_type);
+    g_value_set_static_boxed (&addr,
+            dbus_g_type_specialized_construct (addr_type));
+
+    dbus_g_type_struct_set (&addr,
+            0, name_str,
+            1, addr_str,
+            G_MAXUINT);
+
+    g_ptr_array_add (addr_array, g_value_get_boxed(&addr));
+    g_value_unset (&addr);
+    return addr_array;
 }
 
 
 gpointer
-haze_connection_mail_notify_emails (PurpleConnection *gc,
+haze_connection_mail_notify_emails (PurpleConnection *pc,
         size_t count,
         gboolean detailed,
         const char **subjects,
@@ -157,7 +203,78 @@ haze_connection_mail_notify_emails (PurpleConnection *gc,
         const char **tos,
         const char **urls)
 {
-    DEBUG ("[%s] %" G_GSIZE_FORMAT " new emails", _account_name (gc), count);
+    GPtrArray *mails;
+    HazeSvcConnectionInterfaceMailNotification *conn =
+        HAZE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION (
+                ACCOUNT_GET_TP_BASE_CONNECTION (purple_connection_get_account (pc)));
+
+    DEBUG ("[%s] %" G_GSIZE_FORMAT " new emails", _account_name (pc), count);
+
+    /* FIXME: Count is broken in libpurple, until it's fixed, just ignore messages
+     * wihout details. */
+    if (!detailed)
+        return NULL;
+
+    /* For consitency, ignore messages without subject, from or url */
+    if (subjects == NULL || froms == NULL || urls == NULL)
+        return NULL;
+
+    mails = g_ptr_array_new_with_free_func (
+            (GDestroyNotify)g_hash_table_destroy);
+
+    for (; count; count--)
+        {
+            const char *from, *to, *subject, *url;
+
+            from = *froms;
+            to = *tos;
+            subject = *subjects;
+            url = *urls;
+
+            DEBUG ("[%s] from: %s; to: %s; subject: %s; url: %s",
+                    _account_name (pc), from, to, subject, url);
+
+            /* Filter out any aberations */
+            if (from && to && subject && url)
+                {
+                    GType addr_list_type = HAZE_ARRAY_TYPE_MAIL_ADDRESS_LIST;
+                    GPtrArray *senders, *recipients;
+                    GHashTable *mail;
+
+                    if (strchr(from, '@'))
+                        senders = wrap_mail_address ("", from);
+                    else
+                        senders =  wrap_mail_address (from, "");
+
+                    if (strchr(to, '@'))
+                        recipients = wrap_mail_address ("", to);
+                    else
+                        recipients = wrap_mail_address (to, "");
+
+                    mail = tp_asv_new (
+                            "id", G_TYPE_STRING, "none",
+                            "url_data", G_TYPE_STRING, url,
+                            "senders", addr_list_type, senders,
+                            "to-address", addr_list_type, recipients,
+                            "subject", G_TYPE_STRING, subject,
+                            NULL);
+                    g_ptr_array_add (mails, mail);
+
+                    froms++;
+                    tos++;
+                    subject++;
+
+                    /* Some protocols only set one URL (the inbox URL), so
+                     * reuse previous URL if next one does not exist */
+                    if (count > 1 && urls[1] != NULL)
+                        urls++;
+                }
+        }
+
+    haze_svc_connection_interface_mail_notification_emit_mails_received (
+            conn, mails);
+    g_ptr_array_unref (mails);
+
     return NULL;
 }
 
