@@ -1,5 +1,3 @@
-include $(top_srcdir)/tools/shave.mk
-
 # Telepathy manager file
 managerdir = $(datadir)/telepathy/managers
 dist_manager_DATA = haze.manager
@@ -17,4 +15,4 @@ EXTRA_DIST = $(service_in_files)
 
 # Rule to make the service file with libexecdir expanded
 $(service_DATA): $(service_in_files) Makefile
-	$(QUIET_GEN)sed -e "s|\@libexecdir\@|$(libexecdir)|" $< > $@
+	$(AM_V_GEN)sed -e "s|\@libexecdir\@|$(libexecdir)|" $< > $@

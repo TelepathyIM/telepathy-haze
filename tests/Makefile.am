@@ -1,5 +1,3 @@
-include $(top_srcdir)/tools/shave.mk
-
 SUBDIRS = .
 
 if WANT_TWISTED_TESTS
@@ -7,13 +5,13 @@ SUBDIRS += twisted
 endif
 
 %.conf: %.conf.in
-	$(QUIET_GEN)sed -e "s|[@]abs_top_builddir[@]|@abs_top_builddir@|g" $< > $@
+	$(AM_V_GEN)sed -e "s|[@]abs_top_builddir[@]|@abs_top_builddir@|g" $< > $@
 
 # We don't use the full filename for the .in because > 99 character filenames
 # in tarballs are non-portable (and automake 1.8 doesn't let us build
 # non-archaic tarballs)
 org.freedesktop.Telepathy.ConnectionManager.%.service: %.service.in
-	$(QUIET_GEN)sed -e "s|[@]abs_top_builddir[@]|@abs_top_builddir@|g" \
+	$(AM_V_GEN)sed -e "s|[@]abs_top_builddir[@]|@abs_top_builddir@|g" \
 		-e "s|[@]abs_top_srcdir[@]|@abs_top_srcdir@|g" $< > $@
 
 # D-Bus service file for testing

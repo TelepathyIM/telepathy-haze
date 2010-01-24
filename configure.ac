@@ -26,6 +26,8 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([1.9 -Wno-portability])
 AM_CONFIG_HEADER(config.h)
 
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
+
 AC_PROG_CC
 AC_PROG_CC_STDC
 AC_PROG_INSTALL
@@ -91,8 +93,6 @@ AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 #AC_SUBST(DBUS_SERVICES_DIR)
 #AC_DEFINE_UNQUOTED(DBUS_SERVICES_DIR, "$DBUS_SERVICES_DIR", [DBus services directory])
 
-SHAVE_INIT(.)
-
 AC_OUTPUT([Makefile
            src/Makefile
            data/Makefile
@@ -100,6 +100,4 @@ AC_OUTPUT([Makefile
 	   tests/Makefile
 	   tests/twisted/Makefile
 	   tools/Makefile
-           shave
-           shave-libtool
            ])

@@ -26,8 +26,6 @@ tags
 /tests/haze-testing.log
 /tests/org.freedesktop.Telepathy.ConnectionManager.haze.service
 /tests/tmp-session-bus.conf
-/shave
-/shave-libtool
 
 *.o
 *.swp
