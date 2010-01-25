@@ -1,3 +1,30 @@
+telepathy-haze 0.3.3 (2010-01-25)
+=================================
+
+The “doing the fishstick in a standing ovation” release.
+
+Dependencies:
+
+ * telepathy-glib >= 0.7.36 is now required.
+
+Fixes:
+
+ * The secret connection parameters are now exposed as being secret in
+   the manager file and also when the CM is introspected. This fixes
+   fd.o#24067. (smcv)
+
+ * Fix bug report URL for current bugzilla layout. (smcv)
+
+ * Fix circular channel creation. (felipec)
+
+Enhancements:
+
+ * Start outputting debug messages on the Telepathy Debug interface by
+   using telepathy-glib's TpDebugSender. (jonny, Maiku)
+
+ * Stop using shave and allow use of automake 1.11's silent rules
+   feature. (jonny)
+
 telepathy-haze 0.3.2 (2009-08-25)
 =================================
 
