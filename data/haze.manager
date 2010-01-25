@@ -4,7 +4,7 @@ ObjectPath=/org/freedesktop/Telepathy/ConnectionManager/haze
 
 [Protocol aim]
 param-account=s required
-param-password=s required
+param-password=s required secret
 param-server=s
 param-port=i
 param-use-ssl=b
@@ -18,20 +18,20 @@ default-allow-multiple-logins=true
 
 [Protocol gadugadu]
 param-account=s required
-param-password=s required
+param-password=s required secret
 param-nick=s
 default-nick=Gadu-Gadu User
 
 [Protocol groupwise]
 param-account=s required
-param-password=s required
+param-password=s required secret
 param-server=s
 param-port=i
 default-port=8300
 
 [Protocol icq]
 param-account=s required
-param-password=s required
+param-password=s required secret
 param-server=s
 param-port=i
 param-use-ssl=b
@@ -47,7 +47,7 @@ default-charset=UTF-8
 
 [Protocol irc]
 param-account=s required
-param-password=s
+param-password=s secret
 param-port=i
 param-charset=s
 param-autodetect-utf8=b
@@ -61,7 +61,7 @@ default-ssl=false
 
 [Protocol jabber]
 param-account=s required
-param-password=s required
+param-password=s required secret
 param-require-encryption=b
 param-old-ssl=b
 param-auth-plain-in-clear=b
@@ -88,7 +88,7 @@ default-port=5298
 
 [Protocol msn]
 param-account=s required
-param-password=s required
+param-password=s required secret
 param-server=s
 param-port=i
 param-http-method=b
@@ -102,7 +102,7 @@ default-custom-smileys=true
 
 [Protocol myspace]
 param-account=s required
-param-password=s required
+param-password=s required secret
 param-server=s
 param-port=i
 default-server=im.myspace.akadns.net
@@ -110,7 +110,7 @@ default-port=1863
 
 [Protocol qq]
 param-account=s required
-param-password=s required
+param-password=s required secret
 param-server=s
 param-client-version=s
 param-use-tcp=b
@@ -130,7 +130,7 @@ default-update-interval=300
 
 [Protocol sametime]
 param-account=s required
-param-password=s required
+param-password=s required secret
 param-server=s
 param-port=i
 param-force-login=b
@@ -141,7 +141,7 @@ default-fake-client-id=false
 
 [Protocol silc]
 param-account=s required
-param-password=s
+param-password=s secret
 param-server=s
 param-port=i
 param-public-key=s
@@ -167,7 +167,7 @@ default-sign-verify=false
 
 [Protocol simple]
 param-account=s required
-param-password=s required
+param-password=s required secret
 param-dopublish=b
 param-port=i
 param-udp=b
@@ -182,7 +182,7 @@ default-useproxy=false
 
 [Protocol yahoo]
 param-account=s required
-param-password=s required
+param-password=s required secret
 param-server=s
 param-port=i
 param-xfer-host=s
@@ -200,7 +200,7 @@ default-charset=UTF-8
 
 [Protocol yahoojp]
 param-account=s required
-param-password=s required
+param-password=s required secret
 param-server=s
 param-port=i
 param-xfer-host=s

@@ -273,6 +273,14 @@ _translate_protocol_option (PurpleAccountOption *option,
     if (g_str_equal (paramspec->name, "server"))
         paramspec->filter = _param_filter_no_blanks;
 
+    /* There don't seem to be any secrets except for password at the moment
+     * (SILC's private-key is a filename, so its value is not actually secret).
+     * If more appear, e.g. http-proxy-password, this would be a good place to
+     * set the SECRET flag on them; for future-proofing I'll assume tha
+     * anything ending with -password is likely to be secret. */
+    if (g_str_has_suffix (paramspec->name, "-password"))
+        paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_SECRET;
+
     return TRUE;
 }
 
@@ -288,7 +296,8 @@ _build_paramspecs (HazeProtocolInfo *hpi)
           (gpointer) "account", NULL };
     TpCMParamSpec password_spec =
         { "password", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
-          TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL,
+          TP_CONN_MGR_PARAM_FLAG_REQUIRED | TP_CONN_MGR_PARAM_FLAG_SECRET,
+          NULL, 0, NULL, NULL,
           (gpointer) "password", NULL };
 
     GArray *paramspecs = g_array_new (TRUE, TRUE, sizeof (TpCMParamSpec));
@@ -316,7 +325,7 @@ _build_paramspecs (HazeProtocolInfo *hpi)
     if (!(hpi->prpl_info->options & OPT_PROTO_NO_PASSWORD))
     {
         if (hpi->prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL)
-            password_spec.flags = 0;
+            password_spec.flags &= ~TP_CONN_MGR_PARAM_FLAG_REQUIRED;
         g_array_append_val (paramspecs, password_spec);
     }
 
