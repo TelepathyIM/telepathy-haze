@@ -47,9 +47,9 @@ static const TpPresenceStatusSpec statuses[] = {
         arg_specs, NULL, NULL },
     { "away", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE,
         arg_specs, NULL, NULL },
-    { "ext_away", TP_CONNECTION_PRESENCE_TYPE_EXTENDED_AWAY, TRUE,
+    { "xa", TP_CONNECTION_PRESENCE_TYPE_EXTENDED_AWAY, TRUE,
         arg_specs, NULL, NULL },
-    { "invisible", TP_CONNECTION_PRESENCE_TYPE_HIDDEN, TRUE, NULL, NULL, NULL },
+    { "hidden", TP_CONNECTION_PRESENCE_TYPE_HIDDEN, TRUE, NULL, NULL, NULL },
     { "offline", TP_CONNECTION_PRESENCE_TYPE_OFFLINE, FALSE, NULL, NULL, NULL },
     { NULL, TP_CONNECTION_PRESENCE_TYPE_UNSET, FALSE, NULL, NULL, NULL }
 };
