@@ -1137,6 +1137,7 @@ haze_media_channel_list_streams (TpSvcChannelTypeStreamedMedia *iface,
       ret = make_stream_list (self, streams->len,
           (HazeMediaStream **) streams->pdata);
 
+      g_ptr_array_unref (streams);
       g_object_unref (backend);
     }
 
@@ -1242,6 +1243,7 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
       purple_media_end (priv->media, g_ptr_array_index (media_ids, i), NULL);
     }
 
+  g_ptr_array_unref (backend_streams);
   g_ptr_array_free (media_ids, TRUE);
   tp_svc_channel_type_streamed_media_return_from_remove_streams (context);
 }
