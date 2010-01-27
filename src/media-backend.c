@@ -63,7 +63,7 @@ struct _HazeMediaBackendPrivate
 {
   gchar *conference_type;
   gchar *object_path;
-  PurpleMedia *media;
+  gpointer media;
   GPtrArray *streams;
 
   guint next_stream_id;
@@ -130,8 +130,7 @@ haze_media_backend_set_property (GObject      *object,
       g_assert (priv->media == NULL);
       priv->media = g_value_get_object (value);
 
-      g_object_add_weak_pointer(G_OBJECT(priv->media),
-          (gpointer*)&priv->media);
+      g_object_add_weak_pointer(G_OBJECT(priv->media), &priv->media);
       g_signal_connect (priv->media, "state-changed",
           G_CALLBACK (haze_backend_state_changed_cb), backend);
       break;
