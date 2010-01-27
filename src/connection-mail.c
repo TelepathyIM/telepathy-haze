@@ -142,7 +142,7 @@ haze_connection_mail_properties_getter (GObject *object,
 
     if (name == prop_quarks[PROP_CAPABILITIES])
         g_value_set_uint (value,
-            HAZE_MAIL_NOTIFICATION_HAS_SIGNAL_MAILSRECEIVED);
+            HAZE_MAIL_NOTIFICATION_EMITS_MAILS_RECEIVED);
     else if (name == prop_quarks[PROP_UNREAD_MAIL_COUNT])
         g_value_set_uint (value, 0);
     else if (name == prop_quarks[PROP_UNREAD_MAILS])
@@ -253,7 +253,7 @@ haze_connection_mail_notify_emails (PurpleConnection *pc,
 
                     mail = tp_asv_new (
                             "id", G_TYPE_STRING, "none",
-                            "url_data", G_TYPE_STRING, url,
+                            "url-data", G_TYPE_STRING, url,
                             "senders", addr_list_type, senders,
                             "to-address", addr_list_type, recipients,
                             "subject", G_TYPE_STRING, subject,
