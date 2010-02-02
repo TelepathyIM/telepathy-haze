@@ -195,6 +195,9 @@ haze_media_stream_constructor (GType type, guint n_props,
   else
     {
       priv->awaiting_intersection = TRUE;
+      g_object_set (stream, "combined-direction",
+          MAKE_COMBINED_DIRECTION (TP_MEDIA_STREAM_DIRECTION_BIDIRECTIONAL,
+            TP_MEDIA_STREAM_PENDING_LOCAL_SEND), NULL);
     }
 
   return obj;
@@ -1121,7 +1124,12 @@ haze_media_stream_ready (TpSvcMediaStreamHandler *iface,
 
       if (purple_media_get_session_type (priv->media, self->name) &
           (PURPLE_MEDIA_SEND_AUDIO | PURPLE_MEDIA_SEND_VIDEO))
-        tp_svc_media_stream_handler_emit_set_stream_sending (self, TRUE);
+        {
+          g_object_set (self, "combined-direction",
+              MAKE_COMBINED_DIRECTION (TP_MEDIA_STREAM_DIRECTION_BIDIRECTIONAL,
+                0), NULL);
+          tp_svc_media_stream_handler_emit_set_stream_sending (self, TRUE);
+        }
 
       /* If a new stream is added while the call's on hold, it will have
        * local_hold set at construct time. So once tp-fs has called Ready(), we
