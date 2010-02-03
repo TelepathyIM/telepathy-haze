@@ -19,6 +19,8 @@
  *
  */
 
+#include "config.h"
+
 #include <string.h>
 
 #include <telepathy-glib/dbus.h>
@@ -39,8 +41,11 @@
 #include "connection-presence.h"
 #include "connection-aliasing.h"
 #include "connection-avatars.h"
-#include "connection-capabilities.h"
 #include "contact-list-channel.h"
+
+#ifdef ENABLE_MEDIA
+#include "connection-capabilities.h"
+#endif
 
 enum
 {
@@ -63,8 +68,10 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_aliasing_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
         haze_connection_avatars_iface_init);
+#ifdef ENABLE_MEDIA
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CAPABILITIES,
         haze_connection_capabilities_iface_init);
+#endif
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
         tp_contacts_mixin_iface_init);
     );
@@ -417,9 +424,11 @@ _haze_connection_create_channel_managers (TpBaseConnection *base)
         g_object_new (HAZE_TYPE_IM_CHANNEL_FACTORY, "connection", self, NULL));
     g_ptr_array_add (channel_managers, self->im_factory);
 
+#ifdef ENABLE_MEDIA
     self->media_manager = HAZE_MEDIA_MANAGER (
         g_object_new (HAZE_TYPE_MEDIA_MANAGER, "connection", self, NULL));
     g_ptr_array_add (channel_managers, self->media_manager);
+#endif
 
     self->contact_list = HAZE_CONTACT_LIST (
         g_object_new (HAZE_TYPE_CONTACT_LIST, "connection", self, NULL));
@@ -507,7 +516,9 @@ haze_connection_constructor (GType type,
 
     haze_connection_aliasing_init (object);
     haze_connection_avatars_init (object);
+#ifdef ENABLE_MEDIA
     haze_connection_capabilities_init (object);
+#endif
     haze_connection_presence_init (object);
 
     return (GObject *)self;
@@ -561,7 +572,9 @@ haze_connection_class_init (HazeConnectionClass *klass)
         TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
         TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
         TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+#ifdef ENABLE_MEDIA
         TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES,
+#endif
         TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
         /* TODO: This is a lie.  Not all protocols supported by libpurple
          *       actually have the concept of a user-settable alias, but
@@ -617,7 +630,9 @@ haze_connection_class_init (HazeConnectionClass *klass)
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);
     haze_connection_avatars_class_init (object_class);
+#ifdef ENABLE_MEDIA
     haze_connection_capabilities_class_init (object_class);
+#endif
 }
 
 static void

@@ -86,6 +86,25 @@ done
 AC_SUBST(TEST_PYTHON)
 AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 
+AC_MSG_CHECKING([for libpurple >= 2.7.0 (media support)])
+AC_ARG_ENABLE(media,
+  AC_HELP_STRING([--disable-media],[disable audio/video calls]),
+  [
+    AC_MSG_RESULT([disabled])
+    AM_CONDITIONAL([MEDIA_ENABLED], false)
+  ],[
+    PKG_CHECK_EXISTS([purple >= 2.7.0],
+      [
+        AC_MSG_RESULT([yes])
+        AC_DEFINE(ENABLE_MEDIA, [], [Enable audio/video calls])
+        AM_CONDITIONAL([MEDIA_ENABLED], true)
+      ],[
+        AC_MSG_RESULT([no])
+        AM_CONDITIONAL([MEDIA_ENABLED], false)
+      ])
+  ])
+AC_SUBST(ENABLE_MEDIA)
+
 #AS_AC_EXPAND(DATADIR, $datadir)
 #DBUS_SERVICES_DIR="$DATADIR/dbus-1/services"
 #AC_SUBST(DBUS_SERVICES_DIR)
