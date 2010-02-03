@@ -100,10 +100,12 @@ haze_debug_print (PurpleDebugLevel level,
     gchar *domain = g_strdup_printf ("purple/%s", category);
     GLogLevelFlags log_level = debug_level_map[level];
 
-    log_to_debug_sender (domain, log_level, argh);
-
+    /* The default log handler catches g_log. Calling log_to_debug_sender
+     * and g_log duplicates debug messages */
     if (flags & HAZE_DEBUG_PURPLE)
         g_log (domain, log_level, "%s", argh);
+    else
+        log_to_debug_sender (domain, log_level, argh);
 
     g_free (domain);
     g_free(argh);
