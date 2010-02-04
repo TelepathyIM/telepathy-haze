@@ -31,6 +31,7 @@
 
 #include "contact-list.h"
 #include "im-channel-factory.h"
+#include "media-manager.h"
 
 G_BEGIN_DECLS
 
@@ -62,11 +63,15 @@ struct _HazeConnection {
 
     HazeContactList *contact_list;
     HazeImChannelFactory *im_factory;
+    HazeMediaManager *media_manager;
 
     TpContactsMixin contacts;
     TpPresenceMixin presence;
 
     gchar **acceptable_avatar_mime_types;
+
+    /* Part of the hack for Jabber media caps */
+    gulong status_changed_id;
 
     gpointer priv;
 };
