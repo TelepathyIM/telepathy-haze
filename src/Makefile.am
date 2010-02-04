@@ -8,6 +8,21 @@ man_MANS = telepathy-haze.8
 EXTRA_DIST = telepathy-haze.8.in
 CLEANFILES = $(man_MANS)
 
+if MEDIA_ENABLED
+haze_media_sources = connection-capabilities.c \
+                     connection-capabilities.h \
+                     media-backend.c \
+                     media-backend.h \
+                     media-channel.c \
+                     media-channel.h \
+                     media-manager.c \
+                     media-manager.h \
+                     media-stream.c \
+                     media-stream.h
+else
+haze_media_sources =
+endif
+
 telepathy_haze_SOURCES = main.c \
                          defines.h \
                          debug.c \
@@ -33,7 +48,8 @@ telepathy_haze_SOURCES = main.c \
                          notify.c \
                          notify.h \
                          request.c \
-                         request.h
+                         request.h \
+                         $(haze_media_sources)
 
 AM_CFLAGS = \
 	-DG_LOG_DOMAIN=\"haze\" \
