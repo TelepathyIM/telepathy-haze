@@ -32,7 +32,7 @@
 
 enum
 {
-    PROP_CAPABILITIES,
+    PROP_MAIL_NOTIFICATION_FLAGS,
     PROP_UNREAD_MAIL_COUNT,
     PROP_UNREAD_MAILS,
     NUM_OF_PROP,
@@ -130,8 +130,8 @@ haze_connection_mail_properties_getter (GObject *object,
 
     if (G_UNLIKELY (prop_quarks[0] == 0))
         {
-            prop_quarks[PROP_CAPABILITIES] =
-                g_quark_from_static_string ("Capabilities");
+            prop_quarks[PROP_MAIL_NOTIFICATION_FLAGS] =
+                g_quark_from_static_string ("MailNotificationFlags");
             prop_quarks[PROP_UNREAD_MAIL_COUNT] =
                 g_quark_from_static_string ("UnreadMailCount");
             prop_quarks[PROP_UNREAD_MAILS] =
@@ -140,9 +140,9 @@ haze_connection_mail_properties_getter (GObject *object,
 
     DEBUG ("MailNotification get property %s", g_quark_to_string (name));
 
-    if (name == prop_quarks[PROP_CAPABILITIES])
+    if (name == prop_quarks[PROP_MAIL_NOTIFICATION_FLAGS])
         g_value_set_uint (value,
-            HAZE_MAIL_NOTIFICATION_EMITS_MAILS_RECEIVED);
+            HAZE_MAIL_NOTIFICATION_FLAG_EMITS_MAILS_RECEIVED);
     else if (name == prop_quarks[PROP_UNREAD_MAIL_COUNT])
         g_value_set_uint (value, 0);
     else if (name == prop_quarks[PROP_UNREAD_MAILS])

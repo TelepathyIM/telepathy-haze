@@ -567,7 +567,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
         TP_IFACE_CONNECTION_INTERFACE_ALIASING,
         NULL };
     static TpDBusPropertiesMixinPropImpl mail_props[] = {
-        { "Capabilities", NULL, NULL },
+        { "MailNotificationFlags", NULL, NULL },
         { "UnreadMailCount", NULL, NULL },
         { "UnreadMails", NULL, NULL },
         { NULL }
