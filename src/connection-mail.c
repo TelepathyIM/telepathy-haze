@@ -35,6 +35,7 @@ enum
     PROP_MAIL_NOTIFICATION_FLAGS,
     PROP_UNREAD_MAIL_COUNT,
     PROP_UNREAD_MAILS,
+    PROP_MAIL_ADDRESS,
     NUM_OF_PROP,
 };
 
@@ -119,6 +120,33 @@ haze_connection_mail_iface_init (gpointer g_iface,
 }
 
 
+static gchar *_get_email (PurpleAccount *account)
+{
+    const gchar *username = purple_account_get_username (account);
+    gchar *email;
+    if (!g_utf8_strchr (username, -1, '@'))
+        {
+            /* Here we have per-protocol quark for e-mail. */
+            const gchar *protocol = purple_account_get_protocol_id (account);
+            if (!tp_strdiff (protocol, "prpl-yahoo"))
+                {
+                    email = g_strdup_printf ("%s@yahoo.com", username);   
+                }
+            else
+                {
+                    /* We make sure that the e-mail at least look like
+                     * one and that it is discriminated by protocol */
+                    email = g_strdup_printf ("%s@%s", username, protocol);
+                }
+        }
+    else
+       {
+           email = g_strdup (username);
+       }
+    return email;
+}
+
+
 void
 haze_connection_mail_properties_getter (GObject *object,
         GQuark interface,
@@ -127,6 +155,7 @@ haze_connection_mail_properties_getter (GObject *object,
         gpointer getter_data)
 {
     static GQuark prop_quarks[NUM_OF_PROP] = {0};
+    HazeConnection *conn = HAZE_CONNECTION (object);
 
     if (G_UNLIKELY (prop_quarks[0] == 0))
         {
@@ -136,6 +165,8 @@ haze_connection_mail_properties_getter (GObject *object,
                 g_quark_from_static_string ("UnreadMailCount");
             prop_quarks[PROP_UNREAD_MAILS] =
                 g_quark_from_static_string ("UnreadMails");
+            prop_quarks[PROP_MAIL_ADDRESS] =
+                g_quark_from_static_string ("MailAddress");
         }
 
     DEBUG ("MailNotification get property %s", g_quark_to_string (name));
@@ -147,6 +178,8 @@ haze_connection_mail_properties_getter (GObject *object,
         g_value_set_uint (value, 0);
     else if (name == prop_quarks[PROP_UNREAD_MAILS])
         g_value_set_boxed (value, &empty_array);
+    else if (name == prop_quarks[PROP_MAIL_ADDRESS])
+        g_value_take_string (value, _get_email (conn->account));
     else
         g_assert (!"Unknown mail notification property, please file a bug.");
 }
@@ -157,6 +190,7 @@ _account_name (PurpleConnection *pc)
 {
     return purple_account_get_username (purple_connection_get_account (pc));
 }
+
 
 gpointer
 haze_connection_mail_notify_email (PurpleConnection *pc,
