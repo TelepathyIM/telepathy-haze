@@ -68,7 +68,7 @@ haze_connection_mail_request_inbox_url (
         HazeSvcConnectionInterfaceMailNotification *iface,
         DBusGMethodInvocation *context)
 {
-    GError e = {TP_ERRORS, TP_ERROR_NOT_CAPABLE,
+    GError e = {TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
         "LibPurple does not provide Inbox URL"};
     dbus_g_method_return_error (context, &e);
 }
@@ -78,13 +78,21 @@ static void
 haze_connection_mail_request_mail_url (
         HazeSvcConnectionInterfaceMailNotification *iface,
         const gchar *in_id,
-        const gchar *in_url_data,
+        const GValue *in_url_data,
         DBusGMethodInvocation *context)
 {
     GValueArray *result;
 
+    if (!G_VALUE_HOLDS_STRING (in_url_data))
+        {
+             GError e = {TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+                 "Wrong type for url-data"};
+             dbus_g_method_return_error (context, &e);
+             return;
+        }
+
     result = tp_value_array_build (3,
-        G_TYPE_STRING, in_url_data,
+        G_TYPE_STRING, g_value_get_string (in_url_data),
         G_TYPE_UINT, HAZE_HTTP_METHOD_GET,
         HAZE_ARRAY_TYPE_HTTP_POST_DATA_LIST, &empty_array,
         G_TYPE_INVALID);
@@ -93,7 +101,6 @@ haze_connection_mail_request_mail_url (
         context, result);
 
     g_value_array_free (result);
-    /* TODO */
 }
 
 
@@ -130,7 +137,7 @@ static gchar *_get_email (PurpleAccount *account)
             const gchar *protocol = purple_account_get_protocol_id (account);
             if (!tp_strdiff (protocol, "prpl-yahoo"))
                 {
-                    email = g_strdup_printf ("%s@yahoo.com", username);   
+                    email = g_strdup_printf ("%s@yahoo.com", username);
                 }
             else
                 {
