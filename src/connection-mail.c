@@ -28,7 +28,6 @@
 #include "connection-mail.h"
 #include "debug.h"
 
-#include <string.h>
 
 enum
 {
@@ -285,12 +284,12 @@ haze_connection_mail_notify_emails (PurpleConnection *pc,
                     GPtrArray *senders, *recipients;
                     GHashTable *mail;
 
-                    if (strchr(from, '@'))
+                    if (g_utf8_strchr(from, -1, '@'))
                         senders = wrap_mail_address ("", from);
                     else
                         senders =  wrap_mail_address (from, "");
 
-                    if (strchr(to, '@'))
+                    if (g_utf8_strchr(to, -1, '@'))
                         recipients = wrap_mail_address ("", to);
                     else
                         recipients = wrap_mail_address (to, "");
