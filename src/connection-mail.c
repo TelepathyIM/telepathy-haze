@@ -44,7 +44,8 @@ static GPtrArray empty_array = { 0 };
 
 
 static void
-haze_connection_mail_subscribe (HazeSvcConnectionInterfaceMailNotification *iface,
+haze_connection_mail_subscribe (
+        HazeSvcConnectionInterfaceMailNotification *iface,
         DBusGMethodInvocation *context)
 {
     /* Nothing do do, no resources attached to mail notification */
@@ -54,7 +55,8 @@ haze_connection_mail_subscribe (HazeSvcConnectionInterfaceMailNotification *ifac
 
 
 static void
-haze_connection_mail_unsubscribe (HazeSvcConnectionInterfaceMailNotification *iface,
+haze_connection_mail_unsubscribe (
+        HazeSvcConnectionInterfaceMailNotification *iface,
         DBusGMethodInvocation *context)
 {
     /* Nothing do do, no resources attached to mail notification */
@@ -247,12 +249,13 @@ haze_connection_mail_notify_emails (PurpleConnection *pc,
     GPtrArray *mails;
     HazeSvcConnectionInterfaceMailNotification *conn =
         HAZE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION (
-                ACCOUNT_GET_TP_BASE_CONNECTION (purple_connection_get_account (pc)));
+            ACCOUNT_GET_TP_BASE_CONNECTION (
+                purple_connection_get_account (pc)));
 
     DEBUG ("[%s] %" G_GSIZE_FORMAT " new emails", _account_name (pc), count);
 
-    /* FIXME: Count is broken in libpurple, until it's fixed, just ignore messages
-     * wihout details. */
+    /* FIXME: Count is broken in libpurple, until it's fixed, just ignore
+     * messages wihout details. */
     if (!detailed)
         return NULL;
 
