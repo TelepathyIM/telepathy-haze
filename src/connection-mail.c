@@ -181,7 +181,8 @@ haze_connection_mail_properties_getter (GObject *object,
 
     if (name == prop_quarks[PROP_MAIL_NOTIFICATION_FLAGS])
         g_value_set_uint (value,
-            HAZE_MAIL_NOTIFICATION_FLAG_EMITS_MAILS_RECEIVED);
+            HAZE_MAIL_NOTIFICATION_FLAG_EMITS_MAILS_RECEIVED
+            | HAZE_MAIL_NOTIFICATION_FLAG_SUPPORTS_REQUEST_MAIL_URL);
     else if (name == prop_quarks[PROP_UNREAD_MAIL_COUNT])
         g_value_set_uint (value, 0);
     else if (name == prop_quarks[PROP_UNREAD_MAILS])
