@@ -295,7 +295,6 @@ haze_connection_mail_notify_emails (PurpleConnection *pc,
                         recipients = wrap_mail_address (to, "");
 
                     mail = tp_asv_new (
-                            "id", G_TYPE_STRING, "none",
                             "url-data", G_TYPE_STRING, url,
                             "senders", addr_list_type, senders,
                             "to-address", addr_list_type, recipients,
