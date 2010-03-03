@@ -303,8 +303,8 @@ haze_connection_mail_notify_emails (PurpleConnection *pc,
                             NULL);
                     g_ptr_array_add (mails, mail);
 
-                    g_ptr_array_free (senders, TRUE);
-                    g_ptr_array_free (recipients, TRUE);
+                    g_ptr_array_unref (senders);
+                    g_ptr_array_unref (recipients);
 
                     froms++;
                     tos++;
