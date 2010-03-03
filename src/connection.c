@@ -352,6 +352,9 @@ _haze_connection_start_connecting (TpBaseConnection *base,
     tp_base_connection_change_status(base, TP_CONNECTION_STATUS_CONNECTING,
                                      TP_CONNECTION_STATUS_REASON_REQUESTED);
 
+    /* We systematically enable mail notification to avoid bugs in protocol
+     * like GMail and MySpace where you need to do an action before connecting
+     * to start receiving the notifications. */
     purple_account_set_check_mail(self->account, TRUE);
     purple_account_set_enabled(self->account, UI_ID, TRUE);
     purple_account_connect(self->account);
