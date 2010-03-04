@@ -69,24 +69,31 @@ PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.7.36])
 PKG_CHECK_MODULES(GLIB,[glib-2.0, gobject-2.0])
 PKG_CHECK_MODULES(DBUS_GLIB,[dbus-glib-1 >= 0.73])
 
+GLIB_GENMARSHAL=`$PKG_CONFIG --variable=glib_genmarshal glib-2.0`
+AC_SUBST(GLIB_GENMARSHAL)
+
 AC_CHECK_LIB(purple, purple_dbus_uninit,
   [ AC_DEFINE(HAVE_PURPLE_DBUS_UNINIT, [],
     [Define if purple_dbus_uninit is present in libpurple]) ],
   [], [$PURPLE_LIBS])
 
+dnl Check for code generation tools
+XSLTPROC=
+AC_CHECK_PROGS([XSLTPROC], [xsltproc])
+if test -z "$XSLTPROC"; then
+  AC_MSG_ERROR([xsltproc (from the libxslt source package) is required])
+fi
+
+AM_PATH_PYTHON([2.5])
+
 # Check for a Python >= 2.5 with Twisted, to run the tests
-AC_MSG_CHECKING([for Python >= 2.5 with Twisted and XMPP protocol support])
-for TEST_PYTHON in python2.5 python2.6 python; do
-  if $TEST_PYTHON -c "from sys import version_info; import dbus, dbus.mainloop.glib; raise SystemExit(version_info < (2, 5, 0, 'final', 0))" >/dev/null 2>&1; then
-    if $TEST_PYTHON -c "import twisted.words.xish.domish, twisted.words.protocols.jabber, twisted.internet.reactor" >/dev/null 2>&1; then
-      AC_MSG_RESULT([$TEST_PYTHON])
-      AM_CONDITIONAL([WANT_TWISTED_TESTS], true)
-      break
-    else
-      TEST_PYTHON=false
-    fi
-  fi
-done
+AC_MSG_CHECKING([for Python with Twisted and XMPP protocol support])
+if $PYTHON -c "import twisted.words.xish.domish, twisted.words.protocols.jabber, twisted.internet.reactor" >/dev/null 2>&1; then
+    TEST_PYTHON="$PYTHON"
+else
+    TEST_PYTHON=false
+fi
+AC_MSG_RESULT([$TEST_PYTHON])
 AC_SUBST(TEST_PYTHON)
 AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 
