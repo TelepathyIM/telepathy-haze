@@ -1,6 +1,5 @@
 EXTRA_DIST = \
     with-session-bus.sh \
-    shave.mk \
     c-constants-gen.py \
     doc-generator.xsl \
     glib-ginterface-gen.py \

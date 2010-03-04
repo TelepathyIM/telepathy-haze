@@ -33,6 +33,7 @@ AC_CONFIG_FILES([Makefile
 		 tests/Makefile
 		 tests/twisted/Makefile
 		 tools/Makefile
+		 extensions/Makefile
                  ])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
