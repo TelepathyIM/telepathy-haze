@@ -1,6 +1,7 @@
 /INSTALL
 Makefile
 Makefile.in
+_gen
 aclocal.m4
 config.guess
 config.log
@@ -13,6 +14,7 @@ cscope.out
 stamp-h1
 data/org.freedesktop.Telepathy.ConnectionManager.haze.service
 depcomp
+/extensions/extensions.html
 install-sh
 libtool
 ltmain.sh
@@ -27,6 +29,7 @@ tags
 /tests/org.freedesktop.Telepathy.ConnectionManager.haze.service
 /tests/tmp-session-bus.conf
 
+*.l[ao]
 *.o
 *.swp
 *~
