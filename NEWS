@@ -1,3 +1,28 @@
+telepathy-haze 0.3.4 (2010-03-05)
+=================================
+
+The “The People's Great and Harmonious Moon Hand” release.
+
+Fixes:
+
+ * Use the well-known Telepathy names for hidden and xa statuses to
+   fix interoperability with Empathy, in particular the ability to be
+   invisible on Haze accounts. (smcv)
+
+ * Report the "loubserp-mxit" prpl as "mxit". (smcv)
+
+ * Rename prpl-simple to the standard Telepathy protocol name
+   'sip'. (smcv)
+
+ * Be sure to link to glib and gobject, and fix typo when linking to
+   dbus-glib, to ensure. Fixes fd.o#25124. (jonny)
+
+Enhancements:
+
+ * Implement the new draft mail notification spec. (stormer)
+
+ * Implement streamed media. Fixes fd.o#24385. (Maiku)
+
 telepathy-haze 0.3.3 (2010-01-25)
 =================================
 
