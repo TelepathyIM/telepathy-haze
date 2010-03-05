@@ -1,6 +1,8 @@
 tools_dir = $(top_srcdir)/tools
 
-EXTRA_DIST = all.xml
+EXTRA_DIST = \
+	all.xml \
+	Connection_Interface_Mail_Notification.xml
 
 noinst_LTLIBRARIES = libhaze-extensions.la
 
