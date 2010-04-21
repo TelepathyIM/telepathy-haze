@@ -599,6 +599,10 @@ haze_connection_class_init (HazeConnectionClass *klass)
         { NULL }
     };
     static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+        { TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+            haze_connection_avatars_properties_getter,
+            NULL,
+            NULL },     /* initialized a bit later */
         { HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
             haze_connection_mail_properties_getter,
             NULL,
@@ -646,6 +650,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
     g_object_class_install_property (object_class, PROP_PROTOCOL_INFO,
                                      param_spec);
 
+    prop_interfaces[0].props = haze_connection_avatars_properties;
     klass->properties_class.interfaces = prop_interfaces;
     tp_dbus_properties_mixin_class_init (object_class,
         G_STRUCT_OFFSET (HazeConnectionClass, properties_class));
