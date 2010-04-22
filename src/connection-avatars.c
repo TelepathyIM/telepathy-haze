@@ -93,8 +93,23 @@ haze_connection_avatars_properties_getter (GObject *object,
 {
     AvatarDBusProperty which = GPOINTER_TO_INT (getter_data);
     HazeConnection *conn = HAZE_CONNECTION (object);
+    TpBaseConnection *base = (TpBaseConnection *) conn;
     PurplePluginProtocolInfo *prpl_info;
     PurpleBuddyIconSpec *icon_spec;
+
+    if (base->status != TP_CONNECTION_STATUS_CONNECTED)
+    {
+        /* not CONNECTED yet, so our connection doesn't have the prpl info
+         * yet - return dummy values */
+        if (G_VALUE_HOLDS_UINT (value))
+          g_value_set_uint (value, 0);
+        else if (G_VALUE_HOLDS (value, G_TYPE_STRV))
+          g_value_set_boxed (value, NULL);
+        else
+          g_assert_not_reached ();
+
+        return;
+    }
 
     prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
     icon_spec = &(prpl_info->icon_spec);
