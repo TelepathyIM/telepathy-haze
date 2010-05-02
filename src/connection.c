@@ -89,9 +89,9 @@ struct _HazeConnectionPrivate
     /* Set if purple_account_disconnect has been called or is scheduled to be
      * called, so should not be called again.
      */
-    gboolean disconnecting : 1;
+    gboolean disconnecting;
 
-    gboolean dispose_has_run : 1;
+    gboolean dispose_has_run;
 };
 
 #define PC_GET_BASE_CONN(pc) \
