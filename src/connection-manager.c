@@ -419,15 +419,6 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
     return (TpBaseConnection *) conn;
 }
 
-/** Frees the slice-allocated HazeProtocolInfo pointed to by @a data.  Useful
- *  as the value-destroying callback in a hash table.
- */
-static void
-_protocol_info_slice_free (gpointer data)
-{
-    g_slice_free (HazeProtocolInfo, data);
-}
-
 /** Predicate for g_hash_table_find to search on prpl_id.
  *  @param key      (const gchar *)tp_protocol_name
  *  @param value    (HazeProtocolInfo *)info
@@ -444,59 +435,57 @@ _compare_protocol_id (gpointer key,
     return (!strcmp (info->prpl_id, prpl_id));
 }
 
-static void _init_protocol_table (HazeConnectionManagerClass *klass)
+static GHashTable *
+build_protocol_table (void)
 {
-    GHashTable *table;
-    HazeProtocolInfo *i, *info;
-    PurplePlugin *plugin;
-    PurplePluginInfo *p_info;
-    PurplePluginProtocolInfo *prpl_info;
-    GList *iter;
+  GHashTable *table;
+  HazeProtocolInfo *i;
+  GList *iter;
 
-    table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
-                                   _protocol_info_slice_free);
+  table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, NULL);
 
-    for (i = known_protocol_info; i->prpl_id != NULL; i++)
+  for (i = known_protocol_info; i->prpl_id != NULL; i++)
     {
-        plugin = purple_find_prpl (i->prpl_id);
-        if (!plugin)
-            continue;
+      PurplePlugin *plugin = purple_find_prpl (i->prpl_id);
 
-        info = g_slice_new (HazeProtocolInfo);
+      if (plugin == NULL)
+        continue;
 
-        info->prpl_id = i->prpl_id;
-        info->tp_protocol_name = i->tp_protocol_name;
-        info->prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
-        info->parameter_map = i->parameter_map;
+      i->prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
 
-        g_hash_table_insert (table, info->tp_protocol_name, info);
+      g_hash_table_insert (table, i->tp_protocol_name, i);
     }
 
-    for (iter = purple_plugins_get_protocols (); iter; iter = iter->next)
+  for (iter = purple_plugins_get_protocols (); iter; iter = iter->next)
     {
-        plugin = (PurplePlugin *)iter->data;
-        p_info = plugin->info;
-        prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
+      PurplePlugin *plugin = iter->data;
+      PurplePluginInfo *p_info = plugin->info;
+      PurplePluginProtocolInfo *prpl_info =
+          PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
+      HazeProtocolInfo *info;
 
-        if (g_hash_table_find (table, _compare_protocol_id, p_info->id))
-            continue; /* already in the table from the previous loop */
+      if (g_hash_table_find (table, _compare_protocol_id, p_info->id))
+        continue; /* already in the table from the previous loop */
 
-        info = g_slice_new (HazeProtocolInfo);
-        info->prpl_id = p_info->id;
-        if (g_str_has_prefix (p_info->id, "prpl-"))
-            info->tp_protocol_name = (p_info->id + 5);
-        else
+      info = g_slice_new (HazeProtocolInfo);
+      info->prpl_id = p_info->id;
+      info->prpl_info = prpl_info;
+      info->parameter_map = NULL;
+
+      if (g_str_has_prefix (p_info->id, "prpl-"))
         {
-            g_warning ("prpl '%s' has a dumb id; spank its author", p_info->id);
-            info->tp_protocol_name = p_info->id;
+          info->tp_protocol_name = (p_info->id + 5);
         }
-        info->prpl_info = prpl_info;
-        info->parameter_map = NULL;
+      else
+        {
+          g_warning ("prpl '%s' has a dumb id; spank its author", p_info->id);
+          info->tp_protocol_name = p_info->id;
+        }
 
-        g_hash_table_insert (table, info->tp_protocol_name, info);
+      g_hash_table_insert (table, info->tp_protocol_name, info);
     }
 
-    klass->protocol_info_table = table;
+  return table;
 }
 
 static void
@@ -519,7 +508,7 @@ haze_connection_manager_class_init (HazeConnectionManagerClass *klass)
         (TpBaseConnectionManagerClass *)klass;
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-    _init_protocol_table (klass);
+    klass->protocol_info_table = build_protocol_table ();
 
     object_class->finalize = _haze_cm_finalize;
 
