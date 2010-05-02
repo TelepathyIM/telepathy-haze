@@ -247,17 +247,14 @@ _warn_unhandled_parameter (const gchar *key,
     g_warning ("received an unknown parameter '%s'; ignoring", key);
 }
 
-struct _i_want_closure
-{
-    PurpleAccount *account;
-    GHashTable *params;
-};
-
 static void
-_set_option (const PurpleAccountOption *option,
-             struct _i_want_closure *context)
+set_option (
+    PurpleAccount *account,
+    const PurpleAccountOption *option,
+    GHashTable *params)
 {
-    GValue *value = g_hash_table_lookup (context->params, option->pref_name);
+    GValue *value = g_hash_table_lookup (params, option->pref_name);
+
     if (!value)
         return;
 
@@ -265,18 +262,18 @@ _set_option (const PurpleAccountOption *option,
     {
         case PURPLE_PREF_BOOLEAN:
             g_assert (G_VALUE_TYPE (value) == G_TYPE_BOOLEAN);
-            purple_account_set_bool (context->account, option->pref_name,
+            purple_account_set_bool (account, option->pref_name,
                 g_value_get_boolean (value));
             break;
         case PURPLE_PREF_INT:
             g_assert (G_VALUE_TYPE (value) == G_TYPE_INT);
-            purple_account_set_int (context->account, option->pref_name,
+            purple_account_set_int (account, option->pref_name,
                 g_value_get_int (value));
             break;
         case PURPLE_PREF_STRING:
         case PURPLE_PREF_STRING_LIST:
             g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
-            purple_account_set_string (context->account, option->pref_name,
+            purple_account_set_string (account, option->pref_name,
                 g_value_get_string (value));
             break;
         default:
@@ -284,7 +281,7 @@ _set_option (const PurpleAccountOption *option,
                 option->pref_name, option->type);
     }
 
-    g_hash_table_remove (context->params, option->pref_name);
+    g_hash_table_remove (params, option->pref_name);
 }
 
 /**
@@ -306,7 +303,7 @@ haze_connection_create_account (HazeConnection *self,
     GHashTable *params = priv->parameters;
     PurplePluginProtocolInfo *prpl_info = priv->prpl_info;
     const gchar *username, *password;
-    struct _i_want_closure context;
+    GList *l;
 
     g_return_val_if_fail (self->account == NULL, FALSE);
 
@@ -333,9 +330,8 @@ haze_connection_create_account (HazeConnection *self,
         g_hash_table_remove (params, "password");
     }
 
-    context.account = self->account;
-    context.params = params;
-    g_list_foreach (prpl_info->protocol_options, (GFunc) _set_option, &context);
+    for (l = prpl_info->protocol_options; l != NULL; l = l->next)
+      set_option (self->account, l->data, params);
 
     g_hash_table_foreach (params, (GHFunc) _warn_unhandled_parameter, "lala");
 
