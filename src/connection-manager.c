@@ -100,29 +100,17 @@ _haze_cm_alloc_params (void)
 }
 
 static void
-_haze_cm_free_params (void *p)
-{
-    GHashTable *params = (GHashTable *)p;
-    g_hash_table_unref (params);
-}
-
-static void
 _haze_cm_set_param (const TpCMParamSpec *paramspec,
                     const GValue *value,
                     gpointer params_)
 {
-    GHashTable *params = (GHashTable *) params_;
-    GValue *value_copy = tp_g_value_slice_new (paramspec->gtype);
-    gchar *prpl_param_name = (gchar *) paramspec->setter_data;
+  GHashTable *params = params_;
+  gchar *prpl_param_name = (gchar *) paramspec->setter_data;
 
-    g_assert (G_VALUE_TYPE (value) == G_VALUE_TYPE (value_copy));
+  DEBUG ("setting parameter %s (telepathy name %s)",
+      prpl_param_name, paramspec->name);
 
-    g_value_copy (value, value_copy);
-
-    DEBUG ("setting parameter %s (telepathy name %s)",
-        prpl_param_name, paramspec->name);
-
-    g_hash_table_insert (params, prpl_param_name, value_copy);
+  g_hash_table_insert (params, prpl_param_name, tp_g_value_slice_dup (value));
 }
 
 static gboolean
@@ -159,20 +147,17 @@ _param_filter_string_list (const TpCMParamSpec *paramspec,
                            GValue *value,
                            GError **error)
 {
-    const gchar *str = g_value_get_string (value);
-    const GList *valid_values = paramspec->filter_data;
+  const gchar *str = g_value_get_string (value);
+  /* grr g_list_find_custom() is not const-correct of course */
+  GList *valid_values = (GList *) paramspec->filter_data;
 
-    for (; valid_values != NULL; valid_values = valid_values->next)
-    {
-        const gchar *valid = valid_values->data;
+  if (g_list_find_custom (valid_values, str, (GCompareFunc) g_strcmp0)
+      != NULL)
+    return TRUE;
 
-        if (!tp_strdiff (valid, str))
-            return TRUE;
-    }
-
-    g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-        "'%s' is not a valid value for parameter '%s'", str, paramspec->name);
-    return FALSE;
+  g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      "'%s' is not a valid value for parameter '%s'", str, paramspec->name);
+  return FALSE;
 }
 
 /* Populates a TpCMParamSpec from a PurpleAccountOption, possibly renaming the
@@ -353,75 +338,59 @@ _build_paramspecs (HazeProtocolInfo *hpi)
     return (TpCMParamSpec *) g_array_free (paramspecs, FALSE);
 }
 
-struct _protocol_info_foreach_data
-{
-    TpCMProtocolSpec *protocols;
-    guint index;
-};
-
-static void
-_protocol_info_foreach (gpointer key,
-                        gpointer value,
-                        gpointer user_data)
-{
-    HazeProtocolInfo *info = (HazeProtocolInfo *)value;
-    struct _protocol_info_foreach_data *data =
-        (struct _protocol_info_foreach_data *)user_data;
-    TpCMProtocolSpec *protocol = &(data->protocols[data->index]);
-
-    protocol->name = info->tp_protocol_name;
-    protocol->parameters = _build_paramspecs (info);
-    protocol->params_new = _haze_cm_alloc_params;
-    protocol->params_free = _haze_cm_free_params;
-    protocol->set_param = _haze_cm_set_param;
-
-    (data->index)++;
-}
-
 static int
-_compare_protocol_names(gconstpointer a,
-                        gconstpointer b)
+_compare_protocol_names (gconstpointer a,
+                         gconstpointer b)
 {
-    const TpCMProtocolSpec *protocol_a = a;
-    const TpCMProtocolSpec *protocol_b = b;
+  const TpCMProtocolSpec *protocol_a = a;
+  const TpCMProtocolSpec *protocol_b = b;
 
-    return strcmp(protocol_a->name, protocol_b->name);
+  return strcmp(protocol_a->name, protocol_b->name);
 }
 
 static TpCMProtocolSpec *
 get_protocols (HazeConnectionManagerClass *klass)
 {
-    struct _protocol_info_foreach_data foreach_data;
-    TpCMProtocolSpec *protocols;
-    guint n_protocols;
+  GArray *protocols = g_array_new (TRUE, TRUE, sizeof (TpCMProtocolSpec));
+  GHashTableIter iter;
+  gpointer key, value;
 
-    n_protocols = g_hash_table_size (klass->protocol_info_table);
-    foreach_data.protocols = protocols = (TpCMProtocolSpec *)
-        g_slice_alloc0 (sizeof (TpCMProtocolSpec) * (n_protocols + 1));
-    foreach_data.index = 0;
-
-    g_hash_table_foreach (klass->protocol_info_table, _protocol_info_foreach,
-        &foreach_data);
-
-    qsort (protocols, n_protocols, sizeof (TpCMProtocolSpec),
-        _compare_protocol_names);
-
+  g_hash_table_iter_init (&iter, klass->protocol_info_table);
+  while (g_hash_table_iter_next (&iter, &key, &value))
     {
-        GString *debug_string = g_string_new ("");
-        TpCMProtocolSpec *p = protocols;
-        while (p->name != NULL)
-        {
-            g_string_append (debug_string, p->name);
-            p += 1;
-            if (p->name != NULL)
-                g_string_append (debug_string, ", ");
-        }
+      HazeProtocolInfo *info = value;
+      TpCMProtocolSpec protocol = {
+          info->tp_protocol_name, /* name */
+          _build_paramspecs (info), /* parameters */
+          _haze_cm_alloc_params, /* params_new */
+          (GDestroyNotify) g_hash_table_unref, /* params_free */
+          _haze_cm_set_param /* set_param */
+      };
 
-        DEBUG ("Found protocols %s", debug_string->str);
-        g_string_free (debug_string, TRUE);
+      g_array_append_val (protocols, protocol);
     }
 
-    return protocols;
+  qsort (protocols->data, protocols->len, sizeof (TpCMProtocolSpec),
+      _compare_protocol_names);
+
+  {
+    GString *debug_string = g_string_new ("");
+    TpCMProtocolSpec *p = (TpCMProtocolSpec *) protocols->data;
+
+    while (p->name != NULL)
+      {
+        g_string_append (debug_string, p->name);
+        p += 1;
+
+        if (p->name != NULL)
+          g_string_append (debug_string, ", ");
+      }
+
+    DEBUG ("Found protocols %s", debug_string->str);
+    g_string_free (debug_string, TRUE);
+  }
+
+  return (TpCMProtocolSpec *) g_array_free (protocols, FALSE);
 }
 
 static TpBaseConnection *
