@@ -60,6 +60,99 @@ _get_acceptable_mime_types (HazeConnection *self)
     return self->acceptable_avatar_mime_types;
 }
 
+typedef enum {
+    DP_MIN_W,
+    DP_MIN_H,
+    DP_MAX_W,
+    DP_MAX_H,
+    DP_REC_W,
+    DP_REC_H,
+    DP_MAX_BYTES,
+    DP_TYPES
+} AvatarDBusProperty;
+
+static TpDBusPropertiesMixinPropImpl props[] = {
+      { "MinimumAvatarWidth", GINT_TO_POINTER (DP_MIN_W), NULL },
+      { "RecommendedAvatarWidth", GINT_TO_POINTER (DP_REC_W), NULL },
+      { "MaximumAvatarWidth", GINT_TO_POINTER (DP_MAX_W), NULL },
+      { "MinimumAvatarHeight", GINT_TO_POINTER (DP_MIN_H), NULL },
+      { "RecommendedAvatarHeight", GINT_TO_POINTER (DP_REC_H), NULL },
+      { "MaximumAvatarHeight", GINT_TO_POINTER (DP_MAX_H), NULL },
+      { "MaximumAvatarBytes", GINT_TO_POINTER (DP_MAX_BYTES), NULL },
+      { "SupportedAvatarMIMETypes", GINT_TO_POINTER (DP_TYPES), NULL },
+      { NULL }
+};
+TpDBusPropertiesMixinPropImpl *haze_connection_avatars_properties = props;
+
+void
+haze_connection_avatars_properties_getter (GObject *object,
+                                           GQuark interface,
+                                           GQuark name,
+                                           GValue *value,
+                                           gpointer getter_data)
+{
+    AvatarDBusProperty which = GPOINTER_TO_INT (getter_data);
+    HazeConnection *conn = HAZE_CONNECTION (object);
+    TpBaseConnection *base = (TpBaseConnection *) conn;
+    PurplePluginProtocolInfo *prpl_info;
+    PurpleBuddyIconSpec *icon_spec;
+
+    if (base->status != TP_CONNECTION_STATUS_CONNECTED)
+    {
+        /* not CONNECTED yet, so our connection doesn't have the prpl info
+         * yet - return dummy values */
+        if (G_VALUE_HOLDS_UINT (value))
+          g_value_set_uint (value, 0);
+        else if (G_VALUE_HOLDS (value, G_TYPE_STRV))
+          g_value_set_boxed (value, NULL);
+        else
+          g_assert_not_reached ();
+
+        return;
+    }
+
+    prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
+    icon_spec = &(prpl_info->icon_spec);
+
+    /* If the spec or the formats are null, this iface wasn't implemented. */
+    g_assert (icon_spec != NULL && icon_spec->format != NULL);
+
+    switch (which)
+    {
+    case DP_MIN_W:
+        g_value_set_uint (value, icon_spec->min_width);
+        break;
+
+    case DP_MAX_W:
+        g_value_set_uint (value, icon_spec->max_width);
+        break;
+
+    case DP_MIN_H:
+        g_value_set_uint (value, icon_spec->min_height);
+        break;
+
+    case DP_MAX_H:
+        g_value_set_uint (value, icon_spec->max_height);
+        break;
+
+    case DP_REC_W:
+    case DP_REC_H:
+        g_value_set_uint (value, 0);    /* libpurple has no recommendation */
+        break;
+
+    case DP_MAX_BYTES:
+        g_value_set_uint (value, icon_spec->max_filesize);
+        break;
+
+    case DP_TYPES:
+        g_value_set_boxed (value, _get_acceptable_mime_types (conn));
+        break;
+
+    default:
+        g_assert_not_reached ();
+    }
+}
+
 static void
 haze_connection_get_avatar_requirements (TpSvcConnectionInterfaceAvatars *self,
                                          DBusGMethodInvocation *context)

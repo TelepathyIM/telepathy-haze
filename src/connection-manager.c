@@ -65,6 +65,8 @@ static HazeProtocolInfo known_protocol_info[] = {
     { "yahoo",      "prpl-yahoo",       NULL, "local_charset:charset" },
     { "yahoojp",    "prpl-yahoojp",     NULL, "local_charset:charset" },
     { "zephyr",     "prpl-zephyr",      NULL, "encoding:charset" },
+    { "mxit",       "prpl-loubserp-mxit", NULL, "" },
+    { "sip",        "prpl-simple",      NULL, "" },
     { NULL,         NULL,               NULL, "" }
 };
 

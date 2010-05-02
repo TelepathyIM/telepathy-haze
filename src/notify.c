@@ -19,6 +19,7 @@
  */
 
 #include "notify.h"
+#include "connection-mail.h"
 #include "debug.h"
 
 static const gchar *
@@ -55,30 +56,6 @@ haze_notify_message (PurpleNotifyMsgType type,
     return NULL;
 }
 
-static gpointer
-haze_notify_email (PurpleConnection *gc,
-                   const char *subject,
-                   const char *from,
-                   const char *to,
-                   const char *url)
-{
-    DEBUG ("[%s] from: %s; to: %s; subject: %s; url: %s", _account_name (gc),
-        from, to, subject, url);
-    return NULL;
-}
-
-static gpointer
-haze_notify_emails (PurpleConnection *gc,
-                    size_t count,
-                    gboolean detailed,
-                    const char **subjects,
-                    const char **froms,
-                    const char **tos,
-                    const char **urls)
-{
-    DEBUG ("[%s] %" G_GSIZE_FORMAT " new emails", _account_name (gc), count);
-    return NULL;
-}
 
 static gpointer
 haze_notify_formatted (const char *title,
@@ -112,8 +89,8 @@ haze_notify_userinfo (PurpleConnection *gc,
 static PurpleNotifyUiOps notify_ui_ops =
 {
     .notify_message = haze_notify_message,
-    .notify_email = haze_notify_email,
-    .notify_emails = haze_notify_emails,
+    .notify_email = haze_connection_mail_notify_email,
+    .notify_emails = haze_connection_mail_notify_emails,
     .notify_formatted = haze_notify_formatted,
     .notify_userinfo = haze_notify_userinfo,
     .notify_uri = haze_notify_uri,
