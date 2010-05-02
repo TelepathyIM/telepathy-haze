@@ -403,10 +403,11 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
     HazeProtocolInfo *info =
         g_hash_table_lookup (klass->protocol_info_table, proto);
     HazeConnection *conn = g_object_new (HAZE_TYPE_CONNECTION,
-                                         "protocol",        proto,
-                                         "protocol-info",   info,
-                                         "parameters",      params,
-                                         NULL);
+        "protocol", proto,
+        "prpl-id", info->prpl_id,
+        "prpl-info", info->prpl_info,
+        "parameters", params,
+        NULL);
 
     if (!haze_connection_create_account (conn, error))
       {
