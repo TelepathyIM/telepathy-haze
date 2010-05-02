@@ -44,6 +44,13 @@ struct _HazeConnectionManager {
     gpointer priv;
 };
 
+typedef struct _HazeParameterMapping HazeParameterMapping;
+struct _HazeParameterMapping
+{
+    const gchar *purple_name;
+    const gchar *telepathy_name;
+};
+
 typedef struct _HazeProtocolInfo HazeProtocolInfo;
 struct _HazeProtocolInfo
 {
@@ -54,13 +61,8 @@ struct _HazeProtocolInfo
     gchar *prpl_id;
     PurplePluginProtocolInfo *prpl_info;
 
-    /** A string of the form
-     *      "foo:bar,baz:badger"
-     *  where foo and baz are the names of prpl account options, and bar
-     *  and badger are the names theses options should be given as
-     *  Telepathy parameters.
-     */
-    const gchar *parameter_map;
+    /* If not NULL, an array terminated by an entry with both names NULL. */
+    const HazeParameterMapping *parameter_map;
 };
 
 GType haze_connection_manager_get_type (void);

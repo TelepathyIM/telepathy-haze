@@ -47,27 +47,48 @@ struct _HazeConnectionManagerPrivate
  * parameters renaming to match well-known names in the spec, or to have
  * hyphens rather than underscores for consistency.
  */
+
+static const HazeParameterMapping encoding_to_charset[] = {
+    { "encoding", "charset" },
+    { NULL, NULL }
+};
+
+static const HazeParameterMapping jabber_mappings[] = {
+    { "connect_server", "server" },
+    { "require_tls", "require-encryption" },
+    { NULL, NULL }
+};
+
+static const HazeParameterMapping bonjour_mappings[] = {
+    { "first", "first-name" },
+    { "last", "last-name" },
+    { NULL, NULL }
+};
+
+static const HazeParameterMapping yahoo_mappings[] = {
+    { "local_charset", "charset" },
+    { NULL, NULL }
+};
+
 static HazeProtocolInfo known_protocol_info[] = {
-    { "aim",        "prpl-aim",         NULL, "" },
+    { "aim", "prpl-aim", NULL, NULL },
     /* Seriously. */
-    { "facebook",   "prpl-bigbrownchunx-facebookim", NULL, "" },
-    { "gadugadu",   "prpl-gg",          NULL, "" },
-    { "groupwise",  "prpl-novell",      NULL, "" },
-    { "irc",        "prpl-irc",         NULL, "encoding:charset" },
-    { "icq",        "prpl-icq",         NULL, "encoding:charset" },
-    { "jabber",     "prpl-jabber",      NULL,
-        "connect_server:server,require_tls:require-encryption" },
-    { "local-xmpp", "prpl-bonjour",     NULL,
-        "first:first-name,last:last-name" },
-    { "msn",        "prpl-msn",         NULL, "" },
-    { "qq",         "prpl-qq",          NULL, "" },
-    { "sametime",   "prpl-meanwhile",   NULL, "" },
-    { "yahoo",      "prpl-yahoo",       NULL, "local_charset:charset" },
-    { "yahoojp",    "prpl-yahoojp",     NULL, "local_charset:charset" },
-    { "zephyr",     "prpl-zephyr",      NULL, "encoding:charset" },
-    { "mxit",       "prpl-loubserp-mxit", NULL, "" },
-    { "sip",        "prpl-simple",      NULL, "" },
-    { NULL,         NULL,               NULL, "" }
+    { "facebook", "prpl-bigbrownchunx-facebookim", NULL, NULL },
+    { "gadugadu", "prpl-gg", NULL, NULL },
+    { "groupwise", "prpl-novell", NULL, NULL },
+    { "irc", "prpl-irc", NULL, encoding_to_charset },
+    { "icq", "prpl-icq", NULL, encoding_to_charset },
+    { "jabber", "prpl-jabber", NULL, jabber_mappings },
+    { "local-xmpp", "prpl-bonjour", NULL, bonjour_mappings },
+    { "msn", "prpl-msn", NULL, NULL },
+    { "qq", "prpl-qq", NULL, NULL },
+    { "sametime", "prpl-meanwhile", NULL, NULL },
+    { "yahoo", "prpl-yahoo", NULL, yahoo_mappings },
+    { "yahoojp", "prpl-yahoojp", NULL, yahoo_mappings },
+    { "zephyr", "prpl-zephyr", NULL, encoding_to_charset },
+    { "mxit", "prpl-loubserp-mxit", NULL, NULL },
+    { "sip", "prpl-simple", NULL, NULL },
+    { NULL, NULL, NULL, NULL }
 };
 
 static void *
@@ -155,31 +176,34 @@ _param_filter_string_list (const TpCMParamSpec *paramspec,
 }
 
 /* Populates a TpCMParamSpec from a PurpleAccountOption, possibly renaming the
- * parameter as specified in parameter_map.  paramspec is assumed to be zeroed out.
- * Returns TRUE on success, and FALSE if paramspec could not be populated (and
- * thus should not be used).
+ * parameter as specified in hpi->parameter_map.  paramspec is assumed to be
+ * zeroed out.
+ *
+ * Returns: %TRUE on success, and %FALSE if paramspec could not be populated
+ *          (and thus should not be used).
  */
 static gboolean
 _translate_protocol_option (PurpleAccountOption *option,
                             TpCMParamSpec *paramspec,
-                            HazeProtocolInfo *hpi,
-                            GHashTable *parameter_map)
+                            HazeProtocolInfo *hpi)
 {
     const char *pref_name = purple_account_option_get_setting (option);
     PurplePrefType pref_type = purple_account_option_get_type (option);
-    gchar *name = g_strdup (g_hash_table_lookup (parameter_map, pref_name));
+    gchar *name = NULL;
+    const HazeParameterMapping *m;
 
-    /* These strings are never free'd, but need to last until exit anyway.
-     */
+    for (m = hpi->parameter_map;
+         name == NULL && m != NULL && m->purple_name != NULL;
+         m++)
+      if (!tp_strdiff (m->purple_name, pref_name))
+        name = g_strdup (m->telepathy_name);
+
+    /* Intentional once-per-protocol-per-process leak. */
     if (name == NULL)
       name = g_strdup (pref_name);
 
     if (g_str_has_prefix (name, "facebook_"))
-      {
-        gchar *tmp = g_strdup (name + strlen ("facebook_"));
-        g_free (name);
-        name = tmp;
-      }
+      name += strlen ("facebook_");
 
     g_strdelimit (name, "_", '-');
     paramspec->name = name;
@@ -305,21 +329,6 @@ _build_paramspecs (HazeProtocolInfo *hpi)
     GArray *paramspecs = g_array_new (TRUE, TRUE, sizeof (TpCMParamSpec));
     GList *opts;
 
-    /* Deserialize the hpi->parameter_map string to a hash table;
-     *     "libpurple_name1:telepathy-name1,libpurple_name2:telepathy-name2"
-     * becomes
-     *     "libpurple_name1" => "telepathy-name1"
-     *     "libpurple_name2" => "telepathy-name2"
-     */
-    GHashTable *parameter_map = g_hash_table_new (g_str_hash, g_str_equal);
-    gchar **map_chunks = g_strsplit_set (hpi->parameter_map, ",:", 0);
-    int i;
-    for (i = 0; map_chunks[i] != NULL; i = i + 2)
-    {
-        g_assert (map_chunks[i+1] != NULL);
-        g_hash_table_insert (parameter_map, map_chunks[i], map_chunks[i+1]);
-    }
-
     /* TODO: local-xmpp shouldn't have an account parameter */
     g_array_append_val (paramspecs, account_spec);
 
@@ -337,12 +346,9 @@ _build_paramspecs (HazeProtocolInfo *hpi)
         TpCMParamSpec paramspec =
             { NULL, NULL, 0, 0, NULL, 0, NULL, NULL, NULL, NULL};
 
-        if (_translate_protocol_option (option, &paramspec, hpi, parameter_map))
+        if (_translate_protocol_option (option, &paramspec, hpi))
             g_array_append_val (paramspecs, paramspec);
     }
-
-    g_hash_table_destroy (parameter_map);
-    g_strfreev (map_chunks);
 
     return (TpCMParamSpec *) g_array_free (paramspecs, FALSE);
 }
@@ -516,7 +522,7 @@ static void _init_protocol_table (HazeConnectionManagerClass *klass)
             info->tp_protocol_name = p_info->id;
         }
         info->prpl_info = prpl_info;
-        info->parameter_map = "";
+        info->parameter_map = NULL;
 
         g_hash_table_insert (table, info->tp_protocol_name, info);
     }
