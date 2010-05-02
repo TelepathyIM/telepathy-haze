@@ -233,10 +233,7 @@ _translate_protocol_option (PurpleAccountOption *option,
                 break;
             }
 
-            if (g_str_equal (paramspec->name, "charset"))
-                def = "UTF-8";
-            else
-                def = purple_account_option_get_default_string (option);
+            def = purple_account_option_get_default_string (option);
 
             if (def != NULL && *def != '\0')
             {
