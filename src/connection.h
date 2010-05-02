@@ -48,6 +48,7 @@ typedef enum
 } HazeListHandle;
 
 typedef struct _HazeConnection HazeConnection;
+typedef struct _HazeConnectionPrivate HazeConnectionPrivate;
 typedef struct _HazeConnectionClass HazeConnectionClass;
 
 struct _HazeConnectionClass {
@@ -74,7 +75,7 @@ struct _HazeConnection {
     /* Part of the hack for Jabber media caps */
     gulong status_changed_id;
 
-    gpointer priv;
+    HazeConnectionPrivate *priv;
 };
 
 #define ACCOUNT_GET_HAZE_CONNECTION(account) \

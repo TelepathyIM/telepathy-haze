@@ -80,7 +80,7 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_mail_iface_init);
     );
 
-typedef struct _HazeConnectionPrivate
+struct _HazeConnectionPrivate
 {
     GHashTable *parameters;
 
@@ -92,10 +92,7 @@ typedef struct _HazeConnectionPrivate
     gboolean disconnecting : 1;
 
     gboolean dispose_has_run : 1;
-} HazeConnectionPrivate;
-
-#define HAZE_CONNECTION_GET_PRIVATE(o) \
-  ((HazeConnectionPrivate *)o->priv)
+};
 
 #define PC_GET_BASE_CONN(pc) \
     (ACCOUNT_GET_TP_BASE_CONNECTION (purple_connection_get_account (pc)))
@@ -128,7 +125,7 @@ haze_report_disconnect_reason (PurpleConnection *gc,
 {
     PurpleAccount *account = purple_connection_get_account (gc);
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (conn);
+    HazeConnectionPrivate *priv = conn->priv;
     TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
 
     TpConnectionStatusReason tp_reason;
@@ -211,7 +208,7 @@ disconnected_cb (PurpleConnection *pc)
 {
     PurpleAccount *account = purple_connection_get_account (pc);
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (conn);
+    HazeConnectionPrivate *priv = conn->priv;
     TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
 
     priv->disconnecting = TRUE;
@@ -303,7 +300,7 @@ gboolean
 haze_connection_create_account (HazeConnection *self,
                                 GError **error)
 {
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
+    HazeConnectionPrivate *priv = self->priv;
     GHashTable *params = priv->parameters;
     PurplePluginProtocolInfo *prpl_info = priv->protocol_info->prpl_info;
     const gchar *prpl_id = priv->protocol_info->prpl_id;
@@ -376,7 +373,7 @@ static void
 _haze_connection_shut_down (TpBaseConnection *base)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (self);
+    HazeConnectionPrivate *priv = self->priv;
     if(!priv->disconnecting)
     {
         priv->disconnecting = TRUE;
@@ -460,7 +457,7 @@ haze_connection_get_property (GObject    *object,
                               GParamSpec *pspec)
 {
     HazeConnection *self = HAZE_CONNECTION (object);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
+    HazeConnectionPrivate *priv = self->priv;
 
     switch (property_id) {
         case PROP_PARAMETERS:
@@ -482,7 +479,7 @@ haze_connection_set_property (GObject      *object,
                               GParamSpec   *pspec)
 {
     HazeConnection *self = HAZE_CONNECTION (object);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
+    HazeConnectionPrivate *priv = self->priv;
 
     switch (property_id) {
         case PROP_PARAMETERS:
@@ -507,7 +504,7 @@ haze_connection_constructor (GType type,
             G_OBJECT_CLASS (haze_connection_parent_class)->constructor (
                 type, n_construct_properties, construct_params));
     GObject *object = (GObject *) self;
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (self);
+    HazeConnectionPrivate *priv = self->priv;
 
     DEBUG ("Post-construction: (HazeConnection *)%p", self);
 
@@ -537,7 +534,7 @@ static void
 haze_connection_dispose (GObject *object)
 {
     HazeConnection *self = HAZE_CONNECTION(object);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (self);
+    HazeConnectionPrivate *priv = self->priv;
 
     if (priv->dispose_has_run)
         return;

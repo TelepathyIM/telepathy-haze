@@ -30,6 +30,7 @@
 G_BEGIN_DECLS
 
 typedef struct _HazeContactListChannel HazeContactListChannel;
+typedef struct _HazeContactListChannelPrivate HazeContactListChannelPrivate;
 typedef struct _HazeContactListChannelClass HazeContactListChannelClass;
 
 struct _HazeContactListChannelClass {
@@ -43,7 +44,7 @@ struct _HazeContactListChannel {
 
     TpGroupMixin group;
 
-    gpointer priv;
+    HazeContactListChannelPrivate *priv;
 };
 
 GType haze_contact_list_channel_get_type (void);
