@@ -29,7 +29,6 @@
 #include <signal.h>
 
 #include <glib.h>
-#include <glib/gstdio.h>
 
 #include <libpurple/account.h>
 #include <libpurple/core.h>
@@ -60,6 +59,7 @@ extern const guint purple_micro_version;
 #include "connection-manager.h"
 #include "notify.h"
 #include "request.h"
+#include "util.h"
 
 #ifdef ENABLE_MEDIA
 #include "media-backend.h"
@@ -242,49 +242,10 @@ get_cm (void)
     return (TpBaseConnectionManager *) g_object_new (HAZE_TYPE_CONNECTION_MANAGER, NULL);
 }
 
-static gboolean
-delete_directory (const char *path)
-{
-    const gchar *child_path;
-    GDir *dir = g_dir_open (path, 0, NULL);
-    gboolean ret = TRUE;
-
-    if (!dir)
-        return FALSE;
-
-    while (ret && (child_path = g_dir_read_name (dir)))
-    {
-        gchar *child_full_path =
-            g_strconcat (path, G_DIR_SEPARATOR_S, child_path, NULL);
-        if (g_file_test (child_full_path, G_FILE_TEST_IS_DIR))
-        {
-            if (!delete_directory (child_full_path))
-                ret = FALSE;
-        }
-        else
-        {
-            DEBUG ("deleting %s", child_full_path);
-            if (g_unlink (child_full_path))
-                ret = FALSE;
-        }
-        g_free (child_full_path);
-    }
-
-    g_dir_close (dir);
-
-    if (ret)
-    {
-        DEBUG ("deleting %s", path);
-        ret = !g_rmdir (path);
-    }
-
-    return ret;
-}
-
 static void
 delete_user_dir (void)
 {
-    if (!delete_directory (user_dir))
+    if (!haze_remove_directory (user_dir))
         g_warning ("couldn't delete %s", user_dir);
     g_free (user_dir);
 }

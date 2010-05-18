@@ -51,6 +51,8 @@ telepathy_haze_SOURCES = main.c \
                          notify.h \
                          request.c \
                          request.h \
+                         util.c \
+                         util.h \
                          $(haze_media_sources)
 
 telepathy_haze_LDADD = $(top_builddir)/extensions/libhaze-extensions.la
