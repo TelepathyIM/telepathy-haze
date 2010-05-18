@@ -25,8 +25,7 @@ haze_remove_directory (const gchar *path)
 
   while (ret && (child_path = g_dir_read_name (dir)))
     {
-      gchar *child_full_path =
-        g_strconcat (path, G_DIR_SEPARATOR_S, child_path, NULL);
+      gchar *child_full_path = g_build_filename (path, child_path, NULL);
 
       if (g_file_test (child_full_path, G_FILE_TEST_IS_DIR))
         {
