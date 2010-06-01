@@ -67,7 +67,7 @@ AC_SUBST(ENABLE_LEAKY_REQUEST_STUBS)
 
 PKG_CHECK_MODULES(PURPLE,[purple >= 2.1.1])
 PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.9.2])
-PKG_CHECK_MODULES(GLIB,[glib-2.0, gobject-2.0])
+PKG_CHECK_MODULES(GLIB,[glib-2.0 >= 2.22, gobject-2.0])
 PKG_CHECK_MODULES(DBUS_GLIB,[dbus-glib-1 >= 0.73])
 
 GLIB_GENMARSHAL=`$PKG_CONFIG --variable=glib_genmarshal glib-2.0`
