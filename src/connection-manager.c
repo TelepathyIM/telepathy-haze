@@ -47,27 +47,48 @@ struct _HazeConnectionManagerPrivate
  * parameters renaming to match well-known names in the spec, or to have
  * hyphens rather than underscores for consistency.
  */
+
+static const HazeParameterMapping encoding_to_charset[] = {
+    { "encoding", "charset" },
+    { NULL, NULL }
+};
+
+static const HazeParameterMapping jabber_mappings[] = {
+    { "connect_server", "server" },
+    { "require_tls", "require-encryption" },
+    { NULL, NULL }
+};
+
+static const HazeParameterMapping bonjour_mappings[] = {
+    { "first", "first-name" },
+    { "last", "last-name" },
+    { NULL, NULL }
+};
+
+static const HazeParameterMapping yahoo_mappings[] = {
+    { "local_charset", "charset" },
+    { NULL, NULL }
+};
+
 static HazeProtocolInfo known_protocol_info[] = {
-    { "aim",        "prpl-aim",         NULL, "" },
+    { "aim", "prpl-aim", NULL, NULL },
     /* Seriously. */
-    { "facebook",   "prpl-bigbrownchunx-facebookim", NULL, "" },
-    { "gadugadu",   "prpl-gg",          NULL, "" },
-    { "groupwise",  "prpl-novell",      NULL, "" },
-    { "irc",        "prpl-irc",         NULL, "encoding:charset" },
-    { "icq",        "prpl-icq",         NULL, "encoding:charset" },
-    { "jabber",     "prpl-jabber",      NULL,
-        "connect_server:server,require_tls:require-encryption" },
-    { "local-xmpp", "prpl-bonjour",     NULL,
-        "first:first-name,last:last-name" },
-    { "msn",        "prpl-msn",         NULL, "" },
-    { "qq",         "prpl-qq",          NULL, "" },
-    { "sametime",   "prpl-meanwhile",   NULL, "" },
-    { "yahoo",      "prpl-yahoo",       NULL, "local_charset:charset" },
-    { "yahoojp",    "prpl-yahoojp",     NULL, "local_charset:charset" },
-    { "zephyr",     "prpl-zephyr",      NULL, "encoding:charset" },
-    { "mxit",       "prpl-loubserp-mxit", NULL, "" },
-    { "sip",        "prpl-simple",      NULL, "" },
-    { NULL,         NULL,               NULL, "" }
+    { "facebook", "prpl-bigbrownchunx-facebookim", NULL, NULL },
+    { "gadugadu", "prpl-gg", NULL, NULL },
+    { "groupwise", "prpl-novell", NULL, NULL },
+    { "irc", "prpl-irc", NULL, encoding_to_charset },
+    { "icq", "prpl-icq", NULL, encoding_to_charset },
+    { "jabber", "prpl-jabber", NULL, jabber_mappings },
+    { "local-xmpp", "prpl-bonjour", NULL, bonjour_mappings },
+    { "msn", "prpl-msn", NULL, NULL },
+    { "qq", "prpl-qq", NULL, NULL },
+    { "sametime", "prpl-meanwhile", NULL, NULL },
+    { "yahoo", "prpl-yahoo", NULL, yahoo_mappings },
+    { "yahoojp", "prpl-yahoojp", NULL, yahoo_mappings },
+    { "zephyr", "prpl-zephyr", NULL, encoding_to_charset },
+    { "mxit", "prpl-loubserp-mxit", NULL, NULL },
+    { "sip", "prpl-simple", NULL, NULL },
+    { NULL, NULL, NULL, NULL }
 };
 
 static void *
@@ -79,29 +100,17 @@ _haze_cm_alloc_params (void)
 }
 
 static void
-_haze_cm_free_params (void *p)
-{
-    GHashTable *params = (GHashTable *)p;
-    g_hash_table_unref (params);
-}
-
-static void
 _haze_cm_set_param (const TpCMParamSpec *paramspec,
                     const GValue *value,
                     gpointer params_)
 {
-    GHashTable *params = (GHashTable *) params_;
-    GValue *value_copy = tp_g_value_slice_new (paramspec->gtype);
-    gchar *prpl_param_name = (gchar *) paramspec->setter_data;
+  GHashTable *params = params_;
+  gchar *prpl_param_name = (gchar *) paramspec->setter_data;
 
-    g_assert (G_VALUE_TYPE (value) == G_VALUE_TYPE (value_copy));
+  DEBUG ("setting parameter %s (telepathy name %s)",
+      prpl_param_name, paramspec->name);
 
-    g_value_copy (value, value_copy);
-
-    DEBUG ("setting parameter %s (telepathy name %s)",
-        prpl_param_name, paramspec->name);
-
-    g_hash_table_insert (params, prpl_param_name, value_copy);
+  g_hash_table_insert (params, prpl_param_name, tp_g_value_slice_dup (value));
 }
 
 static gboolean
@@ -138,48 +147,48 @@ _param_filter_string_list (const TpCMParamSpec *paramspec,
                            GValue *value,
                            GError **error)
 {
-    const gchar *str = g_value_get_string (value);
-    const GList *valid_values = paramspec->filter_data;
+  const gchar *str = g_value_get_string (value);
+  /* grr g_list_find_custom() is not const-correct of course */
+  GList *valid_values = (GList *) paramspec->filter_data;
 
-    for (; valid_values != NULL; valid_values = valid_values->next)
-    {
-        const gchar *valid = valid_values->data;
+  if (g_list_find_custom (valid_values, str, (GCompareFunc) g_strcmp0)
+      != NULL)
+    return TRUE;
 
-        if (!tp_strdiff (valid, str))
-            return TRUE;
-    }
-
-    g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
-        "'%s' is not a valid value for parameter '%s'", str, paramspec->name);
-    return FALSE;
+  g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      "'%s' is not a valid value for parameter '%s'", str, paramspec->name);
+  return FALSE;
 }
 
 /* Populates a TpCMParamSpec from a PurpleAccountOption, possibly renaming the
- * parameter as specified in parameter_map.  paramspec is assumed to be zeroed out.
- * Returns TRUE on success, and FALSE if paramspec could not be populated (and
- * thus should not be used).
+ * parameter as specified in hpi->parameter_map.  paramspec is assumed to be
+ * zeroed out.
+ *
+ * Returns: %TRUE on success, and %FALSE if paramspec could not be populated
+ *          (and thus should not be used).
  */
 static gboolean
 _translate_protocol_option (PurpleAccountOption *option,
                             TpCMParamSpec *paramspec,
-                            HazeProtocolInfo *hpi,
-                            GHashTable *parameter_map)
+                            HazeProtocolInfo *hpi)
 {
     const char *pref_name = purple_account_option_get_setting (option);
     PurplePrefType pref_type = purple_account_option_get_type (option);
-    gchar *name = g_strdup (g_hash_table_lookup (parameter_map, pref_name));
+    gchar *name = NULL;
+    const HazeParameterMapping *m;
 
-    /* These strings are never free'd, but need to last until exit anyway.
-     */
+    for (m = hpi->parameter_map;
+         name == NULL && m != NULL && m->purple_name != NULL;
+         m++)
+      if (!tp_strdiff (m->purple_name, pref_name))
+        name = g_strdup (m->telepathy_name);
+
+    /* Intentional once-per-protocol-per-process leak. */
     if (name == NULL)
       name = g_strdup (pref_name);
 
     if (g_str_has_prefix (name, "facebook_"))
-      {
-        gchar *tmp = g_strdup (name + strlen ("facebook_"));
-        g_free (name);
-        name = tmp;
-      }
+      name += strlen ("facebook_");
 
     g_strdelimit (name, "_", '-');
     paramspec->name = name;
@@ -224,10 +233,7 @@ _translate_protocol_option (PurpleAccountOption *option,
                 break;
             }
 
-            if (g_str_equal (paramspec->name, "charset"))
-                def = "UTF-8";
-            else
-                def = purple_account_option_get_default_string (option);
+            def = purple_account_option_get_default_string (option);
 
             if (def != NULL && *def != '\0')
             {
@@ -305,21 +311,6 @@ _build_paramspecs (HazeProtocolInfo *hpi)
     GArray *paramspecs = g_array_new (TRUE, TRUE, sizeof (TpCMParamSpec));
     GList *opts;
 
-    /* Deserialize the hpi->parameter_map string to a hash table;
-     *     "libpurple_name1:telepathy-name1,libpurple_name2:telepathy-name2"
-     * becomes
-     *     "libpurple_name1" => "telepathy-name1"
-     *     "libpurple_name2" => "telepathy-name2"
-     */
-    GHashTable *parameter_map = g_hash_table_new (g_str_hash, g_str_equal);
-    gchar **map_chunks = g_strsplit_set (hpi->parameter_map, ",:", 0);
-    int i;
-    for (i = 0; map_chunks[i] != NULL; i = i + 2)
-    {
-        g_assert (map_chunks[i+1] != NULL);
-        g_hash_table_insert (parameter_map, map_chunks[i], map_chunks[i+1]);
-    }
-
     /* TODO: local-xmpp shouldn't have an account parameter */
     g_array_append_val (paramspecs, account_spec);
 
@@ -337,85 +328,66 @@ _build_paramspecs (HazeProtocolInfo *hpi)
         TpCMParamSpec paramspec =
             { NULL, NULL, 0, 0, NULL, 0, NULL, NULL, NULL, NULL};
 
-        if (_translate_protocol_option (option, &paramspec, hpi, parameter_map))
+        if (_translate_protocol_option (option, &paramspec, hpi))
             g_array_append_val (paramspecs, paramspec);
     }
-
-    g_hash_table_destroy (parameter_map);
-    g_strfreev (map_chunks);
 
     return (TpCMParamSpec *) g_array_free (paramspecs, FALSE);
 }
 
-struct _protocol_info_foreach_data
-{
-    TpCMProtocolSpec *protocols;
-    guint index;
-};
-
-static void
-_protocol_info_foreach (gpointer key,
-                        gpointer value,
-                        gpointer user_data)
-{
-    HazeProtocolInfo *info = (HazeProtocolInfo *)value;
-    struct _protocol_info_foreach_data *data =
-        (struct _protocol_info_foreach_data *)user_data;
-    TpCMProtocolSpec *protocol = &(data->protocols[data->index]);
-
-    protocol->name = info->tp_protocol_name;
-    protocol->parameters = _build_paramspecs (info);
-    protocol->params_new = _haze_cm_alloc_params;
-    protocol->params_free = _haze_cm_free_params;
-    protocol->set_param = _haze_cm_set_param;
-
-    (data->index)++;
-}
-
 static int
-_compare_protocol_names(gconstpointer a,
-                        gconstpointer b)
+_compare_protocol_names (gconstpointer a,
+                         gconstpointer b)
 {
-    const TpCMProtocolSpec *protocol_a = a;
-    const TpCMProtocolSpec *protocol_b = b;
+  const TpCMProtocolSpec *protocol_a = a;
+  const TpCMProtocolSpec *protocol_b = b;
 
-    return strcmp(protocol_a->name, protocol_b->name);
+  return strcmp(protocol_a->name, protocol_b->name);
 }
 
 static TpCMProtocolSpec *
 get_protocols (HazeConnectionManagerClass *klass)
 {
-    struct _protocol_info_foreach_data foreach_data;
-    TpCMProtocolSpec *protocols;
-    guint n_protocols;
+  GArray *protocols = g_array_new (TRUE, TRUE, sizeof (TpCMProtocolSpec));
+  GHashTableIter iter;
+  gpointer key, value;
 
-    n_protocols = g_hash_table_size (klass->protocol_info_table);
-    foreach_data.protocols = protocols = (TpCMProtocolSpec *)
-        g_slice_alloc0 (sizeof (TpCMProtocolSpec) * (n_protocols + 1));
-    foreach_data.index = 0;
-
-    g_hash_table_foreach (klass->protocol_info_table, _protocol_info_foreach,
-        &foreach_data);
-
-    qsort (protocols, n_protocols, sizeof (TpCMProtocolSpec),
-        _compare_protocol_names);
-
+  g_hash_table_iter_init (&iter, klass->protocol_info_table);
+  while (g_hash_table_iter_next (&iter, &key, &value))
     {
-        GString *debug_string = g_string_new ("");
-        TpCMProtocolSpec *p = protocols;
-        while (p->name != NULL)
-        {
-            g_string_append (debug_string, p->name);
-            p += 1;
-            if (p->name != NULL)
-                g_string_append (debug_string, ", ");
-        }
+      HazeProtocolInfo *info = value;
+      TpCMProtocolSpec protocol = {
+          info->tp_protocol_name, /* name */
+          _build_paramspecs (info), /* parameters */
+          _haze_cm_alloc_params, /* params_new */
+          (GDestroyNotify) g_hash_table_unref, /* params_free */
+          _haze_cm_set_param /* set_param */
+      };
 
-        DEBUG ("Found protocols %s", debug_string->str);
-        g_string_free (debug_string, TRUE);
+      g_array_append_val (protocols, protocol);
     }
 
-    return protocols;
+  qsort (protocols->data, protocols->len, sizeof (TpCMProtocolSpec),
+      _compare_protocol_names);
+
+  {
+    GString *debug_string = g_string_new ("");
+    TpCMProtocolSpec *p = (TpCMProtocolSpec *) protocols->data;
+
+    while (p->name != NULL)
+      {
+        g_string_append (debug_string, p->name);
+        p += 1;
+
+        if (p->name != NULL)
+          g_string_append (debug_string, ", ");
+      }
+
+    DEBUG ("Found protocols %s", debug_string->str);
+    g_string_free (debug_string, TRUE);
+  }
+
+  return (TpCMProtocolSpec *) g_array_free (protocols, FALSE);
 }
 
 static TpBaseConnection *
@@ -431,10 +403,11 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
     HazeProtocolInfo *info =
         g_hash_table_lookup (klass->protocol_info_table, proto);
     HazeConnection *conn = g_object_new (HAZE_TYPE_CONNECTION,
-                                         "protocol",        proto,
-                                         "protocol-info",   info,
-                                         "parameters",      params,
-                                         NULL);
+        "protocol", proto,
+        "prpl-id", info->prpl_id,
+        "prpl-info", info->prpl_info,
+        "parameters", params,
+        NULL);
 
     if (!haze_connection_create_account (conn, error))
       {
@@ -442,15 +415,6 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
         return FALSE;
       }
     return (TpBaseConnection *) conn;
-}
-
-/** Frees the slice-allocated HazeProtocolInfo pointed to by @a data.  Useful
- *  as the value-destroying callback in a hash table.
- */
-static void
-_protocol_info_slice_free (gpointer data)
-{
-    g_slice_free (HazeProtocolInfo, data);
 }
 
 /** Predicate for g_hash_table_find to search on prpl_id.
@@ -469,59 +433,57 @@ _compare_protocol_id (gpointer key,
     return (!strcmp (info->prpl_id, prpl_id));
 }
 
-static void _init_protocol_table (HazeConnectionManagerClass *klass)
+static GHashTable *
+build_protocol_table (void)
 {
-    GHashTable *table;
-    HazeProtocolInfo *i, *info;
-    PurplePlugin *plugin;
-    PurplePluginInfo *p_info;
-    PurplePluginProtocolInfo *prpl_info;
-    GList *iter;
+  GHashTable *table;
+  HazeProtocolInfo *i;
+  GList *iter;
 
-    table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
-                                   _protocol_info_slice_free);
+  table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, NULL);
 
-    for (i = known_protocol_info; i->prpl_id != NULL; i++)
+  for (i = known_protocol_info; i->prpl_id != NULL; i++)
     {
-        plugin = purple_find_prpl (i->prpl_id);
-        if (!plugin)
-            continue;
+      PurplePlugin *plugin = purple_find_prpl (i->prpl_id);
 
-        info = g_slice_new (HazeProtocolInfo);
+      if (plugin == NULL)
+        continue;
 
-        info->prpl_id = i->prpl_id;
-        info->tp_protocol_name = i->tp_protocol_name;
-        info->prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
-        info->parameter_map = i->parameter_map;
+      i->prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
 
-        g_hash_table_insert (table, info->tp_protocol_name, info);
+      g_hash_table_insert (table, i->tp_protocol_name, i);
     }
 
-    for (iter = purple_plugins_get_protocols (); iter; iter = iter->next)
+  for (iter = purple_plugins_get_protocols (); iter; iter = iter->next)
     {
-        plugin = (PurplePlugin *)iter->data;
-        p_info = plugin->info;
-        prpl_info = PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
+      PurplePlugin *plugin = iter->data;
+      PurplePluginInfo *p_info = plugin->info;
+      PurplePluginProtocolInfo *prpl_info =
+          PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
+      HazeProtocolInfo *info;
 
-        if (g_hash_table_find (table, _compare_protocol_id, p_info->id))
-            continue; /* already in the table from the previous loop */
+      if (g_hash_table_find (table, _compare_protocol_id, p_info->id))
+        continue; /* already in the table from the previous loop */
 
-        info = g_slice_new (HazeProtocolInfo);
-        info->prpl_id = p_info->id;
-        if (g_str_has_prefix (p_info->id, "prpl-"))
-            info->tp_protocol_name = (p_info->id + 5);
-        else
+      info = g_slice_new (HazeProtocolInfo);
+      info->prpl_id = p_info->id;
+      info->prpl_info = prpl_info;
+      info->parameter_map = NULL;
+
+      if (g_str_has_prefix (p_info->id, "prpl-"))
         {
-            g_warning ("prpl '%s' has a dumb id; spank its author", p_info->id);
-            info->tp_protocol_name = p_info->id;
+          info->tp_protocol_name = (p_info->id + 5);
         }
-        info->prpl_info = prpl_info;
-        info->parameter_map = "";
+      else
+        {
+          g_warning ("prpl '%s' has a dumb id; spank its author", p_info->id);
+          info->tp_protocol_name = p_info->id;
+        }
 
-        g_hash_table_insert (table, info->tp_protocol_name, info);
+      g_hash_table_insert (table, info->tp_protocol_name, info);
     }
 
-    klass->protocol_info_table = table;
+  return table;
 }
 
 static void
@@ -544,7 +506,7 @@ haze_connection_manager_class_init (HazeConnectionManagerClass *klass)
         (TpBaseConnectionManagerClass *)klass;
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-    _init_protocol_table (klass);
+    klass->protocol_info_table = build_protocol_table ();
 
     object_class->finalize = _haze_cm_finalize;
 

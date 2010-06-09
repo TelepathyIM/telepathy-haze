@@ -50,7 +50,8 @@
 enum
 {
     PROP_PARAMETERS = 1,
-    PROP_PROTOCOL_INFO,
+    PROP_PRPL_ID,
+    PROP_PRPL_INFO,
 
     LAST_PROPERTY
 } HazeConnectionProperties;
@@ -76,22 +77,20 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_mail_iface_init);
     );
 
-typedef struct _HazeConnectionPrivate
+struct _HazeConnectionPrivate
 {
     GHashTable *parameters;
 
-    HazeProtocolInfo *protocol_info;
+    gchar *prpl_id;
+    PurplePluginProtocolInfo *prpl_info;
 
     /* Set if purple_account_disconnect has been called or is scheduled to be
      * called, so should not be called again.
      */
-    gboolean disconnecting : 1;
+    gboolean disconnecting;
 
-    gboolean dispose_has_run : 1;
-} HazeConnectionPrivate;
-
-#define HAZE_CONNECTION_GET_PRIVATE(o) \
-  ((HazeConnectionPrivate *)o->priv)
+    gboolean dispose_has_run;
+};
 
 #define PC_GET_BASE_CONN(pc) \
     (ACCOUNT_GET_TP_BASE_CONNECTION (purple_connection_get_account (pc)))
@@ -124,7 +123,7 @@ haze_report_disconnect_reason (PurpleConnection *gc,
 {
     PurpleAccount *account = purple_connection_get_account (gc);
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (conn);
+    HazeConnectionPrivate *priv = conn->priv;
     TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
 
     TpConnectionStatusReason tp_reason;
@@ -207,7 +206,7 @@ disconnected_cb (PurpleConnection *pc)
 {
     PurpleAccount *account = purple_connection_get_account (pc);
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (conn);
+    HazeConnectionPrivate *priv = conn->priv;
     TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
 
     priv->disconnecting = TRUE;
@@ -244,17 +243,14 @@ _warn_unhandled_parameter (const gchar *key,
     g_warning ("received an unknown parameter '%s'; ignoring", key);
 }
 
-struct _i_want_closure
-{
-    PurpleAccount *account;
-    GHashTable *params;
-};
-
 static void
-_set_option (const PurpleAccountOption *option,
-             struct _i_want_closure *context)
+set_option (
+    PurpleAccount *account,
+    const PurpleAccountOption *option,
+    GHashTable *params)
 {
-    GValue *value = g_hash_table_lookup (context->params, option->pref_name);
+    GValue *value = g_hash_table_lookup (params, option->pref_name);
+
     if (!value)
         return;
 
@@ -262,18 +258,18 @@ _set_option (const PurpleAccountOption *option,
     {
         case PURPLE_PREF_BOOLEAN:
             g_assert (G_VALUE_TYPE (value) == G_TYPE_BOOLEAN);
-            purple_account_set_bool (context->account, option->pref_name,
+            purple_account_set_bool (account, option->pref_name,
                 g_value_get_boolean (value));
             break;
         case PURPLE_PREF_INT:
             g_assert (G_VALUE_TYPE (value) == G_TYPE_INT);
-            purple_account_set_int (context->account, option->pref_name,
+            purple_account_set_int (account, option->pref_name,
                 g_value_get_int (value));
             break;
         case PURPLE_PREF_STRING:
         case PURPLE_PREF_STRING_LIST:
             g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
-            purple_account_set_string (context->account, option->pref_name,
+            purple_account_set_string (account, option->pref_name,
                 g_value_get_string (value));
             break;
         default:
@@ -281,7 +277,7 @@ _set_option (const PurpleAccountOption *option,
                 option->pref_name, option->type);
     }
 
-    g_hash_table_remove (context->params, option->pref_name);
+    g_hash_table_remove (params, option->pref_name);
 }
 
 /**
@@ -299,26 +295,25 @@ gboolean
 haze_connection_create_account (HazeConnection *self,
                                 GError **error)
 {
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
+    HazeConnectionPrivate *priv = self->priv;
     GHashTable *params = priv->parameters;
-    PurplePluginProtocolInfo *prpl_info = priv->protocol_info->prpl_info;
-    const gchar *prpl_id = priv->protocol_info->prpl_id;
+    PurplePluginProtocolInfo *prpl_info = priv->prpl_info;
     const gchar *username, *password;
-    struct _i_want_closure context;
+    GList *l;
 
     g_return_val_if_fail (self->account == NULL, FALSE);
 
     username = tp_asv_get_string (params, "account");
     g_assert (username != NULL);
 
-    if (purple_accounts_find (username, prpl_id) != NULL)
+    if (purple_accounts_find (username, priv->prpl_id) != NULL)
       {
         g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-            "a connection already exists to %s on %s", username, prpl_id);
+            "a connection already exists to %s on %s", username, priv->prpl_id);
         return FALSE;
       }
 
-    self->account = purple_account_new (username, priv->protocol_info->prpl_id);
+    self->account = purple_account_new (username, priv->prpl_id);
     purple_accounts_add (self->account);
     g_hash_table_remove (params, "account");
 
@@ -331,9 +326,8 @@ haze_connection_create_account (HazeConnection *self,
         g_hash_table_remove (params, "password");
     }
 
-    context.account = self->account;
-    context.params = params;
-    g_list_foreach (prpl_info->protocol_options, (GFunc) _set_option, &context);
+    for (l = prpl_info->protocol_options; l != NULL; l = l->next)
+      set_option (self->account, l->data, params);
 
     g_hash_table_foreach (params, (GHFunc) _warn_unhandled_parameter, "lala");
 
@@ -372,7 +366,7 @@ static void
 _haze_connection_shut_down (TpBaseConnection *base)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (self);
+    HazeConnectionPrivate *priv = self->priv;
     if(!priv->disconnecting)
     {
         priv->disconnecting = TRUE;
@@ -456,14 +450,17 @@ haze_connection_get_property (GObject    *object,
                               GParamSpec *pspec)
 {
     HazeConnection *self = HAZE_CONNECTION (object);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
+    HazeConnectionPrivate *priv = self->priv;
 
     switch (property_id) {
         case PROP_PARAMETERS:
-            g_value_set_pointer (value, priv->parameters);
+            g_value_set_boxed (value, priv->parameters);
             break;
-        case PROP_PROTOCOL_INFO:
-            g_value_set_pointer (value, priv->protocol_info);
+        case PROP_PRPL_ID:
+            g_value_set_string (value, priv->prpl_id);
+            break;
+        case PROP_PRPL_INFO:
+            g_value_set_pointer (value, priv->prpl_info);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -478,15 +475,18 @@ haze_connection_set_property (GObject      *object,
                               GParamSpec   *pspec)
 {
     HazeConnection *self = HAZE_CONNECTION (object);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE(self);
+    HazeConnectionPrivate *priv = self->priv;
 
     switch (property_id) {
         case PROP_PARAMETERS:
-            priv->parameters = g_value_get_pointer (value);
-            g_hash_table_ref (priv->parameters);
+            priv->parameters = g_value_dup_boxed (value);
             break;
-        case PROP_PROTOCOL_INFO:
-            priv->protocol_info = g_value_get_pointer (value);
+        case PROP_PRPL_ID:
+            g_free (priv->prpl_id);
+            priv->prpl_id = g_value_dup_string (value);
+            break;
+        case PROP_PRPL_INFO:
+            priv->prpl_info = g_value_get_pointer (value);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -503,7 +503,7 @@ haze_connection_constructor (GType type,
             G_OBJECT_CLASS (haze_connection_parent_class)->constructor (
                 type, n_construct_properties, construct_params));
     GObject *object = (GObject *) self;
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (self);
+    HazeConnectionPrivate *priv = self->priv;
 
     DEBUG ("Post-construction: (HazeConnection *)%p", self);
 
@@ -531,7 +531,7 @@ static void
 haze_connection_dispose (GObject *object)
 {
     HazeConnection *self = HAZE_CONNECTION(object);
-    HazeConnectionPrivate *priv = HAZE_CONNECTION_GET_PRIVATE (self);
+    HazeConnectionPrivate *priv = self->priv;
 
     if (priv->dispose_has_run)
         return;
@@ -621,26 +621,21 @@ haze_connection_class_init (HazeConnectionClass *klass)
     base_class->shut_down = _haze_connection_shut_down;
     base_class->interfaces_always_present = interfaces_always_present;
 
-    param_spec = g_param_spec_pointer ("parameters",
-                                       "GHashTable of gchar * => GValue",
-                                       "Connection parameters (username, "
-                                       "password, etc.)",
-                                       G_PARAM_CONSTRUCT_ONLY |
-                                       G_PARAM_READWRITE |
-                                       G_PARAM_STATIC_NAME |
-                                       G_PARAM_STATIC_BLURB);
+    param_spec = g_param_spec_boxed ("parameters", "gchar * => GValue",
+        "Connection parameters (username, password, etc.)",
+        G_TYPE_HASH_TABLE,
+        G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property (object_class, PROP_PARAMETERS, param_spec);
 
-    param_spec = g_param_spec_pointer ("protocol-info",
-                                       "HazeProtocolInfo instance",
-                                       "Information on how this protocol "
-                                       "should be treated by haze",
-                                       G_PARAM_CONSTRUCT_ONLY |
-                                       G_PARAM_READWRITE |
-                                       G_PARAM_STATIC_NAME |
-                                       G_PARAM_STATIC_BLURB);
-    g_object_class_install_property (object_class, PROP_PROTOCOL_INFO,
-                                     param_spec);
+    param_spec = g_param_spec_string ("prpl-id", "protocol plugin ID",
+        "protocol plugin ID", NULL,
+        G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (object_class, PROP_PRPL_ID, param_spec);
+
+    param_spec = g_param_spec_pointer ("prpl-info", "PurplePluginProtocolInfo",
+        "protocol plugin info",
+        G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (object_class, PROP_PRPL_INFO, param_spec);
 
     prop_interfaces[0].props = haze_connection_avatars_properties;
     klass->properties_class.interfaces = prop_interfaces;

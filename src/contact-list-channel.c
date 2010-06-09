@@ -61,7 +61,6 @@ publish_request_data_free (PublishRequestData *prd)
 }
 
 
-typedef struct _HazeContactListChannelPrivate HazeContactListChannelPrivate;
 struct _HazeContactListChannelPrivate {
     HazeConnection *conn;
 
@@ -84,9 +83,6 @@ struct _HazeContactListChannelPrivate {
     gboolean closed;
     gboolean dispose_has_run;
 };
-
-#define HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE(o) \
-    ((HazeContactListChannelPrivate *) ((o)->priv))
 
 static void channel_iface_init (gpointer g_iface, gpointer iface_data);
 
@@ -135,7 +131,7 @@ remove_pending_publish_request (HazeContactListChannel *publish,
                                 TpHandle handle)
 {
     HazeContactListChannelPrivate *priv =
-        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (publish);
+        publish->priv;
     HazeConnection *conn = priv->conn;
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
     TpHandleRepoIface *handle_repo =
@@ -158,7 +154,7 @@ _list_add_member_cb (HazeContactListChannel *chan,
                      GError **error)
 {
     HazeContactListChannelPrivate *priv =
-        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (chan);
+        chan->priv;
     HazeConnection *conn = priv->conn;
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
     const gchar *bname =
@@ -220,7 +216,7 @@ _group_add_member_cb (HazeContactListChannel *chan,
                       GError **error)
 {
     HazeContactListChannelPrivate *priv =
-        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (chan);
+        chan->priv;
     HazeConnection *conn = priv->conn;
     const gchar *bname =
         haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
@@ -251,7 +247,7 @@ _haze_contact_list_channel_add_member_cb (GObject *obj,
 {
     HazeContactListChannel *chan = HAZE_CONTACT_LIST_CHANNEL (obj);
     HazeContactListChannelPrivate *priv =
-        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (chan);
+        chan->priv;
     switch (priv->handle_type)
     {
         case TP_HANDLE_TYPE_LIST:
@@ -271,7 +267,7 @@ _list_remove_member_cb (HazeContactListChannel *chan,
                         GError **error)
 {
     HazeContactListChannelPrivate *priv =
-        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (chan);
+        chan->priv;
     HazeConnection *conn = priv->conn;
     PurpleAccount *account = conn->account;
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
@@ -345,7 +341,7 @@ _group_remove_member_cb (HazeContactListChannel *chan,
                          GError **error)
 {
     HazeContactListChannelPrivate *priv =
-        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (chan);
+        chan->priv;
     HazeConnection *conn = priv->conn;
     PurpleAccount *account = conn->account;
     const gchar *bname =
@@ -381,7 +377,7 @@ _haze_contact_list_channel_remove_member_cb (GObject *obj,
 {
     HazeContactListChannel *chan = HAZE_CONTACT_LIST_CHANNEL (obj);
     HazeContactListChannelPrivate *priv =
-        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (chan);
+        chan->priv;
 
     switch (priv->handle_type)
     {
@@ -416,7 +412,7 @@ haze_request_authorize (PurpleAccount *account,
         haze_contact_list_get_channel (conn->contact_list,
             TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_PUBLISH, NULL, NULL);
     HazeContactListChannelPrivate *priv =
-        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (publish);
+        publish->priv;
 
     TpIntSet *add_local_pending = tp_intset_new ();
     TpHandle remote_handle;
@@ -460,7 +456,7 @@ haze_close_account_request (gpointer request_data_)
      */
     HazeContactListChannel *publish = g_object_ref (request_data->publish);
     HazeContactListChannelPrivate *priv =
-        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (publish);
+        publish->priv;
 
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
 
@@ -509,7 +505,7 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
     obj = G_OBJECT_CLASS (haze_contact_list_channel_parent_class)->
         constructor (type, n_props, props);
     chan = HAZE_CONTACT_LIST_CHANNEL (obj);
-    priv = HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (chan);
+    priv = chan->priv;
     conn = TP_BASE_CONNECTION (priv->conn);
     self_handle = conn->self_handle;
     handle_type = priv->handle_type;
@@ -579,7 +575,7 @@ static void
 haze_contact_list_channel_dispose (GObject *object)
 {
     HazeContactListChannel *self = HAZE_CONTACT_LIST_CHANNEL (object);
-    HazeContactListChannelPrivate *priv = HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE(self);
+    HazeContactListChannelPrivate *priv = self->priv;
 
     if (priv->dispose_has_run)
         return;
@@ -608,12 +604,6 @@ haze_contact_list_channel_dispose (GObject *object)
 static void
 haze_contact_list_channel_finalize (GObject *object)
 {
-/*
-    HazeContactListChannel *self = HAZE_CONTACT_LIST_CHANNEL (object);
-    HazeContactListChannelPrivate *priv =
-        HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE(self);
-*/
-    
     tp_group_mixin_finalize (object);
 
     G_OBJECT_CLASS (haze_contact_list_channel_parent_class)->finalize (object);
@@ -626,7 +616,7 @@ haze_contact_list_channel_get_property (GObject    *object,
                                         GParamSpec *pspec)
 {
     HazeContactListChannel *self = HAZE_CONTACT_LIST_CHANNEL (object);
-    HazeContactListChannelPrivate *priv = HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE(self);
+    HazeContactListChannelPrivate *priv = self->priv;
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (priv->conn);
 
     switch (property_id) {
@@ -694,7 +684,7 @@ haze_contact_list_channel_set_property (GObject      *object,
                                         GParamSpec   *pspec)
 {
     HazeContactListChannel *self = HAZE_CONTACT_LIST_CHANNEL (object);
-    HazeContactListChannelPrivate *priv = HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE(self);
+    HazeContactListChannelPrivate *priv = self->priv;
 
     switch (property_id) {
         case PROP_OBJECT_PATH:
@@ -836,7 +826,7 @@ haze_contact_list_channel_close (TpSvcChannel *iface,
 
     g_assert (HAZE_IS_CONTACT_LIST_CHANNEL (self));
 
-    priv = HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (self);
+    priv = self->priv;
 
     if (priv->handle_type == TP_HANDLE_TYPE_LIST)
     {
@@ -879,7 +869,7 @@ haze_contact_list_channel_get_handle (TpSvcChannel *iface,
 
     g_assert (HAZE_IS_CONTACT_LIST_CHANNEL (self));
 
-    priv = HAZE_CONTACT_LIST_CHANNEL_GET_PRIVATE (self);
+    priv = self->priv;
 
     tp_svc_channel_return_from_get_handle (context, priv->handle_type,
         priv->handle);
