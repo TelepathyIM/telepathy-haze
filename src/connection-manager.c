@@ -83,6 +83,7 @@ static HazeProtocolInfo known_protocol_info[] = {
     { "msn", "prpl-msn", NULL, NULL },
     { "qq", "prpl-qq", NULL, NULL },
     { "sametime", "prpl-meanwhile", NULL, NULL },
+    { "sipe", "prpl-sipe", NULL, NULL },
     { "yahoo", "prpl-yahoo", NULL, yahoo_mappings },
     { "yahoojp", "prpl-yahoojp", NULL, yahoo_mappings },
     { "zephyr", "prpl-zephyr", NULL, encoding_to_charset },
