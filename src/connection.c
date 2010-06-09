@@ -243,6 +243,56 @@ _warn_unhandled_parameter (const gchar *key,
     g_warning ("received an unknown parameter '%s'; ignoring", key);
 }
 
+static gchar *
+_haze_connection_get_username (GHashTable *params,
+    PurplePluginProtocolInfo *prpl_info)
+{
+  const gchar *account = tp_asv_get_string (params, "account");
+  gchar *username;
+
+  /* 'account' is always flagged as Required. */
+  g_return_val_if_fail (account != NULL, NULL);
+
+  /* Does the protocol have user splits? */
+  if (prpl_info->user_splits != NULL &&
+      g_hash_table_lookup (params, "usersplit1") != NULL)
+    {
+      GString *string = g_string_new (account);
+      guint i;
+      GList *l;
+
+      for (i = 1, l = prpl_info->user_splits;
+           l != NULL;
+           i++, l = l->next)
+        {
+          PurpleAccountUserSplit *split = l->data;
+          gchar *param_name = g_strdup_printf ("usersplit%d", i);
+          GValue *value = g_hash_table_lookup (params, param_name);
+
+          /* tp-glib should guarantee that this is present and a string. */
+          g_assert (value != NULL);
+          g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
+
+          g_string_append_c (string,
+              purple_account_user_split_get_separator (split));
+          g_string_append (string, g_value_get_string (value));
+
+          g_hash_table_remove (params, param_name);
+          g_free (param_name);
+        }
+
+      username = g_string_free (string, FALSE);
+    }
+  else
+    {
+      username = g_strdup (account);
+    }
+
+  g_hash_table_remove (params, "account");
+
+  return username;
+}
+
 static void
 set_option (
     PurpleAccount *account,
@@ -298,24 +348,25 @@ haze_connection_create_account (HazeConnection *self,
     HazeConnectionPrivate *priv = self->priv;
     GHashTable *params = priv->parameters;
     PurplePluginProtocolInfo *prpl_info = priv->prpl_info;
-    const gchar *username, *password;
+    gchar *username;
+    const gchar *password;
     GList *l;
 
     g_return_val_if_fail (self->account == NULL, FALSE);
 
-    username = tp_asv_get_string (params, "account");
-    g_assert (username != NULL);
+    username = _haze_connection_get_username (params, prpl_info);
+    g_return_val_if_fail (username != NULL, FALSE);
 
     if (purple_accounts_find (username, priv->prpl_id) != NULL)
       {
         g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
             "a connection already exists to %s on %s", username, priv->prpl_id);
+        g_free(username);
         return FALSE;
       }
 
     self->account = purple_account_new (username, priv->prpl_id);
     purple_accounts_add (self->account);
-    g_hash_table_remove (params, "account");
 
     self->account->ui_data = self;
 
@@ -331,6 +382,7 @@ haze_connection_create_account (HazeConnection *self,
 
     g_hash_table_foreach (params, (GHFunc) _warn_unhandled_parameter, "lala");
 
+    g_free(username);
     return TRUE;
 }
 
