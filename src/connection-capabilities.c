@@ -29,8 +29,11 @@
 
 #include "connection.h"
 #include "debug.h"
+#ifdef ENABLE_MEDIA
 #include "mediamanager.h"
+#endif
 
+#ifdef ENABLE_MEDIA
 static PurpleMediaCaps
 tp_flags_to_purple_caps (guint flags)
 {
@@ -109,6 +112,7 @@ _emit_capabilities_changed (HazeConnection *conn,
 
   g_ptr_array_free (caps_arr, TRUE);
 }
+#endif
 
 /**
  * haze_connection_advertise_capabilities
@@ -124,12 +128,15 @@ haze_connection_advertise_capabilities (TpSvcConnectionInterfaceCapabilities *if
 {
   HazeConnection *self = HAZE_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;
+#ifdef ENABLE_MEDIA
   guint i;
-  GPtrArray *ret;
   PurpleMediaCaps old_caps, caps;
+#endif
+  GPtrArray *ret;
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
+#ifdef ENABLE_MEDIA
   caps = old_caps = purple_media_manager_get_ui_caps (
       purple_media_manager_get ());
   for (i = 0; i < add->len; i++)
@@ -164,6 +171,7 @@ haze_connection_advertise_capabilities (TpSvcConnectionInterfaceCapabilities *if
   purple_media_manager_set_ui_caps (purple_media_manager_get(), caps);
 
   _emit_capabilities_changed (self, base->self_handle, old_caps, caps);
+#endif
 
   ret = g_ptr_array_new ();
 
@@ -190,6 +198,7 @@ haze_connection_get_handle_capabilities (HazeConnection *self,
                                          TpHandle handle,
                                          GPtrArray *arr)
 {
+#ifdef ENABLE_MEDIA
   TpBaseConnection *conn = TP_BASE_CONNECTION (self);
   PurpleAccount *account = self->account;
   TpHandleRepoIface *contact_handles =
@@ -197,6 +206,7 @@ haze_connection_get_handle_capabilities (HazeConnection *self,
   const gchar *bname;
   guint typeflags = 0;
   PurpleMediaCaps caps;
+#endif
   const gchar **assumed;
 
   if (0 == handle)
@@ -207,6 +217,7 @@ haze_connection_get_handle_capabilities (HazeConnection *self,
 
   /* TODO: Check for presence */
 
+#ifdef ENABLE_MEDIA
   if (handle == conn->self_handle)
     caps = purple_media_manager_get_ui_caps (purple_media_manager_get ());
   else
@@ -234,6 +245,7 @@ haze_connection_get_handle_capabilities (HazeConnection *self,
 
       g_ptr_array_add (arr, g_value_get_boxed (&monster));
     }
+#endif
 
   for (assumed = assumed_caps; NULL != *assumed; assumed++)
     {
@@ -265,7 +277,7 @@ static void
 haze_connection_get_capabilities (TpSvcConnectionInterfaceCapabilities *iface,
                                   const GArray *handles,
                                   DBusGMethodInvocation *context)
-{  
+{
   HazeConnection *self = HAZE_CONNECTION (iface);
   TpBaseConnection *conn = TP_BASE_CONNECTION (self);
   TpHandleRepoIface *contact_handles = tp_base_connection_get_handles (conn,
@@ -353,6 +365,7 @@ haze_connection_capabilities_iface_init (gpointer g_iface,
 #undef IMPLEMENT
 }
 
+#ifdef ENABLE_MEDIA
 static void
 caps_changed_cb (PurpleBuddy *buddy,
                  PurpleMediaCaps caps,
@@ -370,12 +383,15 @@ caps_changed_cb (PurpleBuddy *buddy,
       purple_caps_to_tp_flags(oldcaps),
       purple_caps_to_tp_flags(caps));
 }
+#endif
 
 void
 haze_connection_capabilities_class_init (GObjectClass *object_class)
 {
+#ifdef ENABLE_MEDIA
   purple_signal_connect (purple_blist_get_handle (), "buddy-caps-changed",
       object_class, PURPLE_CALLBACK (caps_changed_cb), NULL);
+#endif
 }
 
 void
