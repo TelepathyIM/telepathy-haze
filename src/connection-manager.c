@@ -161,6 +161,20 @@ _param_filter_string_list (const TpCMParamSpec *paramspec,
   return FALSE;
 }
 
+static const HazeParameterMapping *
+protocol_info_lookup_param (
+    HazeProtocolInfo *hpi,
+    const gchar *purple_name)
+{
+  const HazeParameterMapping *m;
+
+  for (m = hpi->parameter_map; m != NULL && m->purple_name != NULL; m++)
+    if (!tp_strdiff (m->purple_name, purple_name))
+      return m;
+
+  return NULL;
+}
+
 /* Populates a TpCMParamSpec from a PurpleAccountOption, possibly renaming the
  * parameter as specified in hpi->parameter_map.  paramspec is assumed to be
  * zeroed out.
@@ -176,16 +190,12 @@ _translate_protocol_option (PurpleAccountOption *option,
     const char *pref_name = purple_account_option_get_setting (option);
     PurplePrefType pref_type = purple_account_option_get_type (option);
     gchar *name = NULL;
-    const HazeParameterMapping *m;
-
-    for (m = hpi->parameter_map;
-         name == NULL && m != NULL && m->purple_name != NULL;
-         m++)
-      if (!tp_strdiff (m->purple_name, pref_name))
-        name = g_strdup (m->telepathy_name);
+    const HazeParameterMapping *m = protocol_info_lookup_param (hpi, pref_name);
 
     /* Intentional once-per-protocol-per-process leak. */
-    if (name == NULL)
+    if (m != NULL)
+      name = g_strdup (m->telepathy_name);
+    else
       name = g_strdup (pref_name);
 
     if (g_str_has_prefix (name, "facebook_"))
