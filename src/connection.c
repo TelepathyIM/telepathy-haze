@@ -269,13 +269,20 @@ _haze_connection_get_username (GHashTable *params,
           gchar *param_name = g_strdup_printf ("usersplit%d", i);
           GValue *value = g_hash_table_lookup (params, param_name);
 
-          /* tp-glib should guarantee that this is present and a string. */
-          g_assert (value != NULL);
-          g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
-
           g_string_append_c (string,
               purple_account_user_split_get_separator (split));
-          g_string_append (string, g_value_get_string (value));
+
+          if (value != NULL)
+            {
+              /* tp-glib should guarantee that this is a string. */
+              g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
+              g_string_append (string, g_value_get_string (value));
+            }
+          else
+            {
+              g_string_append (string,
+                  purple_account_user_split_get_default_value(split));
+            }
 
           g_hash_table_remove (params, param_name);
           g_free (param_name);

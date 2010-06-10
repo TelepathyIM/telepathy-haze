@@ -202,7 +202,7 @@ _translate_protocol_usersplits (HazeProtocolInfo *hpi,
           NULL, /* name */
           DBUS_TYPE_STRING_AS_STRING,
           G_TYPE_STRING,
-          TP_CONN_MGR_PARAM_FLAG_REQUIRED,
+          0,
           NULL, 0, NULL, NULL,
           NULL, /* setter_data */
           NULL
