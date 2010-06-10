@@ -1,3 +1,25 @@
+telepathy-haze 0.3.5 (UNRELEASED)
+=================================
+
+Dependencies:
+
+ • telepathy-glib >= 0.9.2 is now required;
+ • glib >= 2.22 is now required.
+
+Enhancements:
+
+ • The Capabilities interface is now supported even when media is
+   disabled, so contacts get text caps. (jonny)
+
+ • The properties on the Avatars interface, added all the way back in
+   spec 0.17.22, are now implemented. (smcv)
+
+Fixes:
+
+ • The default character set is no longer forced to UTF-8; libpurple's
+   default is respected. This works out better on ICQ, where most people
+   who haven't thought about it use ISO-8859-1. (fd.o#23542, wjt)
+
 telepathy-haze 0.3.4 (2010-03-05)
 =================================
 
