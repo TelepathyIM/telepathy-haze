@@ -65,6 +65,11 @@ static const HazeParameterMapping bonjour_mappings[] = {
     { NULL, NULL }
 };
 
+static const HazeParameterMapping sipe_mappings[] = {
+    { "usersplit1", "login" },
+    { NULL, NULL }
+};
+
 static const HazeParameterMapping yahoo_mappings[] = {
     { "local_charset", "charset" },
     { NULL, NULL }
@@ -83,6 +88,7 @@ static HazeProtocolInfo known_protocol_info[] = {
     { "msn", "prpl-msn", NULL, NULL },
     { "qq", "prpl-qq", NULL, NULL },
     { "sametime", "prpl-meanwhile", NULL, NULL },
+    { "sipe", "prpl-sipe", NULL, sipe_mappings },
     { "yahoo", "prpl-yahoo", NULL, yahoo_mappings },
     { "yahoojp", "prpl-yahoojp", NULL, yahoo_mappings },
     { "zephyr", "prpl-zephyr", NULL, encoding_to_charset },
@@ -160,6 +166,61 @@ _param_filter_string_list (const TpCMParamSpec *paramspec,
   return FALSE;
 }
 
+static const HazeParameterMapping *
+protocol_info_lookup_param (
+    HazeProtocolInfo *hpi,
+    const gchar *purple_name)
+{
+  const HazeParameterMapping *m;
+
+  for (m = hpi->parameter_map; m != NULL && m->purple_name != NULL; m++)
+    if (!tp_strdiff (m->purple_name, purple_name))
+      return m;
+
+  return NULL;
+}
+
+/*
+ * Adds a separate field for each PurpleAccountUserSplit
+ */
+static void
+_translate_protocol_usersplits (HazeProtocolInfo *hpi,
+    GArray *paramspecs)
+{
+  GList *l = hpi->prpl_info->user_splits;
+  const guint count = g_list_length (l);
+  guint i;
+
+  /* first user split is covered by "account" */
+  for (i = 1; i <= count; i++)
+    {
+      gchar *usersplit = g_strdup_printf ("usersplit%d", i);
+      const HazeParameterMapping *m = protocol_info_lookup_param (hpi,
+          usersplit);
+      gchar *name = NULL;
+      TpCMParamSpec usersplit_spec = {
+          NULL, /* name */
+          DBUS_TYPE_STRING_AS_STRING,
+          G_TYPE_STRING,
+          0,
+          NULL, 0, NULL, NULL,
+          NULL, /* setter_data */
+          NULL
+      };
+
+      if (m != NULL)
+        name = g_strdup (m->telepathy_name);
+
+      if (name == NULL)
+        name = usersplit;
+
+      usersplit_spec.name = name;
+      usersplit_spec.setter_data = usersplit;
+
+      g_array_append_val (paramspecs, usersplit_spec);
+    }
+}
+
 /* Populates a TpCMParamSpec from a PurpleAccountOption, possibly renaming the
  * parameter as specified in hpi->parameter_map.  paramspec is assumed to be
  * zeroed out.
@@ -175,16 +236,12 @@ _translate_protocol_option (PurpleAccountOption *option,
     const char *pref_name = purple_account_option_get_setting (option);
     PurplePrefType pref_type = purple_account_option_get_type (option);
     gchar *name = NULL;
-    const HazeParameterMapping *m;
-
-    for (m = hpi->parameter_map;
-         name == NULL && m != NULL && m->purple_name != NULL;
-         m++)
-      if (!tp_strdiff (m->purple_name, pref_name))
-        name = g_strdup (m->telepathy_name);
+    const HazeParameterMapping *m = protocol_info_lookup_param (hpi, pref_name);
 
     /* Intentional once-per-protocol-per-process leak. */
-    if (name == NULL)
+    if (m != NULL)
+      name = g_strdup (m->telepathy_name);
+    else
       name = g_strdup (pref_name);
 
     if (g_str_has_prefix (name, "facebook_"))
@@ -313,6 +370,11 @@ _build_paramspecs (HazeProtocolInfo *hpi)
 
     /* TODO: local-xmpp shouldn't have an account parameter */
     g_array_append_val (paramspecs, account_spec);
+
+    /* Translate user splits for protocols that have a mapping */
+    if (hpi->prpl_info->user_splits &&
+        protocol_info_lookup_param (hpi, "usersplit1") != NULL)
+      _translate_protocol_usersplits (hpi, paramspecs);
 
     /* Password parameter: */
     if (!(hpi->prpl_info->options & OPT_PROTO_NO_PASSWORD))
