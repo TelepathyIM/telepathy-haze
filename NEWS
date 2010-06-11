@@ -14,6 +14,10 @@ Enhancements:
  • The properties on the Avatars interface, added all the way back in
    spec 0.17.22, are now implemented. (smcv)
 
+ • The “sipe” username is now correctly exposed as two parameters,
+   “account” and “login”, rather than the user being required to combine
+   the two with a comma in one field. (fd.o#28469, Stefan Becker)
+
 Fixes:
 
  • The default character set is no longer forced to UTF-8; libpurple's
