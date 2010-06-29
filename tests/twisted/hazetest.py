@@ -5,7 +5,7 @@ Infrastructure code for testing Haze by pretending to be a Jabber server.
 
 import base64
 import os
-import sha
+import hashlib
 import sys
 import time
 import random
@@ -128,7 +128,7 @@ class JabberAuthenticator(xmlstream.Authenticator):
         assert map(str, username) == [self.username]
 
         digest = xpath.queryForNodes('/iq/query/digest', iq)
-        expect = sha.sha(self.xmlstream.sid + self.password).hexdigest()
+        expect = hashlib.sha1(self.xmlstream.sid + self.password).hexdigest()
         assert map(str, digest) == [expect]
 
         resource = xpath.queryForNodes('/iq/query/resource', iq)
