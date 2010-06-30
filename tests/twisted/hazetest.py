@@ -241,9 +241,7 @@ class BaseXmlStream(xmlstream.XmlStream):
         self.addObserver(
             "/iq/query[@xmlns='http://jabber.org/protocol/disco#info']",
             self._cb_disco_iq)
-        self.addObserver(
-            "/iq/query[@xmlns='jabber:iq:roster']",
-            self._cb_roster_get)
+        self.add_roster_observer()
         self.event_func(servicetest.Event('stream-authenticated'))
 
     def _cb_disco_iq(self, iq):
@@ -259,6 +257,11 @@ class BaseXmlStream(xmlstream.XmlStream):
 
             iq['type'] = 'result'
             self.send(iq)
+
+    def add_roster_observer(self):
+        self.addObserver(
+            "/iq/query[@xmlns='jabber:iq:roster']",
+            self._cb_roster_get)
 
     def _cb_roster_get(self, iq):
         # Just send back an empty roster. prpl-jabber waits for the roster
