@@ -73,7 +73,6 @@ class BaseEventQueue:
 
     def __init__(self, timeout=None):
         self.verbose = False
-        self.past_events = []
 
         if timeout is None:
             self.timeout = 5
@@ -83,22 +82,6 @@ class BaseEventQueue:
     def log(self, s):
         if self.verbose:
             print s
-
-    def flush_past_events(self):
-        self.past_events = []
-
-    def expect_racy(self, type, **kw):
-        pattern = EventPattern(type, **kw)
-
-        for event in self.past_events:
-            if pattern.match(event):
-                self.log('past event handled')
-                map(self.log, format_event(event))
-                self.log('')
-                self.past_events.remove(event)
-                return event
-
-        return self.expect(type, **kw)
 
     def expect(self, type, **kw):
         pattern = EventPattern(type, **kw)
