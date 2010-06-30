@@ -5,6 +5,7 @@ TWISTED_TESTS = \
 	connect/twice-to-same-account.py \
 	presence/presence.py \
 	roster/initial-roster.py \
+	roster/subscribe.py \
 	text/destroy.py \
 	text/ensure.py \
 	text/initiate-requestotron.py \
