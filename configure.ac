@@ -60,6 +60,8 @@ TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test x$release = xno],
    unused-parameter])
 AC_SUBST(ERROR_CFLAGS)
 
+AC_CHECK_HEADERS_ONCE([libintl.h])
+
 AC_ARG_ENABLE(leaky-request-stubs,
   AC_HELP_STRING([--enable-leaky-request-stubs],[print debugging information when libpurple attempts to use the request API (warning: very leaky)]),
   AC_DEFINE(ENABLE_LEAKY_REQUEST_STUBS, [], [Enable the leaky stub implementation of the request API for debugging purposes]))

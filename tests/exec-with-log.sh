@@ -7,6 +7,7 @@ shift
 
 cd "${abs_top_builddir}/tests"
 
+export LC_ALL=C
 export HAZE_DEBUG=all
 ulimit -c unlimited
 exec >> haze-testing.log 2>&1
