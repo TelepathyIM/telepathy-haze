@@ -8,7 +8,7 @@ import dbus
 from twisted.words.xish import domish
 
 from hazetest import exec_test
-from servicetest import call_async, EventPattern, tp_path_prefix
+from servicetest import call_async, EventPattern, assertEquals
 
 def test(q, bus, conn, stream):
     conn.Connect()
@@ -122,8 +122,7 @@ def test(q, bus, conn, stream):
     call_async(q, destroyable_iface, 'Destroy')
 
     event = q.expect('dbus-signal', signal='Closed')
-    assert tp_path_prefix + event.path == text_chan.object_path,\
-            (tp_path_prefix + event.path, text_chan.object_path)
+    assertEquals(text_chan.object_path, event.path)
 
     event = q.expect('dbus-return', method='Destroy')
 
