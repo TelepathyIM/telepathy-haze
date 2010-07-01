@@ -49,14 +49,6 @@ struct _HazeContactListChannel {
 
 GType haze_contact_list_channel_get_type (void);
 
-gpointer haze_request_authorize (PurpleAccount *account,
-    const char *remote_user, const char *id, const char *alias,
-    const char *message, gboolean on_list,
-    PurpleAccountRequestAuthorizationCb authorize_cb,
-    PurpleAccountRequestAuthorizationCb deny_cb, void *user_data);
-
-void haze_close_account_request (gpointer request_data_);
-
 /* TYPE MACROS */
 #define HAZE_TYPE_CONTACT_LIST_CHANNEL \
   (haze_contact_list_channel_get_type ())
