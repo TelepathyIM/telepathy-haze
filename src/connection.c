@@ -121,7 +121,6 @@ connected_cb (PurpleConnection *pc)
         TP_CONNECTION_STATUS_REASON_REQUESTED);
 }
 
-#if PURPLE_VERSION_CHECK(2,3,0)
 static void
 haze_report_disconnect_reason (PurpleConnection *gc,
                                PurpleConnectionError reason,
@@ -198,7 +197,6 @@ haze_report_disconnect_reason (PurpleConnection *gc,
     tp_base_connection_change_status (base_conn,
             TP_CONNECTION_STATUS_DISCONNECTED, tp_reason);
 }
-#endif
 
 static gboolean
 idle_finish_shutdown (gpointer data)
@@ -219,17 +217,11 @@ disconnected_cb (PurpleConnection *pc)
 
     if(base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
     {
+        /* Because we have report_disconnect_reason, if status is not already
+         * DISCONNECTED, we know that it was requested. */
         tp_base_connection_change_status (base_conn,
             TP_CONNECTION_STATUS_DISCONNECTED,
-/* If we have report_disconnect_reason, then if status is not already
- * DISCONNECTED we know that it was requested.  If not, we have no idea.
- */
-#if PURPLE_VERSION_CHECK(2,3,0)
-            TP_CONNECTION_STATUS_REASON_REQUESTED
-#else
-            TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED
-#endif
-            );
+            TP_CONNECTION_STATUS_REASON_REQUESTED);
 
     }
 
@@ -750,11 +742,7 @@ connection_ui_ops =
     NULL,            /* report_disconnect */
     NULL,            /* network_connected */
     NULL,            /* network_disconnected */
-#if PURPLE_VERSION_CHECK(2,3,0)
     haze_report_disconnect_reason, /* report_disconnect_reason */
-#else
-    NULL, /* _purple_reserved0 */
-#endif
 
     NULL, /* _purple_reserved1 */
     NULL, /* _purple_reserved2 */
