@@ -43,6 +43,10 @@ AC_PROG_CC_STDC
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 
+COMPILER_OPTIMISATIONS
+COMPILER_COVERAGE
+LINKER_OPTIMISATIONS
+
 ifelse(haze_nano_version, 0, [release=yes], [release=no])
 TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test x$release = xno],
   [all \
