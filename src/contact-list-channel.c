@@ -123,14 +123,17 @@ _haze_contact_list_channel_add_member_cb (GObject *obj,
     HazeContactListChannel *chan = HAZE_CONTACT_LIST_CHANNEL (obj);
     HazeContactListChannelPrivate *priv =
         chan->priv;
+    const gchar *group_name;
 
     switch (priv->handle_type)
     {
         case TP_HANDLE_TYPE_LIST:
             return _list_add_member_cb (chan, handle, message, error);
         case TP_HANDLE_TYPE_GROUP:
+            group_name = haze_connection_handle_inspect (priv->conn,
+                TP_HANDLE_TYPE_GROUP, priv->handle);
             haze_contact_list_add_to_group (priv->conn->contact_list,
-                priv->group, handle);
+                group_name, handle);
             return TRUE;
         default:
             g_assert_not_reached ();
@@ -175,14 +178,17 @@ _haze_contact_list_channel_remove_member_cb (GObject *obj,
     HazeContactListChannel *chan = HAZE_CONTACT_LIST_CHANNEL (obj);
     HazeContactListChannelPrivate *priv =
         chan->priv;
+    const gchar *group_name;
 
     switch (priv->handle_type)
     {
         case TP_HANDLE_TYPE_LIST:
             return _list_remove_member_cb (chan, handle, message, error);
         case TP_HANDLE_TYPE_GROUP:
+            group_name = haze_connection_handle_inspect (priv->conn,
+                TP_HANDLE_TYPE_GROUP, priv->handle);
             return haze_contact_list_remove_from_group (
-                priv->conn->contact_list, priv->group, handle, error);
+                priv->conn->contact_list, group_name, handle, error);
         default:
             g_assert_not_reached ();
             return FALSE;

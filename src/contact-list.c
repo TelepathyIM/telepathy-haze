@@ -1066,13 +1066,16 @@ haze_contact_list_remove_contact (HazeContactList *self,
 
 void
 haze_contact_list_add_to_group (HazeContactList *self,
-    PurpleGroup *group,
+    const gchar *group_name,
     TpHandle handle)
 {
     HazeConnection *conn = self->priv->conn;
     const gchar *bname =
         haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
     PurpleBuddy *buddy;
+    PurpleGroup *group = purple_group_new (group_name);
+
+    g_return_if_fail (group != NULL);
 
     /* If the buddy is already in this group then this callback should
      * never have been called.
@@ -1089,7 +1092,7 @@ haze_contact_list_add_to_group (HazeContactList *self,
 
 gboolean
 haze_contact_list_remove_from_group (HazeContactList *self,
-    PurpleGroup *group,
+    const gchar *group_name,
     TpHandle handle,
     GError **error)
 {
@@ -1097,10 +1100,15 @@ haze_contact_list_remove_from_group (HazeContactList *self,
     PurpleAccount *account = conn->account;
     const gchar *bname =
         haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
-    GSList *buddies = purple_find_buddies (account, bname);
+    GSList *buddies;
     GSList *l;
     gboolean orphaned = TRUE;
     gboolean ret = TRUE;
+    PurpleGroup *group = purple_find_group (group_name);
+
+    g_return_val_if_fail (group != NULL, FALSE);
+
+    buddies = purple_find_buddies (account, bname);
 
     for (l = buddies; l != NULL; l = l->next)
       {
