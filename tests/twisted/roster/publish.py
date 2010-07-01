@@ -133,5 +133,21 @@ def test(q, bus, conn, stream):
     # the declined contact isn't on our roster
     assertEquals(set([alice]), set(def_group.Group.GetMembers()))
 
+    # she's persistent
+    presence = domish.Element(('jabber:client', 'presence'))
+    presence['from'] = 'queen.of.hearts@wonderland.lit'
+    presence['type'] = 'subscribe'
+    presence.addElement('status', content='How dare you?')
+    stream.send(presence)
+    q.expect('dbus-signal', path=publish.object_path,
+            args=['', [], [], [queen], [], queen,
+                cs.GC_REASON_NONE])
+    # disconnect with the request outstanding, to make sure we don't crash
+    conn.Disconnect()
+    q.expect('dbus-signal', signal='StatusChanged',
+            args=[cs.CONN_STATUS_DISCONNECTED, cs.CSR_REQUESTED])
+    # make sure Haze didn't crash
+    bus.get_object(conn.bus_name, '/').Ping()
+
 if __name__ == '__main__':
     exec_test(test)
