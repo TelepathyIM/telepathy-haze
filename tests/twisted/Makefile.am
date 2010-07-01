@@ -6,6 +6,7 @@ TWISTED_TESTS = \
 	presence/presence.py \
 	roster/initial-roster.py \
 	roster/publish.py \
+	roster/removed-from-rp-subscribe.py \
 	roster/subscribe.py \
 	text/destroy.py \
 	text/ensure.py \
