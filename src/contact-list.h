@@ -76,4 +76,9 @@ void haze_contact_list_accept_publish_request (HazeContactList *self,
 void haze_contact_list_reject_publish_request (HazeContactList *self,
     TpHandle handle);
 
+void haze_contact_list_request_subscription (HazeContactList *self,
+    TpHandle handle, const gchar *message);
+void haze_contact_list_remove_contact (HazeContactList *self,
+    TpHandle handle);
+
 #endif /* #ifndef __HAZE_CONTACT_LIST_H__*/

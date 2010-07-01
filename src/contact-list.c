@@ -1002,3 +1002,64 @@ haze_close_account_request (gpointer request_data_)
     g_object_unref (publish);
     g_object_unref (self);
 }
+
+void
+haze_contact_list_request_subscription (HazeContactList *self,
+    TpHandle handle,
+    const gchar *message)
+{
+  PurpleAccount *account = self->priv->conn->account;
+  const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
+      TP_HANDLE_TYPE_CONTACT, handle);
+  PurpleBuddy *buddy;
+
+  /* If the buddy already exists, then it should already be on the
+   * subscribe list.
+   */
+  g_assert (purple_find_buddy (account, bname) == NULL);
+
+  buddy = purple_buddy_new (account, bname, NULL);
+
+  /* FIXME: This emits buddy-added at once, so a buddy will never be
+   * on the pending list.  It doesn't look like libpurple even has
+   * the concept of a pending buddy.  Sigh.
+   */
+  purple_blist_add_buddy (buddy, NULL, NULL, NULL);
+  purple_account_add_buddy (account, buddy);
+}
+
+void
+haze_contact_list_remove_contact (HazeContactList *self,
+    TpHandle handle)
+{
+  PurpleAccount *account = self->priv->conn->account;
+  const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
+      TP_HANDLE_TYPE_CONTACT, handle);
+  GSList *buddies, *l;
+
+  buddies = purple_find_buddies (account, bname);
+
+  if (buddies == NULL)
+    {
+      g_warning("'%s' is in the group mixin for '%s' but not on the "
+              "libpurple blist", bname, account->username);
+      /* This occurring is a bug in haze or libpurple, but I figure
+       * it's better not to explode
+       */
+      return;
+    }
+
+  /* Removing a buddy from subscribe entails removing it from all
+   * groups since you can't have a buddy without groups in libpurple.
+   */
+  for (l = buddies; l != NULL; l = l->next)
+    {
+      PurpleBuddy *buddy = (PurpleBuddy *) l->data;
+      PurpleGroup *group = purple_buddy_get_group (buddy);
+
+      purple_account_remove_buddy (account, buddy, group);
+      purple_blist_remove_buddy (buddy);
+    }
+
+  g_slist_free (buddies);
+}

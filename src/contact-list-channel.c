@@ -92,29 +92,14 @@ _list_add_member_cb (HazeContactListChannel *chan,
     HazeContactListChannelPrivate *priv =
         chan->priv;
     HazeConnection *conn = priv->conn;
-    const gchar *bname =
-        haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
-    PurpleBuddy *buddy;
 
     g_assert (priv->handle_type == TP_HANDLE_TYPE_LIST);
 
     switch (priv->handle)
     {
         case HAZE_LIST_HANDLE_SUBSCRIBE:
-            /* If the buddy already exists, then it should already be on the
-             * subscribe list.
-             */
-            g_assert (purple_find_buddy (conn->account, bname) == NULL);
-
-            buddy = purple_buddy_new (conn->account, bname, NULL);
-
-            /* FIXME: This emits buddy-added at once, so a buddy will never be
-             * on the pending list.  It doesn't look like libpurple even has
-             * the concept of a pending buddy.  Sigh.
-             */
-            purple_blist_add_buddy(buddy, NULL, NULL, NULL);
-            purple_account_add_buddy(buddy->account, buddy);
-
+            haze_contact_list_request_subscription (conn->contact_list,
+                handle, message);
             return TRUE; /* FIXME: How am I meant to know if it failed? */
 
         case HAZE_LIST_HANDLE_PUBLISH:
@@ -183,47 +168,17 @@ _haze_contact_list_channel_add_member_cb (GObject *obj,
 static gboolean
 _list_remove_member_cb (HazeContactListChannel *chan,
                         TpHandle handle,
-                        const gchar *message,
+                        const gchar *message G_GNUC_UNUSED,
                         GError **error)
 {
     HazeContactListChannelPrivate *priv =
         chan->priv;
     HazeConnection *conn = priv->conn;
-    PurpleAccount *account = conn->account;
-    const gchar *bname =
-        haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
-    GSList *buddies, *l;
-    PurpleBuddy *buddy;
-    PurpleGroup *group;
 
     switch (priv->handle)
     {
         case HAZE_LIST_HANDLE_SUBSCRIBE:
-            buddies = purple_find_buddies (account, bname);
-
-            if (!buddies)
-            {
-                g_warning("'%s' is in the group mixin for '%s' but not on the "
-                        "libpurple blist", bname, account->username);
-                /* This occurring is a bug in haze or libpurple, but I figure
-                 * it's better not to explode
-                 */
-                return TRUE;
-            }
-
-            /* Removing a buddy from subscribe entails removing it from all
-             * groups since you can't have a buddy without groups in libpurple.
-             */
-            for (l = buddies; l != NULL; l = l->next)
-            {
-                buddy = (PurpleBuddy *) l->data;
-                group = purple_buddy_get_group (buddy);
-                purple_account_remove_buddy (account, buddy, group);
-                purple_blist_remove_buddy (buddy);
-            }
-
-            g_slist_free (buddies);
-
+            haze_contact_list_remove_contact (conn->contact_list, handle);
             return TRUE;
 
         case HAZE_LIST_HANDLE_PUBLISH:
