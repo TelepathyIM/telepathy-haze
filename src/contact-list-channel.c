@@ -115,36 +115,6 @@ _list_add_member_cb (HazeContactListChannel *chan,
 }
 
 static gboolean
-_group_add_member_cb (HazeContactListChannel *chan,
-                      TpHandle handle,
-                      const gchar *message,
-                      GError **error)
-{
-    HazeContactListChannelPrivate *priv =
-        chan->priv;
-    HazeConnection *conn = priv->conn;
-    const gchar *bname =
-        haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
-    PurpleBuddy *buddy;
-
-    g_assert (priv->handle_type == TP_HANDLE_TYPE_GROUP);
-
-    /* If the buddy is already in this group then this callback should
-     * never have been called.
-     */
-    g_assert (purple_find_buddy_in_group (conn->account, bname,
-        priv->group) == NULL);
-
-    buddy = purple_buddy_new (conn->account, bname, NULL);
-
-    /* FIXME: This causes it to be added to 'subscribed' too. */
-    purple_blist_add_buddy (buddy, NULL, priv->group, NULL);
-    purple_account_add_buddy(buddy->account, buddy);
-
-    return TRUE;
-}
-
-static gboolean
 _haze_contact_list_channel_add_member_cb (GObject *obj,
                                           TpHandle handle,
                                           const gchar *message,
@@ -153,12 +123,15 @@ _haze_contact_list_channel_add_member_cb (GObject *obj,
     HazeContactListChannel *chan = HAZE_CONTACT_LIST_CHANNEL (obj);
     HazeContactListChannelPrivate *priv =
         chan->priv;
+
     switch (priv->handle_type)
     {
         case TP_HANDLE_TYPE_LIST:
             return _list_add_member_cb (chan, handle, message, error);
         case TP_HANDLE_TYPE_GROUP:
-            return _group_add_member_cb (chan, handle, message, error);
+            haze_contact_list_add_to_group (priv->conn->contact_list,
+                priv->group, handle);
+            return TRUE;
         default:
             g_assert_not_reached ();
             return FALSE;
@@ -194,75 +167,6 @@ _list_remove_member_cb (HazeContactListChannel *chan,
 }
 
 static gboolean
-_group_remove_member_cb (HazeContactListChannel *chan,
-                         TpHandle handle,
-                         const gchar *message,
-                         GError **error)
-{
-    HazeContactListChannelPrivate *priv =
-        chan->priv;
-    HazeConnection *conn = priv->conn;
-    PurpleAccount *account = conn->account;
-    const gchar *bname =
-        haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
-    PurpleGroup *group = priv->group;
-    GSList *buddies = purple_find_buddies (account, bname);
-    GSList *l;
-    gboolean orphaned = TRUE;
-    gboolean ret = TRUE;
-
-    for (l = buddies; l != NULL; l = l->next)
-      {
-        PurpleGroup *their_group = purple_buddy_get_group (l->data);
-
-        if (their_group != group)
-          {
-            orphaned = FALSE;
-            break;
-          }
-      }
-
-    if (orphaned)
-      {
-        /* the contact needs to be copied to the default group first */
-        PurpleGroup *default_group = purple_group_new (
-            haze_get_fallback_group ());
-        PurpleBuddy *copy;
-
-        if (default_group == group)
-          {
-            /* we could make them bounce back, but that'd be insane */
-            g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-                "Contacts can't be removed from '%s' unless they are in "
-                "another group", group->name);
-            ret = FALSE;
-            goto finally;
-          }
-
-        copy = purple_buddy_new (conn->account, bname, NULL);
-        purple_blist_add_buddy (copy, NULL, default_group, NULL);
-        purple_account_add_buddy (account, copy);
-      }
-
-    /* See if the buddy was in the group more than once, since this is
-     * possible in libpurple... */
-    for (l = buddies; l != NULL; l = l->next)
-      {
-        PurpleGroup *their_group = purple_buddy_get_group (l->data);
-
-        if (their_group == group)
-          {
-            purple_account_remove_buddy (account, l->data, group);
-            purple_blist_remove_buddy (l->data);
-          }
-      }
-
-finally:
-    g_slist_free (buddies);
-    return ret;
-}
-
-static gboolean
 _haze_contact_list_channel_remove_member_cb (GObject *obj,
                                              TpHandle handle,
                                              const gchar *message,
@@ -277,7 +181,8 @@ _haze_contact_list_channel_remove_member_cb (GObject *obj,
         case TP_HANDLE_TYPE_LIST:
             return _list_remove_member_cb (chan, handle, message, error);
         case TP_HANDLE_TYPE_GROUP:
-            return _group_remove_member_cb (chan, handle, message, error);
+            return haze_contact_list_remove_from_group (
+                priv->conn->contact_list, priv->group, handle, error);
         default:
             g_assert_not_reached ();
             return FALSE;
