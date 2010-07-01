@@ -72,8 +72,8 @@ gpointer haze_request_authorize (PurpleAccount *account,
 void haze_close_account_request (gpointer request_data_);
 
 void haze_contact_list_accept_publish_request (HazeContactList *self,
-    TpHandle handle, const gchar *message);
+    TpHandle handle);
 void haze_contact_list_reject_publish_request (HazeContactList *self,
-    TpHandle handle, const gchar *message);
+    TpHandle handle);
 
 #endif /* #ifndef __HAZE_CONTACT_LIST_H__*/

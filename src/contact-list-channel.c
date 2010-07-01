@@ -119,7 +119,7 @@ _list_add_member_cb (HazeContactListChannel *chan,
 
         case HAZE_LIST_HANDLE_PUBLISH:
             haze_contact_list_accept_publish_request (conn->contact_list,
-                handle, message);
+                handle);
             return TRUE;
 
         default:
@@ -228,7 +228,7 @@ _list_remove_member_cb (HazeContactListChannel *chan,
 
         case HAZE_LIST_HANDLE_PUBLISH:
             haze_contact_list_reject_publish_request (conn->contact_list,
-                handle, message);
+                handle);
             return TRUE;
 
         default:

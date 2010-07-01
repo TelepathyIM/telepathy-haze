@@ -871,8 +871,7 @@ remove_pending_publish_request (HazeContactList *self,
 
 void
 haze_contact_list_accept_publish_request (HazeContactList *self,
-    TpHandle handle,
-    const gchar *message)
+    TpHandle handle)
 {
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->conn);
   gpointer key = GUINT_TO_POINTER (handle);
@@ -888,7 +887,7 @@ haze_contact_list_accept_publish_request (HazeContactList *self,
   request_data->allow(request_data->data);
 
   add = tp_intset_new_containing (handle);
-  tp_group_mixin_change_members (G_OBJECT (request_data->publish), message,
+  tp_group_mixin_change_members (G_OBJECT (request_data->publish), "",
       add, NULL, NULL, NULL, base_conn->self_handle,
       TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
   tp_intset_destroy (add);
@@ -898,8 +897,7 @@ haze_contact_list_accept_publish_request (HazeContactList *self,
 
 void
 haze_contact_list_reject_publish_request (HazeContactList *self,
-    TpHandle handle,
-    const gchar *message)
+    TpHandle handle)
 {
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->conn);
   gpointer key = GUINT_TO_POINTER (handle);
@@ -915,7 +913,7 @@ haze_contact_list_reject_publish_request (HazeContactList *self,
   request_data->deny(request_data->data);
 
   to_remove = tp_intset_new_containing (handle);
-  tp_group_mixin_change_members (G_OBJECT (request_data->publish), message,
+  tp_group_mixin_change_members (G_OBJECT (request_data->publish), "",
       NULL, to_remove, NULL, NULL, base_conn->self_handle,
       TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
   tp_intset_destroy (to_remove);
