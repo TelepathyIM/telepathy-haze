@@ -114,6 +114,8 @@ GType haze_connection_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), HAZE_TYPE_CONNECTION, \
                               HazeConnectionClass))
 
+const gchar *haze_get_fallback_group (void);
+
 G_END_DECLS
 
 #endif /* #ifndef __HAZE_CONNECTION_H__*/

@@ -4,6 +4,11 @@ TWISTED_TESTS = \
 	connect/success.py \
 	connect/twice-to-same-account.py \
 	presence/presence.py \
+	roster/initial-roster.py \
+	roster/groups.py \
+	roster/publish.py \
+	roster/removed-from-rp-subscribe.py \
+	roster/subscribe.py \
 	text/destroy.py \
 	text/ensure.py \
 	text/initiate-requestotron.py \

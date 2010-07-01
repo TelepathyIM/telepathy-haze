@@ -47,6 +47,12 @@
 
 #include "connection-capabilities.h"
 
+#ifdef HAVE_LIBINTL_H
+#   include <libintl.h>
+#else
+#   define dgettext(domain, msgid) (msgid)
+#endif
+
 enum
 {
     PROP_PARAMETERS = 1,
@@ -776,4 +782,13 @@ haze_connection_handle_inspect (HazeConnection *conn,
         tp_base_connection_get_handles (base_conn, handle_type);
     g_assert (tp_handle_is_valid (handle_repo, handle, NULL));
     return tp_handle_inspect (handle_repo, handle);
+}
+
+/**
+ * Get the group that "most" libpurple prpls will use for ungrouped contacts.
+ */
+const gchar *
+haze_get_fallback_group (void)
+{
+  return dgettext ("pidgin", "Buddies");
 }

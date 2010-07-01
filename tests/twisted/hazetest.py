@@ -5,7 +5,7 @@ Infrastructure code for testing Haze by pretending to be a Jabber server.
 
 import base64
 import os
-import sha
+import hashlib
 import sys
 import time
 import random
@@ -13,6 +13,7 @@ import random
 import ns
 import servicetest
 import twisted
+from servicetest import Event, unwrap
 from twisted.words.xish import domish, xpath
 from twisted.words.protocols.jabber.client import IQ
 from twisted.words.protocols.jabber import xmlstream
@@ -128,7 +129,7 @@ class JabberAuthenticator(xmlstream.Authenticator):
         assert map(str, username) == [self.username]
 
         digest = xpath.queryForNodes('/iq/query/digest', iq)
-        expect = sha.sha(self.xmlstream.sid + self.password).hexdigest()
+        expect = hashlib.sha1(self.xmlstream.sid + self.password).hexdigest()
         assert map(str, digest) == [expect]
 
         resource = xpath.queryForNodes('/iq/query/resource', iq)
@@ -240,9 +241,7 @@ class BaseXmlStream(xmlstream.XmlStream):
         self.addObserver(
             "/iq/query[@xmlns='http://jabber.org/protocol/disco#info']",
             self._cb_disco_iq)
-        self.addObserver(
-            "/iq/query[@xmlns='jabber:iq:roster']",
-            self._cb_roster_get)
+        self.add_roster_observer()
         self.event_func(servicetest.Event('stream-authenticated'))
 
     def _cb_disco_iq(self, iq):
@@ -258,6 +257,11 @@ class BaseXmlStream(xmlstream.XmlStream):
 
             iq['type'] = 'result'
             self.send(iq)
+
+    def add_roster_observer(self):
+        self.addObserver(
+            "/iq/query[@xmlns='jabber:iq:roster']",
+            self._cb_roster_get)
 
     def _cb_roster_get(self, iq):
         # Just send back an empty roster. prpl-jabber waits for the roster
@@ -303,66 +307,13 @@ def make_stream(event_func, authenticator=None, protocol=None, port=4242):
     port = reactor.listenTCP(port, factory)
     return (stream, port)
 
-def go(params=None, authenticator=None, protocol=None, start=None):
-    # hack to ease debugging
-    domish.Element.__repr__ = domish.Element.toXml
-
-    bus = dbus.SessionBus()
-    handler = servicetest.EventTest()
-    conn = make_connection(bus, handler.handle_event, params)
-    (stream, _) = make_stream(handler.handle_event, authenticator, protocol)
-    handler.data = {
-        'bus': bus,
-        'conn': conn,
-        'conn_iface': dbus.Interface(conn,
-            'org.freedesktop.Telepathy.Connection'),
-        'stream': stream}
-    handler.data['test'] = handler
-    handler.verbose = (os.environ.get('CHECK_TWISTED_VERBOSE', '') != '')
-    map(handler.expect, servicetest.load_event_handlers())
-
-    if '-v' in sys.argv:
-        handler.verbose = True
-
-    if start is None:
-        handler.data['conn'].Connect()
-    else:
-        start(handler.data)
-
-    reactor.run()
-
-def install_colourer():
-    def red(s):
-        return '\x1b[31m%s\x1b[0m' % s
-
-    def green(s):
-        return '\x1b[32m%s\x1b[0m' % s
-
-    patterns = {
-        'handled': green,
-        'not handled': red,
-        }
-
-    class Colourer:
-        def __init__(self, fh, patterns):
-            self.fh = fh
-            self.patterns = patterns
-
-        def write(self, s):
-            f = self.patterns.get(s, lambda x: x)
-            self.fh.write(f(s))
-
-    sys.stdout = Colourer(sys.stdout, patterns)
-    return sys.stdout
-
-
 def exec_test_deferred (funs, params, protocol=None, timeout=None):
     # hack to ease debugging
     domish.Element.__repr__ = domish.Element.toXml
     colourer = None
 
     if sys.stdout.isatty():
-        colourer = install_colourer()
+        colourer = servicetest.install_colourer()
 
     queue = servicetest.IteratingEventQueue(timeout)
     queue.verbose = (
@@ -372,6 +323,23 @@ def exec_test_deferred (funs, params, protocol=None, timeout=None):
     bus = dbus.SessionBus()
     # conn = make_connection(bus, queue.append, params)
     (stream, port) = make_stream(queue.append, protocol=protocol)
+
+    def signal_receiver(*args, **kw):
+        queue.append(Event('dbus-signal',
+                           path=unwrap(kw['path']),
+                           signal=kw['member'], args=map(unwrap, args),
+                           interface=kw['interface']))
+
+    bus.add_signal_receiver(
+        signal_receiver,
+        None,       # signal name
+        None,       # interface
+        None,
+        path_keyword='path',
+        member_keyword='member',
+        interface_keyword='interface',
+        byte_arrays=True
+        )
 
     error = None
 

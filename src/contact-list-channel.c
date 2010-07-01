@@ -347,26 +347,60 @@ _group_remove_member_cb (HazeContactListChannel *chan,
     const gchar *bname =
         haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
     PurpleGroup *group = priv->group;
-    PurpleBuddy *buddy = purple_find_buddy_in_group (account, bname, group);
+    GSList *buddies = purple_find_buddies (account, bname);
+    GSList *l;
+    gboolean orphaned = TRUE;
+    gboolean ret = TRUE;
 
-    /* FIXME: check if the buddy is in another group; if not, move it
-     * to the default group to avoid it falling off the subscribe list.
-     */
-    purple_account_remove_buddy (account, buddy, group);
-    purple_blist_remove_buddy(buddy);
+    for (l = buddies; l != NULL; l = l->next)
+      {
+        PurpleGroup *their_group = purple_buddy_get_group (l->data);
 
-    /* Sanity checking: see if the buddy was in the group more than
-     * once, since this is possible in libpurple...
-     */
-    while ((buddy = purple_find_buddy_in_group (account, bname, group)))
-    {
-        g_warning("'%s' was in group '%s' more than once! purging!",
-                  bname, group->name);
-        purple_account_remove_buddy (account, buddy, group);
-        purple_blist_remove_buddy(buddy);
-    }
+        if (their_group != group)
+          {
+            orphaned = FALSE;
+            break;
+          }
+      }
 
-    return TRUE;
+    if (orphaned)
+      {
+        /* the contact needs to be copied to the default group first */
+        PurpleGroup *default_group = purple_group_new (
+            haze_get_fallback_group ());
+        PurpleBuddy *copy;
+
+        if (default_group == group)
+          {
+            /* we could make them bounce back, but that'd be insane */
+            g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+                "Contacts can't be removed from '%s' unless they are in "
+                "another group", group->name);
+            ret = FALSE;
+            goto finally;
+          }
+
+        copy = purple_buddy_new (conn->account, bname, NULL);
+        purple_blist_add_buddy (copy, NULL, default_group, NULL);
+        purple_account_add_buddy (account, copy);
+      }
+
+    /* See if the buddy was in the group more than once, since this is
+     * possible in libpurple... */
+    for (l = buddies; l != NULL; l = l->next)
+      {
+        PurpleGroup *their_group = purple_buddy_get_group (l->data);
+
+        if (their_group == group)
+          {
+            purple_account_remove_buddy (account, l->data, group);
+            purple_blist_remove_buddy (l->data);
+          }
+      }
+
+finally:
+    g_slist_free (buddies);
+    return ret;
 }
 
 static gboolean
