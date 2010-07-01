@@ -5,6 +5,7 @@ TWISTED_TESTS = \
 	connect/twice-to-same-account.py \
 	presence/presence.py \
 	roster/initial-roster.py \
+	roster/groups.py \
 	roster/publish.py \
 	roster/removed-from-rp-subscribe.py \
 	roster/subscribe.py \
