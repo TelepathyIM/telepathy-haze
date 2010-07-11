@@ -281,8 +281,7 @@ def make_connection(bus, event_func, params=None):
         'password': 'pass',
         #'resource': 'Resource',
         'server': 'localhost',
-        # FIXME: the spec says this is a UInt32 and Gabble agrees
-        'port': dbus.Int32(4242),
+        'port': dbus.UInt32(4242),
         'require-encryption': False,
         }
 

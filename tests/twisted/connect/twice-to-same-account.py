@@ -31,8 +31,7 @@ def test(q, bus, conn, stream):
         'account': 'test@localhost/Resource',
         'password': 'pass',
         'server': 'localhost',
-        # FIXME: the spec says this is a UInt32 and Gabble agrees
-        'port': dbus.Int32(4242),
+        'port': dbus.UInt32(4242),
         }
 
     # You might think that this is the test...
