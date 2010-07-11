@@ -279,10 +279,10 @@ def make_connection(bus, event_func, params=None):
     default_params = {
         'account': 'test@localhost/Resource',
         'password': 'pass',
+        # FIXME: fd.o#14212
         #'resource': 'Resource',
         'server': 'localhost',
-        # FIXME: the spec says this is a UInt32 and Gabble agrees
-        'port': dbus.Int32(4242),
+        'port': dbus.UInt32(4242),
         'require-encryption': False,
         }
 

@@ -13,5 +13,5 @@ def test(q, bus, conn, stream):
     q.expect('dbus-signal', signal='StatusChanged', args=[2, 2])
 
 if __name__ == '__main__':
-    exec_test(test, {'port': dbus.Int32(4243)})
+    exec_test(test, {'port': dbus.UInt32(4243)})
 

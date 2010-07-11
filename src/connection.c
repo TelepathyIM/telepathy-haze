@@ -312,35 +312,30 @@ set_option (
     const PurpleAccountOption *option,
     GHashTable *params)
 {
-    GValue *value = g_hash_table_lookup (params, option->pref_name);
+  if (g_hash_table_lookup (params, option->pref_name) == NULL)
+    return;
 
-    if (!value)
-        return;
-
-    switch (option->type)
+  switch (option->type)
     {
-        case PURPLE_PREF_BOOLEAN:
-            g_assert (G_VALUE_TYPE (value) == G_TYPE_BOOLEAN);
-            purple_account_set_bool (account, option->pref_name,
-                g_value_get_boolean (value));
-            break;
-        case PURPLE_PREF_INT:
-            g_assert (G_VALUE_TYPE (value) == G_TYPE_INT);
-            purple_account_set_int (account, option->pref_name,
-                g_value_get_int (value));
-            break;
-        case PURPLE_PREF_STRING:
-        case PURPLE_PREF_STRING_LIST:
-            g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
-            purple_account_set_string (account, option->pref_name,
-                g_value_get_string (value));
-            break;
-        default:
-            g_warning ("option '%s' has unhandled type %u",
-                option->pref_name, option->type);
+    case PURPLE_PREF_BOOLEAN:
+      purple_account_set_bool (account, option->pref_name,
+          tp_asv_get_boolean (params, option->pref_name, NULL));
+      break;
+    case PURPLE_PREF_INT:
+      purple_account_set_int (account, option->pref_name,
+          tp_asv_get_int32 (params, option->pref_name, NULL));
+      break;
+    case PURPLE_PREF_STRING:
+    case PURPLE_PREF_STRING_LIST:
+      purple_account_set_string (account, option->pref_name,
+          tp_asv_get_string (params, option->pref_name));
+      break;
+    default:
+      g_warning ("option '%s' has unhandled type %u",
+          option->pref_name, option->type);
     }
 
-    g_hash_table_remove (params, option->pref_name);
+  g_hash_table_remove (params, option->pref_name);
 }
 
 /**

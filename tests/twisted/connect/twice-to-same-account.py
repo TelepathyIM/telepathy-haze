@@ -7,13 +7,17 @@ shortly afterwards.
 import dbus
 
 from hazetest import exec_test
-from servicetest import tp_name_prefix, tp_path_prefix
+from servicetest import (
+    tp_name_prefix, tp_path_prefix, assertEquals, EventPattern,
+    )
 import constants as cs
 
 def test(q, bus, conn, stream):
     conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[1, 1])
-    q.expect('stream-authenticated')
+    q.expect_many(
+        EventPattern('dbus-signal', signal='StatusChanged', args=[1, 1]),
+        EventPattern('stream-authenticated'),
+        )
 
     # FIXME: unlike Gabble, Haze does not signal a presence update to
     # available during connect
@@ -31,16 +35,14 @@ def test(q, bus, conn, stream):
         'account': 'test@localhost/Resource',
         'password': 'pass',
         'server': 'localhost',
-        # FIXME: the spec says this is a UInt32 and Gabble agrees
-        'port': dbus.Int32(4242),
+        'port': dbus.UInt32(4242),
         }
 
     # You might think that this is the test...
     try:
         cm_iface.RequestConnection('jabber', params)
     except dbus.DBusException, e:
-        # tp-glib <0.7.28 got the error domain wrong! :D
-        assert e.get_dbus_name().endswith("NotAvailable")
+        assertEquals(cs.NOT_AVAILABLE, e.get_dbus_name())
 
     # but you'd be wrong: we now test that Haze is still alive.
     conn.Disconnect()
