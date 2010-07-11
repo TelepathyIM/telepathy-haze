@@ -7,13 +7,17 @@ shortly afterwards.
 import dbus
 
 from hazetest import exec_test
-from servicetest import tp_name_prefix, tp_path_prefix, assertEquals
+from servicetest import (
+    tp_name_prefix, tp_path_prefix, assertEquals, EventPattern,
+    )
 import constants as cs
 
 def test(q, bus, conn, stream):
     conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[1, 1])
-    q.expect('stream-authenticated')
+    q.expect_many(
+        EventPattern('dbus-signal', signal='StatusChanged', args=[1, 1]),
+        EventPattern('stream-authenticated'),
+        )
 
     # FIXME: unlike Gabble, Haze does not signal a presence update to
     # available during connect
