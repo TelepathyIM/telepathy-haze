@@ -7,7 +7,7 @@ shortly afterwards.
 import dbus
 
 from hazetest import exec_test
-from servicetest import tp_name_prefix, tp_path_prefix
+from servicetest import tp_name_prefix, tp_path_prefix, assertEquals
 import constants as cs
 
 def test(q, bus, conn, stream):
@@ -38,8 +38,7 @@ def test(q, bus, conn, stream):
     try:
         cm_iface.RequestConnection('jabber', params)
     except dbus.DBusException, e:
-        # tp-glib <0.7.28 got the error domain wrong! :D
-        assert e.get_dbus_name().endswith("NotAvailable")
+        assertEquals(cs.NOT_AVAILABLE, e.get_dbus_name())
 
     # but you'd be wrong: we now test that Haze is still alive.
     conn.Disconnect()
