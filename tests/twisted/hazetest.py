@@ -279,6 +279,7 @@ def make_connection(bus, event_func, params=None):
     default_params = {
         'account': 'test@localhost/Resource',
         'password': 'pass',
+        # FIXME: fd.o#14212
         #'resource': 'Resource',
         'server': 'localhost',
         'port': dbus.UInt32(4242),
