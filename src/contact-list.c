@@ -336,6 +336,9 @@ _haze_contact_list_create_channel (HazeContactList *contact_list,
     g_free (mangled_name);
     mangled_name = NULL;
 
+    if (handle_type == TP_HANDLE_TYPE_GROUP)
+      purple_group_new (name);
+
     chan = g_object_new (HAZE_TYPE_CONTACT_LIST_CHANNEL,
                          "connection", priv->conn,
                          "object-path", object_path,
