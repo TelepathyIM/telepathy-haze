@@ -36,10 +36,6 @@ struct _HazeContactListChannelPrivate {
     TpHandle handle;
     guint handle_type;
 
-    /* Defined only if handle_type == TP_HANDLE_TYPE_GROUP; NULL otherwise.
-     */
-    PurpleGroup *group;
-
     gboolean closed;
     gboolean dispose_has_run;
 };
@@ -251,9 +247,6 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
                     TP_CHANNEL_GROUP_FLAG_CAN_ADD |
                     TP_CHANNEL_GROUP_FLAG_CAN_REMOVE,
                     0);
-
-            priv->group = purple_group_new (tp_handle_inspect (handle_repo,
-                                                               priv->handle));
             break;
         case TP_HANDLE_TYPE_LIST:
             switch (priv->handle) {
