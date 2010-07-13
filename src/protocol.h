@@ -31,6 +31,7 @@ G_BEGIN_DECLS
 
 typedef struct _HazeProtocol HazeProtocol;
 typedef struct _HazeProtocolClass HazeProtocolClass;
+typedef struct _HazeProtocolPrivate HazeProtocolPrivate;
 
 GType haze_protocol_get_type (void) G_GNUC_CONST;
 
@@ -58,6 +59,7 @@ struct _HazeProtocolClass
 struct _HazeProtocol
 {
   TpBaseProtocol parent;
+  HazeProtocolPrivate *priv;
 };
 
 typedef struct _HazeParameterMapping HazeParameterMapping;

@@ -32,6 +32,12 @@
 
 G_DEFINE_TYPE (HazeProtocol, haze_protocol, TP_TYPE_BASE_PROTOCOL)
 
+struct _HazeProtocolPrivate {
+    gchar *prpl_id;
+    PurplePluginProtocolInfo *prpl_info;
+    HazeParameterMapping *parameter_map;
+};
+
 /* For some protocols, removing the "prpl-" prefix from its name in libpurple
  * doesn't give the right name for Telepathy.  Other protocols need some
  * parameters renaming to match well-known names in the spec, or to have
@@ -451,9 +457,18 @@ haze_protocol_info_to_param_specs (HazeProtocolInfo *hpi)
     return (TpCMParamSpec *) g_array_free (paramspecs, FALSE);
 }
 
+enum
+{
+  PROP_PRPL_ID = 1,
+  PROP_PRPL_INFO,
+  PROP_PARAMETER_MAP,
+} HazeProtocolProperties;
+
 static void
 haze_protocol_init (HazeProtocol *self)
 {
+  self->priv = G_TYPE_INSTANCE_GET_PRIVATE (self, HAZE_TYPE_PROTOCOL,
+      HazeProtocolPrivate);
 }
 
 static const TpCMParamSpec *
@@ -471,10 +486,105 @@ haze_protocol_new_connection (TpBaseProtocol *self,
 }
 
 static void
+haze_protocol_get_property (GObject *object,
+    guint property_id,
+    GValue *value,
+    GParamSpec *pspec)
+{
+  HazeProtocol *self = HAZE_PROTOCOL (object);
+
+  switch (property_id)
+    {
+    case PROP_PARAMETER_MAP:
+      g_value_set_pointer (value, self->priv->parameter_map);
+      break;
+
+    case PROP_PRPL_ID:
+      g_value_set_string (value, self->priv->prpl_id);
+      break;
+
+    case PROP_PRPL_INFO:
+      g_value_set_pointer (value, self->priv->prpl_info);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+    }
+}
+
+static void
+haze_protocol_set_property (GObject *object,
+    guint property_id,
+    const GValue *value,
+    GParamSpec *pspec)
+{
+  HazeProtocol *self = HAZE_PROTOCOL (object);
+
+  switch (property_id)
+    {
+    case PROP_PARAMETER_MAP:
+      g_assert (self->priv->parameter_map == NULL); /* construct-only */
+      self->priv->parameter_map = g_value_get_pointer (value);
+      break;
+
+    case PROP_PRPL_ID:
+      g_assert (self->priv->prpl_id == NULL); /* construct-only */
+      self->priv->prpl_id = g_value_dup_string (value);
+      break;
+
+    case PROP_PRPL_INFO:
+      g_assert (self->priv->prpl_info == NULL); /* construct-only */
+      self->priv->prpl_info = g_value_get_pointer (value);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
+      break;
+    }
+}
+
+static void
+haze_protocol_finalize (GObject *object)
+{
+  GObjectFinalizeFunc finalize =
+    G_OBJECT_CLASS (haze_protocol_parent_class)->finalize;
+  HazeProtocol *self = HAZE_PROTOCOL (object);
+
+  g_free (self->priv->prpl_id);
+
+  if (finalize != NULL)
+    finalize (object);
+}
+
+static void
 haze_protocol_class_init (HazeProtocolClass *cls)
 {
+  GObjectClass *object_class = (GObjectClass *) cls;
   TpBaseProtocolClass *base_class = (TpBaseProtocolClass *) cls;
+  GParamSpec *param_spec;
 
   base_class->get_parameters = haze_protocol_get_parameters;
   base_class->new_connection = haze_protocol_new_connection;
+
+  g_type_class_add_private (cls, sizeof (HazeProtocolPrivate));
+  object_class->get_property = haze_protocol_get_property;
+  object_class->set_property = haze_protocol_set_property;
+  object_class->finalize = haze_protocol_finalize;
+
+  param_spec = g_param_spec_string ("prpl-id", "protocol plugin ID",
+      "protocol plugin ID", NULL,
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_PRPL_ID, param_spec);
+
+  param_spec = g_param_spec_pointer ("prpl-info", "PurplePluginProtocolInfo",
+      "protocol plugin info",
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_PRPL_INFO, param_spec);
+
+  param_spec = g_param_spec_pointer ("parameter-map", "HazeParameterMap",
+      "protocol parameter map",
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_PARAMETER_MAP,
+      param_spec);
 }
