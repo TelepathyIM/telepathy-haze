@@ -106,9 +106,12 @@ _compare_protocol_id (gpointer key,
 GHashTable *
 haze_protocol_build_protocol_table (void)
 {
-  GHashTable *table;
+  static GHashTable *table = NULL;
   HazeProtocolInfo *i;
   GList *iter;
+
+  if (table != NULL)
+    return table;
 
   table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, NULL);
 
