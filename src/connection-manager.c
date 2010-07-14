@@ -78,20 +78,23 @@ static TpCMProtocolSpec *
 get_protocols (HazeConnectionManagerClass *klass)
 {
   GArray *protocols = g_array_new (TRUE, TRUE, sizeof (TpCMProtocolSpec));
-  GHashTableIter iter;
-  gpointer key, value;
+  GList *iter;
 
-  g_hash_table_iter_init (&iter, klass->protocol_info_table);
-  while (g_hash_table_iter_next (&iter, &key, &value))
+  for (iter = klass->protocols; iter != NULL; iter = iter->next)
     {
-      HazeProtocolInfo *info = value;
+      HazeProtocol *obj = iter->data;
       TpCMProtocolSpec protocol = {
-          info->tp_protocol_name, /* name */
-          haze_protocol_info_to_param_specs (info), /* parameters */
+          NULL,
+          tp_base_protocol_get_parameters ((TpBaseProtocol *) obj),
           _haze_cm_alloc_params, /* params_new */
           (GDestroyNotify) g_hash_table_unref, /* params_free */
           _haze_cm_set_param /* set_param */
       };
+
+      /* leaked once per process */
+      g_object_get (obj,
+          "name", &protocol.name,
+          NULL);
 
       g_array_append_val (protocols, protocol);
     }
@@ -173,7 +176,8 @@ haze_connection_manager_class_init (HazeConnectionManagerClass *klass)
         (TpBaseConnectionManagerClass *)klass;
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-    klass->protocol_info_table = haze_protocol_build_protocol_table ();
+    klass->protocol_info_table = haze_protocol_build_protocol_table (
+        &klass->protocols);
 
     object_class->finalize = _haze_cm_finalize;
 

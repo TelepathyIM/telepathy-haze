@@ -36,6 +36,7 @@ struct _HazeProtocolPrivate {
     gchar *prpl_id;
     PurplePluginProtocolInfo *prpl_info;
     HazeParameterMapping *parameter_map;
+    TpCMParamSpec *paramspecs;
 };
 
 /* For some protocols, removing the "prpl-" prefix from its name in libpurple
@@ -157,7 +158,7 @@ haze_protocol_build_list (void)
 }
 
 GHashTable *
-haze_protocol_build_protocol_table (void)
+haze_protocol_build_protocol_table (GList **protocols_out)
 {
   static GHashTable *table = NULL;
   GList *protocols;
@@ -189,8 +190,15 @@ haze_protocol_build_protocol_table (void)
       g_hash_table_insert (table, info->tp_protocol_name, info);
     }
 
-  g_list_foreach (protocols, (GFunc) g_object_unref, NULL);
-  g_list_free (protocols);
+  if (protocols_out == NULL)
+    {
+      g_list_foreach (protocols, (GFunc) g_object_unref, NULL);
+      g_list_free (protocols);
+    }
+  else
+    {
+      *protocols_out = protocols;
+    }
 
   return table;
 }
@@ -243,13 +251,13 @@ _param_filter_string_list (const TpCMParamSpec *paramspec,
 }
 
 static const HazeParameterMapping *
-protocol_info_lookup_param (
-    HazeProtocolInfo *hpi,
+haze_protocol_lookup_param (
+    HazeProtocol *self,
     const gchar *purple_name)
 {
   const HazeParameterMapping *m;
 
-  for (m = hpi->parameter_map; m != NULL && m->purple_name != NULL; m++)
+  for (m = self->priv->parameter_map; m != NULL && m->purple_name != NULL; m++)
     if (!tp_strdiff (m->purple_name, purple_name))
       return m;
 
@@ -260,10 +268,10 @@ protocol_info_lookup_param (
  * Adds a separate field for each PurpleAccountUserSplit
  */
 static void
-_translate_protocol_usersplits (HazeProtocolInfo *hpi,
+_translate_protocol_usersplits (HazeProtocol *self,
     GArray *paramspecs)
 {
-  GList *l = hpi->prpl_info->user_splits;
+  GList *l = self->priv->prpl_info->user_splits;
   const guint count = g_list_length (l);
   guint i;
 
@@ -271,7 +279,7 @@ _translate_protocol_usersplits (HazeProtocolInfo *hpi,
   for (i = 1; i <= count; i++)
     {
       gchar *usersplit = g_strdup_printf ("usersplit%d", i);
-      const HazeParameterMapping *m = protocol_info_lookup_param (hpi,
+      const HazeParameterMapping *m = haze_protocol_lookup_param (self,
           usersplit);
       gchar *name = NULL;
       TpCMParamSpec usersplit_spec = {
@@ -307,12 +315,12 @@ _translate_protocol_usersplits (HazeProtocolInfo *hpi,
 static gboolean
 _translate_protocol_option (PurpleAccountOption *option,
                             TpCMParamSpec *paramspec,
-                            HazeProtocolInfo *hpi)
+                            HazeProtocol *self)
 {
     const char *pref_name = purple_account_option_get_setting (option);
     PurplePrefType pref_type = purple_account_option_get_type (option);
     gchar *name = NULL;
-    const HazeParameterMapping *m = protocol_info_lookup_param (hpi, pref_name);
+    const HazeParameterMapping *m = haze_protocol_lookup_param (self, pref_name);
 
     /* Intentional once-per-protocol-per-process leak. */
     if (m != NULL)
@@ -372,7 +380,7 @@ _translate_protocol_option (PurpleAccountOption *option,
             /* prpl-bonjour chooses the defaults for these parameters with
              * getpwuid(3); but for haze's purposes that's the UI's job.
              */
-            if (g_str_equal (hpi->prpl_id, "prpl-bonjour")
+            if (g_str_equal (self->priv->prpl_id, "prpl-bonjour")
                 && (g_str_equal (paramspec->name, "first-name")
                     || g_str_equal (paramspec->name, "last-name")))
             {
@@ -442,9 +450,10 @@ _translate_protocol_option (PurpleAccountOption *option,
 /* Constructs a parameter specification from the prpl's options list, renaming
  * protocols and parameters according to known_protocol_info.
  */
-TpCMParamSpec *
-haze_protocol_info_to_param_specs (HazeProtocolInfo *hpi)
+static const TpCMParamSpec *
+haze_protocol_get_parameters (TpBaseProtocol *protocol)
 {
+    HazeProtocol *self = HAZE_PROTOCOL (protocol);
     const TpCMParamSpec account_spec =
         { "account", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
           TP_CONN_MGR_PARAM_FLAG_REQUIRED, NULL, 0, NULL, NULL,
@@ -454,37 +463,47 @@ haze_protocol_info_to_param_specs (HazeProtocolInfo *hpi)
           TP_CONN_MGR_PARAM_FLAG_REQUIRED | TP_CONN_MGR_PARAM_FLAG_SECRET,
           NULL, 0, NULL, NULL,
           (gpointer) "password", NULL };
-
-    GArray *paramspecs = g_array_new (TRUE, TRUE, sizeof (TpCMParamSpec));
+    GArray *paramspecs;
     GList *opts;
+
+    if (self->priv->paramspecs != NULL)
+      goto finally;
+
+    paramspecs = g_array_new (TRUE, TRUE, sizeof (TpCMParamSpec));
 
     /* TODO: local-xmpp shouldn't have an account parameter */
     g_array_append_val (paramspecs, account_spec);
 
     /* Translate user splits for protocols that have a mapping */
-    if (hpi->prpl_info->user_splits &&
-        protocol_info_lookup_param (hpi, "usersplit1") != NULL)
-      _translate_protocol_usersplits (hpi, paramspecs);
+    if (self->priv->prpl_info->user_splits &&
+        haze_protocol_lookup_param (self, "usersplit1") != NULL)
+      _translate_protocol_usersplits (self, paramspecs);
 
     /* Password parameter: */
-    if (!(hpi->prpl_info->options & OPT_PROTO_NO_PASSWORD))
+    if (!(self->priv->prpl_info->options & OPT_PROTO_NO_PASSWORD))
     {
-        if (hpi->prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL)
+        if (self->priv->prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL)
             password_spec.flags &= ~TP_CONN_MGR_PARAM_FLAG_REQUIRED;
         g_array_append_val (paramspecs, password_spec);
     }
 
-    for (opts = hpi->prpl_info->protocol_options; opts; opts = opts->next)
+    for (opts = self->priv->prpl_info->protocol_options;
+        opts != NULL;
+        opts = opts->next)
     {
         PurpleAccountOption *option = (PurpleAccountOption *)opts->data;
         TpCMParamSpec paramspec =
             { NULL, NULL, 0, 0, NULL, 0, NULL, NULL, NULL, NULL};
 
-        if (_translate_protocol_option (option, &paramspec, hpi))
+        if (_translate_protocol_option (option, &paramspec, self))
             g_array_append_val (paramspecs, paramspec);
     }
 
-    return (TpCMParamSpec *) g_array_free (paramspecs, FALSE);
+    self->priv->paramspecs = (TpCMParamSpec *) g_array_free (paramspecs,
+        FALSE);
+
+finally:
+    return self->priv->paramspecs;
 }
 
 enum
@@ -499,12 +518,6 @@ haze_protocol_init (HazeProtocol *self)
 {
   self->priv = G_TYPE_INSTANCE_GET_PRIVATE (self, HAZE_TYPE_PROTOCOL,
       HazeProtocolPrivate);
-}
-
-static const TpCMParamSpec *
-haze_protocol_get_parameters (TpBaseProtocol *self)
-{
-  g_assert_not_reached ();
 }
 
 static TpBaseConnection *
@@ -582,6 +595,7 @@ haze_protocol_finalize (GObject *object)
   HazeProtocol *self = HAZE_PROTOCOL (object);
 
   g_free (self->priv->prpl_id);
+  g_free (self->priv->paramspecs);
 
   if (finalize != NULL)
     finalize (object);
