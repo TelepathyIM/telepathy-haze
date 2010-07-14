@@ -160,52 +160,6 @@ haze_protocol_build_list (void)
   return ret;
 }
 
-GHashTable *
-haze_protocol_build_protocol_table (GList **protocols_out)
-{
-  static GHashTable *table = NULL;
-  GList *protocols;
-  GList *iter;
-
-  if (table != NULL)
-    return table;
-
-  table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, NULL);
-
-  protocols = haze_protocol_build_list ();
-
-  for (iter = protocols; iter != NULL; iter = iter->next)
-    {
-      HazeProtocol *protocol = iter->data;
-      HazeProtocolInfo *info;
-
-      /* intentional leak, one HazeProtocolInfo + contents per protocol per
-       * process */
-      info = g_slice_new (HazeProtocolInfo);
-
-      g_object_get (protocol,
-          "name", &info->tp_protocol_name,
-          "prpl-id", &info->prpl_id,
-          "prpl-info", &info->prpl_info,
-          "parameter-map", &info->parameter_map,
-          NULL);
-
-      g_hash_table_insert (table, info->tp_protocol_name, info);
-    }
-
-  if (protocols_out == NULL)
-    {
-      g_list_foreach (protocols, (GFunc) g_object_unref, NULL);
-      g_list_free (protocols);
-    }
-  else
-    {
-      *protocols_out = protocols;
-    }
-
-  return table;
-}
-
 static gboolean
 _param_filter_no_blanks (const TpCMParamSpec *paramspec,
                          GValue *value,

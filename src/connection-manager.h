@@ -34,12 +34,6 @@ typedef struct _HazeConnectionManagerClass HazeConnectionManagerClass;
 
 struct _HazeConnectionManagerClass {
     TpBaseConnectionManagerClass parent_class;
-
-    /** GList of HazeProtocol */
-    GList *protocols;
-
-    /** GHashTable of (gchar *)tp_protocol_name => HazeProtocolInfo */
-    GHashTable *protocol_info_table;
 };
 
 struct _HazeConnectionManager {

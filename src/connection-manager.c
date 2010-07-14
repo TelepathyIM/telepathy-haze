@@ -42,112 +42,27 @@ struct _HazeConnectionManagerPrivate
     TpDebugSender *debug_sender;
 };
 
-static void *
-_haze_cm_alloc_params (void)
-{
-    /* (gchar *) => (GValue *) */
-    return g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
-        (GDestroyNotify) tp_g_value_slice_free);
-}
-
 static void
-_haze_cm_set_param (const TpCMParamSpec *paramspec,
-                    const GValue *value,
-                    gpointer params)
+_haze_cm_constructed (GObject *object)
 {
-  /* just pass straight through - HazeProtocol does the real work */
-  g_hash_table_insert (params, (gchar *) paramspec->name,
-      tp_g_value_slice_dup (value));
-}
+  HazeConnectionManager *self = HAZE_CONNECTION_MANAGER (object);
+  TpBaseConnectionManager *base = (TpBaseConnectionManager *) self;
+  void (*chain_up) (GObject *) =
+    G_OBJECT_CLASS (haze_connection_manager_parent_class)->constructed;
+  GList *protocols;
 
-static int
-_compare_protocol_names (gconstpointer a,
-                         gconstpointer b)
-{
-  const TpCMProtocolSpec *protocol_a = a;
-  const TpCMProtocolSpec *protocol_b = b;
-
-  return strcmp(protocol_a->name, protocol_b->name);
-}
-
-static TpCMProtocolSpec *
-get_protocols (HazeConnectionManagerClass *klass)
-{
-  GArray *protocols = g_array_new (TRUE, TRUE, sizeof (TpCMProtocolSpec));
-  GList *iter;
-
-  for (iter = klass->protocols; iter != NULL; iter = iter->next)
+  if (chain_up != NULL)
     {
-      HazeProtocol *obj = iter->data;
-      TpCMProtocolSpec protocol = {
-          NULL,
-          tp_base_protocol_get_parameters ((TpBaseProtocol *) obj),
-          _haze_cm_alloc_params, /* params_new */
-          (GDestroyNotify) g_hash_table_unref, /* params_free */
-          _haze_cm_set_param /* set_param */
-      };
-
-      /* leaked once per process */
-      g_object_get (obj,
-          "name", &protocol.name,
-          NULL);
-
-      g_array_append_val (protocols, protocol);
+      chain_up (object);
     }
 
-  qsort (protocols->data, protocols->len, sizeof (TpCMProtocolSpec),
-      _compare_protocol_names);
-
-  {
-    GString *debug_string = g_string_new ("");
-    TpCMProtocolSpec *p = (TpCMProtocolSpec *) protocols->data;
-
-    while (p->name != NULL)
-      {
-        g_string_append (debug_string, p->name);
-        p += 1;
-
-        if (p->name != NULL)
-          g_string_append (debug_string, ", ");
-      }
-
-    DEBUG ("Found protocols %s", debug_string->str);
-    g_string_free (debug_string, TRUE);
-  }
-
-  return (TpCMProtocolSpec *) g_array_free (protocols, FALSE);
-}
-
-static TpBaseConnection *
-_haze_connection_manager_new_connection (TpBaseConnectionManager *base,
-                                         const gchar *proto,
-                                         TpIntSet *params_present,
-                                         void *parsed_params,
-                                         GError **error)
-{
-    HazeConnectionManagerClass *klass = HAZE_CONNECTION_MANAGER_GET_CLASS (base);
-    GList *iter;
-
-    for (iter = klass->protocols; iter != NULL; iter = iter->next)
-      {
-        gchar *name;
-
-        g_object_get (iter->data,
-            "name", &name,
-            NULL);
-
-        if (!tp_strdiff (proto, name))
-          {
-            g_free (name);
-            return tp_base_protocol_new_connection (iter->data, parsed_params,
-                error);
-          }
-
-        g_free (name);
-      }
-
-    /* telepathy-glib should stop us getting here */
-    g_assert_not_reached ();
+  for (protocols = haze_protocol_build_list ();
+      protocols != NULL;
+      protocols = g_list_delete_link (protocols, protocols))
+    {
+      tp_base_connection_manager_add_protocol (base, protocols->data);
+      g_object_unref (protocols->data);
+    }
 }
 
 static void
@@ -177,14 +92,12 @@ haze_connection_manager_class_init (HazeConnectionManagerClass *klass)
         (TpBaseConnectionManagerClass *)klass;
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-    klass->protocol_info_table = haze_protocol_build_protocol_table (
-        &klass->protocols);
-
+    object_class->constructed = _haze_cm_constructed;
     object_class->finalize = _haze_cm_finalize;
 
-    base_class->new_connection = _haze_connection_manager_new_connection;
+    base_class->new_connection = NULL;
     base_class->cm_dbus_name = "haze";
-    base_class->protocol_params = get_protocols (klass);
+    base_class->protocol_params = NULL;
 
     g_type_class_add_private (klass, sizeof (HazeConnectionManagerPrivate));
 }
