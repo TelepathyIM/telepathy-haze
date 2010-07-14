@@ -93,17 +93,12 @@ static HazeProtocolInfo known_protocol_info[] = {
     { NULL, NULL, NULL, NULL }
 };
 
-GHashTable *
-haze_protocol_build_protocol_table (void)
+GList *
+haze_protocol_build_list (void)
 {
-  static GHashTable *table = NULL;
   HazeProtocolInfo *i;
   GList *iter;
-
-  if (table != NULL)
-    return table;
-
-  table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, NULL);
+  GList *ret = NULL;
 
   for (iter = purple_plugins_get_protocols (); iter; iter = iter->next)
     {
@@ -111,6 +106,7 @@ haze_protocol_build_protocol_table (void)
       PurplePluginInfo *p_info = plugin->info;
       PurplePluginProtocolInfo *prpl_info =
           PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
+      HazeProtocol *protocol;
       HazeProtocolInfo *info = NULL;
 
       for (i = known_protocol_info; i->prpl_id != NULL; i++)
@@ -124,26 +120,77 @@ haze_protocol_build_protocol_table (void)
 
       if (info == NULL)
         {
-          /* one intentional leak per unknown protocol per process */
-          info = g_slice_new (HazeProtocolInfo);
-          info->prpl_id = p_info->id;
-          info->parameter_map = NULL;
+          const gchar *tp_name;
 
           if (g_str_has_prefix (p_info->id, "prpl-"))
             {
-              info->tp_protocol_name = (p_info->id + 5);
+              tp_name = (p_info->id + 5);
             }
           else
             {
               g_warning ("prpl '%s' has a dumb id; spank its author",
                   p_info->id);
-              info->tp_protocol_name = p_info->id;
+              tp_name = p_info->id;
             }
+
+          /* default behaviour for unknown protocols */
+          protocol = g_object_new (HAZE_TYPE_PROTOCOL,
+              "name", tp_name,
+              "prpl-id", p_info->id,
+              "prpl-info", prpl_info,
+              NULL);
+        }
+      else
+        {
+          protocol = g_object_new (HAZE_TYPE_PROTOCOL,
+              "name", info->tp_protocol_name,
+              "prpl-id", p_info->id,
+              "prpl-info", prpl_info,
+              "parameter-map", info->parameter_map,
+              NULL);
         }
 
-      info->prpl_info = prpl_info;
+      ret = g_list_prepend (ret, protocol);
+    }
+
+  return ret;
+}
+
+GHashTable *
+haze_protocol_build_protocol_table (void)
+{
+  static GHashTable *table = NULL;
+  GList *protocols;
+  GList *iter;
+
+  if (table != NULL)
+    return table;
+
+  table = g_hash_table_new_full (g_str_hash, g_str_equal, NULL, NULL);
+
+  protocols = haze_protocol_build_list ();
+
+  for (iter = protocols; iter != NULL; iter = iter->next)
+    {
+      HazeProtocol *protocol = iter->data;
+      HazeProtocolInfo *info;
+
+      /* intentional leak, one HazeProtocolInfo + contents per protocol per
+       * process */
+      info = g_slice_new (HazeProtocolInfo);
+
+      g_object_get (protocol,
+          "name", &info->tp_protocol_name,
+          "prpl-id", &info->prpl_id,
+          "prpl-info", &info->prpl_info,
+          "parameter-map", &info->parameter_map,
+          NULL);
+
       g_hash_table_insert (table, info->tp_protocol_name, info);
     }
+
+  g_list_foreach (protocols, (GFunc) g_object_unref, NULL);
+  g_list_free (protocols);
 
   return table;
 }

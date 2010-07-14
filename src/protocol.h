@@ -83,6 +83,7 @@ struct _HazeProtocolInfo
     const HazeParameterMapping *parameter_map;
 };
 
+GList *haze_protocol_build_list (void);
 GHashTable *haze_protocol_build_protocol_table (void);
 
 TpCMParamSpec *haze_protocol_info_to_param_specs (HazeProtocolInfo *hpi);
