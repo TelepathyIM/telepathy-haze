@@ -49,6 +49,9 @@ struct _KnownProtocolInfo
     const gchar *prpl_id;
     /* If not NULL, an array terminated by an entry with both names NULL. */
     const HazeParameterMapping *parameter_map;
+    /* vCard field in lower case.
+     * If "", we know that there's no applicable vCard field. */
+    const gchar *vcard_field;
 };
 
 struct _HazeProtocolPrivate {
@@ -93,24 +96,24 @@ static const HazeParameterMapping yahoo_mappings[] = {
 };
 
 static const KnownProtocolInfo known_protocol_info[] = {
-    { "aim", "prpl-aim", NULL },
+    { "aim", "prpl-aim", NULL, "x-aim" },
     /* Seriously. */
-    { "facebook", "prpl-bigbrownchunx-facebookim", NULL },
-    { "gadugadu", "prpl-gg", NULL },
-    { "groupwise", "prpl-novell", NULL },
-    { "irc", "prpl-irc", encoding_to_charset },
-    { "icq", "prpl-icq", encoding_to_charset },
-    { "jabber", "prpl-jabber", jabber_mappings },
-    { "local-xmpp", "prpl-bonjour", bonjour_mappings },
-    { "msn", "prpl-msn", NULL },
-    { "qq", "prpl-qq", NULL },
-    { "sametime", "prpl-meanwhile", NULL },
-    { "sipe", "prpl-sipe", sipe_mappings },
-    { "yahoo", "prpl-yahoo", yahoo_mappings },
-    { "yahoojp", "prpl-yahoojp", yahoo_mappings },
-    { "zephyr", "prpl-zephyr", encoding_to_charset },
-    { "mxit", "prpl-loubserp-mxit", NULL },
-    { "sip", "prpl-simple", NULL },
+    { "facebook", "prpl-bigbrownchunx-facebookim", NULL, "" },
+    { "gadugadu", "prpl-gg", NULL, "x-gadugadu" },
+    { "groupwise", "prpl-novell", NULL, "x-groupwise" },
+    { "irc", "prpl-irc", encoding_to_charset, "x-irc" /* ? */ },
+    { "icq", "prpl-icq", encoding_to_charset, "x-icq" },
+    { "jabber", "prpl-jabber", jabber_mappings, "x-jabber" },
+    { "local-xmpp", "prpl-bonjour", bonjour_mappings, "" /* ? */ },
+    { "msn", "prpl-msn", NULL, "x-msn" },
+    { "qq", "prpl-qq", NULL, "x-qq" /* ? */ },
+    { "sametime", "prpl-meanwhile", NULL, "x-sametime" /* ? */ },
+    { "sipe", "prpl-sipe", sipe_mappings, "" /* ? */ },
+    { "yahoo", "prpl-yahoo", yahoo_mappings, "x-yahoo" },
+    { "yahoojp", "prpl-yahoojp", yahoo_mappings, "x-yahoo" /* ? */ },
+    { "zephyr", "prpl-zephyr", encoding_to_charset, "x-zephyr" /* ? */ },
+    { "mxit", "prpl-loubserp-mxit", NULL, "x-mxit" /* ? */ },
+    { "sip", "prpl-simple", NULL, "x-sip" },
     { NULL, NULL, NULL }
 };
 
@@ -726,7 +729,31 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
     *icon_name = g_strdup ("");
 
   if (vcard_field != NULL)
-    *vcard_field = g_strdup ("");
+    {
+      if (self->priv->known_protocol != NULL &&
+          self->priv->known_protocol->vcard_field != NULL)
+        {
+          /* this might be "", for cases where we know that there isn't an
+           * applicable vCard field, like local-xmpp and facebook */
+          *vcard_field = g_strdup (
+              self->priv->known_protocol->vcard_field);
+        }
+      else
+        {
+          gchar *name, *p;
+
+          /* wild guess */
+          g_object_get (self,
+              "name", &name,
+              NULL);
+
+          *vcard_field = g_strdup_printf ("x-%s", name);
+          g_free (name);
+
+          for (p = *vcard_field; *p != '\0'; p++)
+            *p = g_ascii_tolower (*p);
+        }
+    }
 }
 
 static void
