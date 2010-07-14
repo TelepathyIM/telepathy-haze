@@ -62,27 +62,6 @@ struct _HazeProtocol
   HazeProtocolPrivate *priv;
 };
 
-typedef struct _HazeParameterMapping HazeParameterMapping;
-struct _HazeParameterMapping
-{
-    const gchar *purple_name;
-    const gchar *telepathy_name;
-};
-
-typedef struct _HazeProtocolInfo HazeProtocolInfo;
-struct _HazeProtocolInfo
-{
-    /** Not const for convenience, but should not be freed */
-    gchar *tp_protocol_name;
-
-    /** Not const for convenience, but should not be freed */
-    gchar *prpl_id;
-    PurplePluginProtocolInfo *prpl_info;
-
-    /* If not NULL, an array terminated by an entry with both names NULL. */
-    const HazeParameterMapping *parameter_map;
-};
-
 GList *haze_protocol_build_list (void);
 
 G_END_DECLS
