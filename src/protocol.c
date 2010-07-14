@@ -717,10 +717,11 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
   if (english_name != NULL)
     *english_name = g_strdup (purple_plugin_get_name (self->priv->plugin));
 
-  /* stub implementation for now, clients have to be able to fall back anyway
-   * (telepathy-glib uses im-$PROTOCOL) */
   if (icon_name != NULL)
-    *icon_name = g_strdup ("");
+    {
+      /* guess from the protocol name, like TpProtocol and TpAccount do */
+      *icon_name = g_strdup_printf ("im-%s", tp_base_protocol_get_name (base));
+    }
 
   if (vcard_field != NULL)
     {
