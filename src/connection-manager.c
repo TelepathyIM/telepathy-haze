@@ -566,12 +566,19 @@ static void
 _haze_cm_finalize (GObject *object)
 {
     HazeConnectionManager *self = HAZE_CONNECTION_MANAGER (object);
+    void (*chain_up) (GObject *) =
+      G_OBJECT_CLASS (haze_connection_manager_parent_class)->finalize;
     HazeConnectionManagerPrivate *priv = self->priv;
 
     if (priv->debug_sender != NULL)
     {
         g_object_unref (priv->debug_sender);
         priv->debug_sender = NULL;
+    }
+
+    if (chain_up != NULL)
+    {
+        chain_up (object);
     }
 }
 
