@@ -36,6 +36,7 @@
 G_DEFINE_TYPE (HazeProtocol, haze_protocol, TP_TYPE_BASE_PROTOCOL)
 
 struct _HazeProtocolPrivate {
+    PurplePlugin *plugin;
     gchar *prpl_id;
     PurplePluginProtocolInfo *prpl_info;
     HazeParameterMapping *parameter_map;
@@ -140,6 +141,7 @@ haze_protocol_build_list (void)
           /* default behaviour for unknown protocols */
           protocol = g_object_new (HAZE_TYPE_PROTOCOL,
               "name", tp_name,
+              "plugin", plugin,
               "prpl-id", p_info->id,
               "prpl-info", prpl_info,
               NULL);
@@ -148,6 +150,7 @@ haze_protocol_build_list (void)
         {
           protocol = g_object_new (HAZE_TYPE_PROTOCOL,
               "name", info->tp_protocol_name,
+              "plugin", plugin,
               "prpl-id", p_info->id,
               "prpl-info", prpl_info,
               "parameter-map", info->parameter_map,
@@ -465,7 +468,8 @@ finally:
 
 enum
 {
-  PROP_PRPL_ID = 1,
+  PROP_PLUGIN = 1,
+  PROP_PRPL_ID,
   PROP_PRPL_INFO,
   PROP_PARAMETER_MAP,
 } HazeProtocolProperties;
@@ -560,6 +564,10 @@ haze_protocol_get_property (GObject *object,
       g_value_set_pointer (value, self->priv->parameter_map);
       break;
 
+    case PROP_PLUGIN:
+      g_value_set_pointer (value, self->priv->plugin);
+      break;
+
     case PROP_PRPL_ID:
       g_value_set_string (value, self->priv->prpl_id);
       break;
@@ -587,6 +595,11 @@ haze_protocol_set_property (GObject *object,
     case PROP_PARAMETER_MAP:
       g_assert (self->priv->parameter_map == NULL); /* construct-only */
       self->priv->parameter_map = g_value_get_pointer (value);
+      break;
+
+    case PROP_PLUGIN:
+      g_assert (self->priv->plugin == NULL); /* construct-only */
+      self->priv->plugin = g_value_get_pointer (value);
       break;
 
     case PROP_PRPL_ID:
@@ -658,6 +671,8 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
     gchar **english_name,
     gchar **vcard_field)
 {
+  HazeProtocol *self = HAZE_PROTOCOL (base);
+
   if (connection_interfaces != NULL)
     {
       *connection_interfaces = g_strdupv (
@@ -678,11 +693,11 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
 #endif
     }
 
-  /* stub implementations for now, clients have to be able to fall back */
-
   if (english_name != NULL)
-    *english_name = g_strdup ("");
+    *english_name = g_strdup (purple_plugin_get_name (self->priv->plugin));
 
+  /* stub implementation for now, clients have to be able to fall back anyway
+   * (telepathy-glib uses im-$PROTOCOL) */
   if (icon_name != NULL)
     *icon_name = g_strdup ("");
 
@@ -708,6 +723,11 @@ haze_protocol_class_init (HazeProtocolClass *cls)
   object_class->get_property = haze_protocol_get_property;
   object_class->set_property = haze_protocol_set_property;
   object_class->finalize = haze_protocol_finalize;
+
+  param_spec = g_param_spec_pointer ("plugin", "PurplePlugin",
+      "Purple plugin",
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_PLUGIN, param_spec);
 
   param_spec = g_param_spec_string ("prpl-id", "protocol plugin ID",
       "protocol plugin ID", NULL,
