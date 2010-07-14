@@ -30,6 +30,9 @@
 #include <libpurple/prpl.h>
 #include <telepathy-glib/telepathy-glib.h>
 
+#include "connection.h"
+#include "debug.h"
+
 G_DEFINE_TYPE (HazeProtocol, haze_protocol, TP_TYPE_BASE_PROTOCOL)
 
 struct _HazeProtocolPrivate {
@@ -521,11 +524,62 @@ haze_protocol_init (HazeProtocol *self)
 }
 
 static TpBaseConnection *
-haze_protocol_new_connection (TpBaseProtocol *self,
+haze_protocol_new_connection (TpBaseProtocol *base,
     GHashTable *asv,
     GError **error)
 {
-  g_assert_not_reached ();
+  HazeProtocol *self = HAZE_PROTOCOL (base);
+  GHashTable *unused = g_hash_table_new (g_str_hash, g_str_equal);
+  GHashTable *purple_params = g_hash_table_new_full (g_str_hash, g_str_equal,
+      NULL, (GDestroyNotify) tp_g_value_slice_free);
+  const TpCMParamSpec *pspecs = haze_protocol_get_parameters (base);
+  const TpCMParamSpec *pspec;
+  HazeConnection *conn;
+  gchar *name;
+
+  tp_g_hash_table_update (unused, asv, NULL, NULL);
+
+  for (pspec = pspecs; pspec->name != NULL; pspec++)
+    {
+      gchar *prpl_param_name = (gchar *) pspec->setter_data;
+      const GValue *value = tp_asv_lookup (asv, pspec->name);
+
+      if (value == NULL)
+        continue;
+
+      DEBUG ("setting parameter %s (telepathy name %s)", prpl_param_name,
+          pspec->name);
+
+      g_hash_table_insert (purple_params, prpl_param_name,
+          tp_g_value_slice_dup (value));
+      g_hash_table_remove (unused, pspec->name);
+    }
+
+  /* telepathy-glib isn't meant to give us parameters we don't understand */
+  g_assert (g_hash_table_size (unused) == 0);
+  g_hash_table_unref (unused);
+
+  g_object_get (self,
+      "name", &name,
+      NULL);
+
+  conn = g_object_new (HAZE_TYPE_CONNECTION,
+      "protocol", name,
+      "prpl-id", self->priv->prpl_id,
+      "prpl-info", self->priv->prpl_info,
+      "parameters", purple_params,
+      NULL);
+
+  g_free (name);
+  g_hash_table_unref (purple_params);
+
+  if (!haze_connection_create_account (conn, error))
+    {
+      g_object_unref (conn);
+      return NULL;
+    }
+
+  return (TpBaseConnection *) conn;
 }
 
 static void

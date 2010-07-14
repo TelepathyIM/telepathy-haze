@@ -53,15 +53,11 @@ _haze_cm_alloc_params (void)
 static void
 _haze_cm_set_param (const TpCMParamSpec *paramspec,
                     const GValue *value,
-                    gpointer params_)
+                    gpointer params)
 {
-  GHashTable *params = params_;
-  gchar *prpl_param_name = (gchar *) paramspec->setter_data;
-
-  DEBUG ("setting parameter %s (telepathy name %s)",
-      prpl_param_name, paramspec->name);
-
-  g_hash_table_insert (params, prpl_param_name, tp_g_value_slice_dup (value));
+  /* just pass straight through - HazeProtocol does the real work */
+  g_hash_table_insert (params, (gchar *) paramspec->name,
+      tp_g_value_slice_dup (value));
 }
 
 static int
@@ -129,24 +125,29 @@ _haze_connection_manager_new_connection (TpBaseConnectionManager *base,
                                          void *parsed_params,
                                          GError **error)
 {
-    HazeConnectionManager *cm = HAZE_CONNECTION_MANAGER(base);
-    HazeConnectionManagerClass *klass = HAZE_CONNECTION_MANAGER_GET_CLASS (cm);
-    GHashTable *params = (GHashTable *)parsed_params;
-    HazeProtocolInfo *info =
-        g_hash_table_lookup (klass->protocol_info_table, proto);
-    HazeConnection *conn = g_object_new (HAZE_TYPE_CONNECTION,
-        "protocol", proto,
-        "prpl-id", info->prpl_id,
-        "prpl-info", info->prpl_info,
-        "parameters", params,
-        NULL);
+    HazeConnectionManagerClass *klass = HAZE_CONNECTION_MANAGER_GET_CLASS (base);
+    GList *iter;
 
-    if (!haze_connection_create_account (conn, error))
+    for (iter = klass->protocols; iter != NULL; iter = iter->next)
       {
-        g_object_unref (conn);
-        return FALSE;
+        gchar *name;
+
+        g_object_get (iter->data,
+            "name", &name,
+            NULL);
+
+        if (!tp_strdiff (proto, name))
+          {
+            g_free (name);
+            return tp_base_protocol_new_connection (iter->data, parsed_params,
+                error);
+          }
+
+        g_free (name);
       }
-    return (TpBaseConnection *) conn;
+
+    /* telepathy-glib should stop us getting here */
+    g_assert_not_reached ();
 }
 
 static void
