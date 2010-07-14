@@ -55,8 +55,8 @@ struct _HazeProtocolPrivate {
     PurplePlugin *plugin;
     gchar *prpl_id;
     PurplePluginProtocolInfo *prpl_info;
-    HazeParameterMapping *parameter_map;
     TpCMParamSpec *paramspecs;
+    const KnownProtocolInfo *known_protocol;
 };
 
 /* For some protocols, removing the "prpl-" prefix from its name in libpurple
@@ -169,7 +169,7 @@ haze_protocol_build_list (void)
               "plugin", plugin,
               "prpl-id", p_info->id,
               "prpl-info", prpl_info,
-              "parameter-map", info->parameter_map,
+              "known-protocol", info,
               NULL);
         }
 
@@ -233,9 +233,17 @@ haze_protocol_lookup_param (
 {
   const HazeParameterMapping *m;
 
-  for (m = self->priv->parameter_map; m != NULL && m->purple_name != NULL; m++)
-    if (!tp_strdiff (m->purple_name, purple_name))
-      return m;
+  if (self->priv->known_protocol == NULL ||
+      self->priv->known_protocol->parameter_map == NULL)
+    return NULL;
+
+  for (m = self->priv->known_protocol->parameter_map;
+      m->purple_name != NULL;
+      m++)
+    {
+      if (!tp_strdiff (m->purple_name, purple_name))
+        return m;
+    }
 
   return NULL;
 }
@@ -282,7 +290,7 @@ _translate_protocol_usersplits (HazeProtocol *self,
 }
 
 /* Populates a TpCMParamSpec from a PurpleAccountOption, possibly renaming the
- * parameter as specified in hpi->parameter_map.  paramspec is assumed to be
+ * parameter as specified in parameter_map.  paramspec is assumed to be
  * zeroed out.
  *
  * Returns: %TRUE on success, and %FALSE if paramspec could not be populated
@@ -487,7 +495,7 @@ enum
   PROP_PLUGIN = 1,
   PROP_PRPL_ID,
   PROP_PRPL_INFO,
-  PROP_PARAMETER_MAP,
+  PROP_KNOWN_PROTOCOL,
 } HazeProtocolProperties;
 
 static void
@@ -576,8 +584,8 @@ haze_protocol_get_property (GObject *object,
 
   switch (property_id)
     {
-    case PROP_PARAMETER_MAP:
-      g_value_set_pointer (value, self->priv->parameter_map);
+    case PROP_KNOWN_PROTOCOL:
+      g_value_set_pointer (value, (gpointer) self->priv->known_protocol);
       break;
 
     case PROP_PLUGIN:
@@ -608,9 +616,9 @@ haze_protocol_set_property (GObject *object,
 
   switch (property_id)
     {
-    case PROP_PARAMETER_MAP:
-      g_assert (self->priv->parameter_map == NULL); /* construct-only */
-      self->priv->parameter_map = g_value_get_pointer (value);
+    case PROP_KNOWN_PROTOCOL:
+      g_assert (self->priv->known_protocol == NULL); /* construct-only */
+      self->priv->known_protocol = g_value_get_pointer (value);
       break;
 
     case PROP_PLUGIN:
@@ -755,9 +763,9 @@ haze_protocol_class_init (HazeProtocolClass *cls)
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_PRPL_INFO, param_spec);
 
-  param_spec = g_param_spec_pointer ("parameter-map", "HazeParameterMap",
-      "protocol parameter map",
+  param_spec = g_param_spec_pointer ("known-protocol", "KnownProtocolInfo",
+      "optional hard-coded info to override Haze's default guesses",
       G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
-  g_object_class_install_property (object_class, PROP_PARAMETER_MAP,
+  g_object_class_install_property (object_class, PROP_KNOWN_PROTOCOL,
       param_spec);
 }
