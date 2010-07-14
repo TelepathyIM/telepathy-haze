@@ -42,16 +42,11 @@ struct _HazeParameterMapping
     const gchar *telepathy_name;
 };
 
-typedef struct _HazeProtocolInfo HazeProtocolInfo;
-struct _HazeProtocolInfo
+typedef struct _KnownProtocolInfo KnownProtocolInfo;
+struct _KnownProtocolInfo
 {
-    /** Not const for convenience, but should not be freed */
-    gchar *tp_protocol_name;
-
-    /** Not const for convenience, but should not be freed */
-    gchar *prpl_id;
-    PurplePluginProtocolInfo *prpl_info;
-
+    const gchar *tp_protocol_name;
+    const gchar *prpl_id;
     /* If not NULL, an array terminated by an entry with both names NULL. */
     const HazeParameterMapping *parameter_map;
 };
@@ -97,32 +92,32 @@ static const HazeParameterMapping yahoo_mappings[] = {
     { NULL, NULL }
 };
 
-static HazeProtocolInfo known_protocol_info[] = {
-    { "aim", "prpl-aim", NULL, NULL },
+static const KnownProtocolInfo known_protocol_info[] = {
+    { "aim", "prpl-aim", NULL },
     /* Seriously. */
-    { "facebook", "prpl-bigbrownchunx-facebookim", NULL, NULL },
-    { "gadugadu", "prpl-gg", NULL, NULL },
-    { "groupwise", "prpl-novell", NULL, NULL },
-    { "irc", "prpl-irc", NULL, encoding_to_charset },
-    { "icq", "prpl-icq", NULL, encoding_to_charset },
-    { "jabber", "prpl-jabber", NULL, jabber_mappings },
-    { "local-xmpp", "prpl-bonjour", NULL, bonjour_mappings },
-    { "msn", "prpl-msn", NULL, NULL },
-    { "qq", "prpl-qq", NULL, NULL },
-    { "sametime", "prpl-meanwhile", NULL, NULL },
-    { "sipe", "prpl-sipe", NULL, sipe_mappings },
-    { "yahoo", "prpl-yahoo", NULL, yahoo_mappings },
-    { "yahoojp", "prpl-yahoojp", NULL, yahoo_mappings },
-    { "zephyr", "prpl-zephyr", NULL, encoding_to_charset },
-    { "mxit", "prpl-loubserp-mxit", NULL, NULL },
-    { "sip", "prpl-simple", NULL, NULL },
-    { NULL, NULL, NULL, NULL }
+    { "facebook", "prpl-bigbrownchunx-facebookim", NULL },
+    { "gadugadu", "prpl-gg", NULL },
+    { "groupwise", "prpl-novell", NULL },
+    { "irc", "prpl-irc", encoding_to_charset },
+    { "icq", "prpl-icq", encoding_to_charset },
+    { "jabber", "prpl-jabber", jabber_mappings },
+    { "local-xmpp", "prpl-bonjour", bonjour_mappings },
+    { "msn", "prpl-msn", NULL },
+    { "qq", "prpl-qq", NULL },
+    { "sametime", "prpl-meanwhile", NULL },
+    { "sipe", "prpl-sipe", sipe_mappings },
+    { "yahoo", "prpl-yahoo", yahoo_mappings },
+    { "yahoojp", "prpl-yahoojp", yahoo_mappings },
+    { "zephyr", "prpl-zephyr", encoding_to_charset },
+    { "mxit", "prpl-loubserp-mxit", NULL },
+    { "sip", "prpl-simple", NULL },
+    { NULL, NULL, NULL }
 };
 
 GList *
 haze_protocol_build_list (void)
 {
-  HazeProtocolInfo *i;
+  const KnownProtocolInfo *i;
   GList *iter;
   GList *ret = NULL;
 
@@ -133,7 +128,7 @@ haze_protocol_build_list (void)
       PurplePluginProtocolInfo *prpl_info =
           PURPLE_PLUGIN_PROTOCOL_INFO (plugin);
       HazeProtocol *protocol;
-      HazeProtocolInfo *info = NULL;
+      const KnownProtocolInfo *info = NULL;
 
       for (i = known_protocol_info; i->prpl_id != NULL; i++)
         {
