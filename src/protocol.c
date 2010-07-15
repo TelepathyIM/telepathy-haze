@@ -513,6 +513,67 @@ haze_protocol_init (HazeProtocol *self)
       HazeProtocolPrivate);
 }
 
+gchar *
+haze_protocol_get_username (GHashTable *params,
+    PurplePluginProtocolInfo *prpl_info,
+    gboolean remove_params)
+{
+  const gchar *account = tp_asv_get_string (params, "account");
+  gchar *username;
+
+  /* 'account' is always flagged as Required. */
+  g_return_val_if_fail (account != NULL, NULL);
+
+  /* Does the protocol have user splits? */
+  if (prpl_info->user_splits != NULL &&
+      g_hash_table_lookup (params, "usersplit1") != NULL)
+    {
+      GString *string = g_string_new (account);
+      guint i;
+      GList *l;
+
+      for (i = 1, l = prpl_info->user_splits;
+           l != NULL;
+           i++, l = l->next)
+        {
+          PurpleAccountUserSplit *split = l->data;
+          gchar *param_name = g_strdup_printf ("usersplit%d", i);
+          GValue *value = g_hash_table_lookup (params, param_name);
+
+          g_string_append_c (string,
+              purple_account_user_split_get_separator (split));
+
+          if (value != NULL)
+            {
+              /* tp-glib should guarantee that this is a string. */
+              g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
+              g_string_append (string, g_value_get_string (value));
+            }
+          else
+            {
+              g_string_append (string,
+                  purple_account_user_split_get_default_value(split));
+            }
+
+          if (remove_params)
+            g_hash_table_remove (params, param_name);
+
+          g_free (param_name);
+        }
+
+      username = g_string_free (string, FALSE);
+    }
+  else
+    {
+      username = g_strdup (account);
+    }
+
+  if (remove_params)
+    g_hash_table_remove (params, "account");
+
+  return username;
+}
+
 static GHashTable *
 haze_protocol_translate_parameters (HazeProtocol *self,
     GHashTable *asv)
@@ -677,7 +738,7 @@ haze_protocol_identify_account (TpBaseProtocol *base,
   GHashTable *purple_params = haze_protocol_translate_parameters (self, asv);
   gchar *ret;
 
-  ret = haze_connection_get_username (purple_params, self->priv->prpl_info,
+  ret = haze_protocol_get_username (purple_params, self->priv->prpl_info,
       FALSE);
   g_hash_table_unref (purple_params);
   return ret;

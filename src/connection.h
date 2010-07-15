@@ -116,10 +116,6 @@ GType haze_connection_get_type (void);
 
 const gchar *haze_get_fallback_group (void);
 
-gchar *haze_connection_get_username (GHashTable *params,
-    PurplePluginProtocolInfo *prpl_info,
-    gboolean remove_params);
-
 const gchar **haze_connection_get_implemented_interfaces (void);
 const gchar **haze_connection_get_guaranteed_interfaces (void);
 

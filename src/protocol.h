@@ -63,6 +63,9 @@ struct _HazeProtocol
 };
 
 GList *haze_protocol_build_list (void);
+gchar *haze_protocol_get_username (GHashTable *params,
+    PurplePluginProtocolInfo *prpl_info,
+    gboolean remove_params);
 
 G_END_DECLS
 
