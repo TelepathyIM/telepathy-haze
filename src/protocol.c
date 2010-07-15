@@ -157,7 +157,8 @@ haze_protocol_build_list (void)
               tp_name = p_info->id;
             }
 
-          /* default behaviour for unknown protocols */
+          DEBUG ("using default behaviour for unknown prpl '%s'", p_info->id);
+
           protocol = g_object_new (HAZE_TYPE_PROTOCOL,
               "name", tp_name,
               "plugin", plugin,
