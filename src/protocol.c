@@ -513,7 +513,7 @@ haze_protocol_init (HazeProtocol *self)
       HazeProtocolPrivate);
 }
 
-gchar *
+static gchar *
 haze_protocol_get_username (GHashTable *params,
     PurplePluginProtocolInfo *prpl_info,
     gboolean remove_params)
