@@ -83,6 +83,8 @@ struct _HazeProtocolInfo
 
 GHashTable *haze_protocol_build_protocol_table (void);
 
+TpCMParamSpec *haze_protocol_info_to_param_specs (HazeProtocolInfo *hpi);
+
 G_END_DECLS
 
 #endif
