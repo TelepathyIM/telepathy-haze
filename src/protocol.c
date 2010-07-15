@@ -75,6 +75,10 @@ static const HazeParameterMapping encoding_to_charset[] = {
 
 static const HazeParameterMapping jabber_mappings[] = {
     { "connect_server", "server" },
+    /* usersplit1 => domain is deliberately not in this map, because
+     * Telepathy convention for XMPP is for 'account' to be the bare
+     * JID (user@domain. Ideally we'd have some way to split the resource
+     * off (fd.o #14212). */
     { "require_tls", "require-encryption" },
     { NULL, NULL }
 };
