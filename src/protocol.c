@@ -551,21 +551,15 @@ haze_protocol_new_connection (TpBaseProtocol *base,
 {
   HazeProtocol *self = HAZE_PROTOCOL (base);
   HazeConnection *conn;
-  gchar *name;
   GHashTable *purple_params = haze_protocol_translate_parameters (self, asv);
 
-  g_object_get (self,
-      "name", &name,
-      NULL);
-
   conn = g_object_new (HAZE_TYPE_CONNECTION,
-      "protocol", name,
+      "protocol", tp_base_protocol_get_name (base),
       "prpl-id", self->priv->prpl_id,
       "prpl-info", self->priv->prpl_info,
       "parameters", purple_params,
       NULL);
 
-  g_free (name);
   g_hash_table_unref (purple_params);
 
   if (!haze_connection_create_account (conn, error))
@@ -740,15 +734,11 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
         }
       else
         {
-          gchar *name, *p;
+          gchar *p;
 
           /* wild guess */
-          g_object_get (self,
-              "name", &name,
-              NULL);
-
-          *vcard_field = g_strdup_printf ("x-%s", name);
-          g_free (name);
+          *vcard_field = g_strdup_printf ("x-%s",
+              tp_base_protocol_get_name (base));
 
           for (p = *vcard_field; *p != '\0'; p++)
             *p = g_ascii_tolower (*p);
