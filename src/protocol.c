@@ -617,16 +617,33 @@ haze_protocol_new_connection (TpBaseProtocol *base,
 {
   HazeProtocol *self = HAZE_PROTOCOL (base);
   HazeConnection *conn;
+  gchar *username;
+  gchar *password;
   GHashTable *purple_params = haze_protocol_translate_parameters (self, asv);
+
+  username = haze_protocol_get_username (purple_params, self->priv->prpl_info,
+      TRUE);
+  g_return_val_if_fail (username != NULL, FALSE);
+
+  password = g_strdup (tp_asv_get_string (purple_params, "password"));
+
+  if (password != NULL)
+    {
+      g_hash_table_remove (purple_params, "password");
+    }
 
   conn = g_object_new (HAZE_TYPE_CONNECTION,
       "protocol", tp_base_protocol_get_name (base),
       "prpl-id", self->priv->prpl_id,
       "prpl-info", self->priv->prpl_info,
       "parameters", purple_params,
+      "username", username,
+      "password", password,
       NULL);
 
   g_hash_table_unref (purple_params);
+  g_free (username);
+  g_free (password);
 
   if (!haze_connection_create_account (conn, error))
     {

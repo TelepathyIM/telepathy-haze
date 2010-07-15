@@ -56,6 +56,8 @@
 enum
 {
     PROP_PARAMETERS = 1,
+    PROP_USERNAME,
+    PROP_PASSWORD,
     PROP_PRPL_ID,
     PROP_PRPL_INFO,
 
@@ -119,6 +121,8 @@ haze_connection_get_guaranteed_interfaces (void)
 
 struct _HazeConnectionPrivate
 {
+    gchar *username;
+    gchar *password;
     GHashTable *parameters;
 
     gchar *prpl_id;
@@ -325,41 +329,31 @@ haze_connection_create_account (HazeConnection *self,
     HazeConnectionPrivate *priv = self->priv;
     GHashTable *params = priv->parameters;
     PurplePluginProtocolInfo *prpl_info = priv->prpl_info;
-    gchar *username;
-    const gchar *password;
     GList *l;
 
     g_return_val_if_fail (self->account == NULL, FALSE);
 
-    username = haze_protocol_get_username (params, prpl_info, TRUE);
-    g_return_val_if_fail (username != NULL, FALSE);
-
-    if (purple_accounts_find (username, priv->prpl_id) != NULL)
+    if (purple_accounts_find (priv->username, priv->prpl_id) != NULL)
       {
         g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-            "a connection already exists to %s on %s", username, priv->prpl_id);
-        g_free(username);
+            "a connection already exists to %s on %s", priv->username,
+            priv->prpl_id);
         return FALSE;
       }
 
-    self->account = purple_account_new (username, priv->prpl_id);
+    self->account = purple_account_new (priv->username, priv->prpl_id);
     purple_accounts_add (self->account);
 
-    self->account->ui_data = self;
+    if (priv->password != NULL)
+      purple_account_set_password (self->account, priv->password);
 
-    password = tp_asv_get_string (params, "password");
-    if (password)
-    {
-        purple_account_set_password (self->account, password);
-        g_hash_table_remove (params, "password");
-    }
+    self->account->ui_data = self;
 
     for (l = prpl_info->protocol_options; l != NULL; l = l->next)
       set_option (self->account, l->data, params);
 
     g_hash_table_foreach (params, (GHFunc) _warn_unhandled_parameter, "lala");
 
-    g_free(username);
     return TRUE;
 }
 
@@ -485,6 +479,12 @@ haze_connection_get_property (GObject    *object,
         case PROP_PARAMETERS:
             g_value_set_boxed (value, priv->parameters);
             break;
+        case PROP_USERNAME:
+            g_value_set_string (value, priv->username);
+            break;
+        case PROP_PASSWORD:
+            g_value_set_string (value, priv->password);
+            break;
         case PROP_PRPL_ID:
             g_value_set_string (value, priv->prpl_id);
             break;
@@ -507,6 +507,12 @@ haze_connection_set_property (GObject      *object,
     HazeConnectionPrivate *priv = self->priv;
 
     switch (property_id) {
+        case PROP_USERNAME:
+            priv->username = g_value_dup_string (value);
+            break;
+        case PROP_PASSWORD:
+            priv->password = g_value_dup_string (value);
+            break;
         case PROP_PARAMETERS:
             priv->parameters = g_value_dup_boxed (value);
             break;
@@ -579,11 +585,14 @@ static void
 haze_connection_finalize (GObject *object)
 {
     HazeConnection *self = HAZE_CONNECTION (object);
+    HazeConnectionPrivate *priv = self->priv;
 
     tp_contacts_mixin_finalize (object);
     tp_presence_mixin_finalize (object);
 
     g_strfreev (self->acceptable_avatar_mime_types);
+    g_free (priv->username);
+    g_free (priv->password);
 
     if (self->account != NULL)
       {
@@ -640,10 +649,20 @@ haze_connection_class_init (HazeConnectionClass *klass)
       haze_connection_get_guaranteed_interfaces();
 
     param_spec = g_param_spec_boxed ("parameters", "gchar * => GValue",
-        "Connection parameters (username, password, etc.)",
+        "Connection parameters (password, etc.)",
         G_TYPE_HASH_TABLE,
         G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property (object_class, PROP_PARAMETERS, param_spec);
+
+    param_spec = g_param_spec_string ("username", "username",
+        "protocol plugin username", NULL,
+        G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (object_class, PROP_USERNAME, param_spec);
+
+    param_spec = g_param_spec_string ("password", "password",
+        "protocol plugin password, or NULL if none", NULL,
+        G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (object_class, PROP_PASSWORD, param_spec);
 
     param_spec = g_param_spec_string ("prpl-id", "protocol plugin ID",
         "protocol plugin ID", NULL,
