@@ -87,6 +87,13 @@ def test(q, bus, conn, stream):
             assertEquals('s', param_type['charset'])
             assertEquals('s', param_type['username'])
             assertEquals('s', param_type['realname'])
+            assertEquals('s', param_type['server'])
+            assertEquals(cs.PARAM_HAS_DEFAULT, param_flags['server'])
+
+            assertEquals('smcv@irc.debian.org',
+                    protocol_iface.IdentifyAccount({
+                        'account': 'smcv',
+                        'server': 'irc.debian.org'}))
         elif name == 'myspace':
             assertEquals('x-myspace', flat_props['VCardField'])
             assertEquals('im-myspace', flat_props['Icon'])

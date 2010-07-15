@@ -73,6 +73,12 @@ static const HazeParameterMapping encoding_to_charset[] = {
     { NULL, NULL }
 };
 
+static const HazeParameterMapping irc_mappings[] = {
+    { "encoding", "charset" },
+    { "usersplit1", "server" },
+    { NULL, NULL }
+};
+
 static const HazeParameterMapping jabber_mappings[] = {
     { "connect_server", "server" },
     /* usersplit1 => domain is deliberately not in this map, because
@@ -105,7 +111,7 @@ static const KnownProtocolInfo known_protocol_info[] = {
     { "facebook", "prpl-bigbrownchunx-facebookim", NULL, "" },
     { "gadugadu", "prpl-gg", NULL, "x-gadugadu" },
     { "groupwise", "prpl-novell", NULL, "x-groupwise" },
-    { "irc", "prpl-irc", encoding_to_charset, "x-irc" /* ? */ },
+    { "irc", "prpl-irc", irc_mappings, "x-irc" /* ? */ },
     { "icq", "prpl-icq", encoding_to_charset, "x-icq" },
     { "jabber", "prpl-jabber", jabber_mappings, "x-jabber" },
     { "local-xmpp", "prpl-bonjour", bonjour_mappings, "" /* ? */ },
