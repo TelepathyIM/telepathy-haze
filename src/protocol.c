@@ -278,7 +278,7 @@ _translate_protocol_usersplits (HazeProtocol *self,
           NULL, /* name */
           DBUS_TYPE_STRING_AS_STRING,
           G_TYPE_STRING,
-          0,
+          TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT,
           NULL, 0, NULL, NULL,
           NULL, /* setter_data */
           NULL

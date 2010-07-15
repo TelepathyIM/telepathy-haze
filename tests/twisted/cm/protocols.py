@@ -162,9 +162,9 @@ def test(q, bus, conn, stream):
         elif name == 'sipe':
             assertEquals('im-sipe', flat_props['Icon'])
             assertDoesNotContain('usersplit1', param_map)
-            assertEquals((0, 's', ''), param_map['login'])
+            assertEquals((cs.PARAM_HAS_DEFAULT, 's', ''), param_map['login'])
 
-            assertEquals('billg@example.com',
+            assertEquals('billg@example.com,',
                     protocol_iface.IdentifyAccount({
                         'account': 'billg@example.com',
                         'password': 'letmein'}))
