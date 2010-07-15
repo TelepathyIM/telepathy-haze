@@ -523,19 +523,16 @@ haze_protocol_init (HazeProtocol *self)
       HazeProtocolPrivate);
 }
 
-static TpBaseConnection *
-haze_protocol_new_connection (TpBaseProtocol *base,
-    GHashTable *asv,
-    GError **error)
+static GHashTable *
+haze_protocol_translate_parameters (HazeProtocol *self,
+    GHashTable *asv)
 {
-  HazeProtocol *self = HAZE_PROTOCOL (base);
   GHashTable *unused = g_hash_table_new (g_str_hash, g_str_equal);
   GHashTable *purple_params = g_hash_table_new_full (g_str_hash, g_str_equal,
       NULL, (GDestroyNotify) tp_g_value_slice_free);
-  const TpCMParamSpec *pspecs = haze_protocol_get_parameters (base);
+  const TpCMParamSpec *pspecs = haze_protocol_get_parameters (
+      (TpBaseProtocol *) self);
   const TpCMParamSpec *pspec;
-  HazeConnection *conn;
-  gchar *name;
 
   tp_g_hash_table_update (unused, asv, NULL, NULL);
 
@@ -558,6 +555,19 @@ haze_protocol_new_connection (TpBaseProtocol *base,
   /* telepathy-glib isn't meant to give us parameters we don't understand */
   g_assert (g_hash_table_size (unused) == 0);
   g_hash_table_unref (unused);
+
+  return purple_params;
+}
+
+static TpBaseConnection *
+haze_protocol_new_connection (TpBaseProtocol *base,
+    GHashTable *asv,
+    GError **error)
+{
+  HazeProtocol *self = HAZE_PROTOCOL (base);
+  HazeConnection *conn;
+  gchar *name;
+  GHashTable *purple_params = haze_protocol_translate_parameters (self, asv);
 
   g_object_get (self,
       "name", &name,
