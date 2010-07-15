@@ -59,6 +59,8 @@ GType haze_media_manager_get_type (void);
   (G_TYPE_INSTANCE_GET_CLASS ((obj), HAZE_TYPE_MEDIA_MANAGER,\
                               HazeMediaManagerClass))
 
+void haze_media_manager_append_channel_classes (GPtrArray *array);
+
 G_END_DECLS
 
 #endif /* #ifndef __MEDIA_MANAGER_H__ */

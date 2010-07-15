@@ -83,6 +83,40 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_mail_iface_init);
     );
 
+static const gchar * implemented_interfaces[] = {
+    /* Conditionally present */
+
+    TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+    HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
+#   define HAZE_NUM_CONDITIONAL_INTERFACES 2
+
+    /* Always present */
+
+    TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
+    TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
+    TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+    TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES,
+    TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
+    /* TODO: This is a lie.  Not all protocols supported by libpurple
+     *       actually have the concept of a user-settable alias, but
+     *       there's no way for the UI to know (yet).
+     */
+    TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+    NULL
+};
+
+const gchar **
+haze_connection_get_implemented_interfaces (void)
+{
+  return implemented_interfaces;
+}
+
+const gchar **
+haze_connection_get_guaranteed_interfaces (void)
+{
+  return implemented_interfaces + HAZE_NUM_CONDITIONAL_INTERFACES;
+}
+
 struct _HazeConnectionPrivate
 {
     GHashTable *parameters;
@@ -241,9 +275,10 @@ _warn_unhandled_parameter (const gchar *key,
     g_warning ("received an unknown parameter '%s'; ignoring", key);
 }
 
-static gchar *
-_haze_connection_get_username (GHashTable *params,
-    PurplePluginProtocolInfo *prpl_info)
+gchar *
+haze_connection_get_username (GHashTable *params,
+    PurplePluginProtocolInfo *prpl_info,
+    gboolean remove_params)
 {
   const gchar *account = tp_asv_get_string (params, "account");
   gchar *username;
@@ -282,7 +317,9 @@ _haze_connection_get_username (GHashTable *params,
                   purple_account_user_split_get_default_value(split));
             }
 
-          g_hash_table_remove (params, param_name);
+          if (remove_params)
+            g_hash_table_remove (params, param_name);
+
           g_free (param_name);
         }
 
@@ -293,7 +330,8 @@ _haze_connection_get_username (GHashTable *params,
       username = g_strdup (account);
     }
 
-  g_hash_table_remove (params, "account");
+  if (remove_params)
+    g_hash_table_remove (params, "account");
 
   return username;
 }
@@ -354,7 +392,7 @@ haze_connection_create_account (HazeConnection *self,
 
     g_return_val_if_fail (self->account == NULL, FALSE);
 
-    username = _haze_connection_get_username (params, prpl_info);
+    username = haze_connection_get_username (params, prpl_info, TRUE);
     g_return_val_if_fail (username != NULL, FALSE);
 
     if (purple_accounts_find (username, priv->prpl_id) != NULL)
@@ -623,18 +661,6 @@ haze_connection_class_init (HazeConnectionClass *klass)
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     TpBaseConnectionClass *base_class = TP_BASE_CONNECTION_CLASS (klass);
     GParamSpec *param_spec;
-    static const gchar *interfaces_always_present[] = {
-        TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
-        TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
-        TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
-        TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES,
-        TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
-        /* TODO: This is a lie.  Not all protocols supported by libpurple
-         *       actually have the concept of a user-settable alias, but
-         *       there's no way for the UI to know (yet).
-         */
-        TP_IFACE_CONNECTION_INTERFACE_ALIASING,
-        NULL };
     static TpDBusPropertiesMixinPropImpl mail_props[] = {
         { "MailNotificationFlags", NULL, NULL },
         { "UnreadMailCount", NULL, NULL },
@@ -671,7 +697,8 @@ haze_connection_class_init (HazeConnectionClass *klass)
         haze_connection_get_unique_connection_name;
     base_class->start_connecting = _haze_connection_start_connecting;
     base_class->shut_down = _haze_connection_shut_down;
-    base_class->interfaces_always_present = interfaces_always_present;
+    base_class->interfaces_always_present =
+      haze_connection_get_guaranteed_interfaces();
 
     param_spec = g_param_spec_boxed ("parameters", "gchar * => GValue",
         "Connection parameters (username, password, etc.)",

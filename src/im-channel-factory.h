@@ -59,6 +59,8 @@ GType haze_im_channel_factory_get_type (void) G_GNUC_CONST;
 
 PurpleConversationUiOps *haze_get_conv_ui_ops (void);
 
+void haze_im_channel_factory_append_channel_classes (GPtrArray *array);
+
 G_END_DECLS
 
 #endif /* __HAZE_IM_CHANNEL_FACTORY_H__ */

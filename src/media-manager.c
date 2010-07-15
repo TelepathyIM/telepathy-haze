@@ -25,6 +25,7 @@
 #include <libpurple/mediamanager.h>
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/interfaces.h>
 
 #include "connection.h"
@@ -370,6 +371,25 @@ haze_media_manager_foreach_channel_class (TpChannelManager *manager,
   func (manager, table, named_channel_allowed_properties, user_data);
 
   g_hash_table_destroy (table);
+}
+
+static void
+append_to_ptr_array (TpChannelManager *null G_GNUC_UNUSED,
+    GHashTable *table,
+    const gchar * const *allowed,
+    gpointer user_data)
+{
+  g_ptr_array_add (user_data, tp_value_array_build (2,
+        TP_HASH_TYPE_CHANNEL_CLASS, table,
+        G_TYPE_STRV, allowed,
+        G_TYPE_INVALID));
+}
+
+void
+haze_media_manager_append_channel_classes (GPtrArray *array)
+{
+  haze_media_manager_foreach_channel_class (NULL, append_to_ptr_array,
+      array);
 }
 
 typedef enum

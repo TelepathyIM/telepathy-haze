@@ -665,6 +665,77 @@ haze_protocol_finalize (GObject *object)
     finalize (object);
 }
 
+static gchar *
+haze_protocol_normalize_contact (TpBaseProtocol *base,
+    const gchar *contact,
+    GError **error)
+{
+  /* FIXME: is it safe to pass a NULL account to prpl_info->account for all
+   * prpls? If it is, we could do that to be more likely to normalize right */
+  return g_strdup (purple_normalize (NULL, contact));
+}
+
+static gchar *
+haze_protocol_identify_account (TpBaseProtocol *base,
+    GHashTable *asv,
+    GError **error)
+{
+  HazeProtocol *self = HAZE_PROTOCOL (base);
+  GHashTable *purple_params = haze_protocol_translate_parameters (self, asv);
+  gchar *ret;
+
+  ret = haze_connection_get_username (purple_params, self->priv->prpl_info,
+      FALSE);
+  g_hash_table_unref (purple_params);
+  return ret;
+}
+
+static GStrv
+haze_protocol_get_interfaces (TpBaseProtocol *base)
+{
+  return g_new0 (gchar *, 1);
+}
+
+static void
+haze_protocol_get_connection_details (TpBaseProtocol *base,
+    GStrv *connection_interfaces,
+    GPtrArray **requestable_channel_classes,
+    gchar **icon_name,
+    gchar **english_name,
+    gchar **vcard_field)
+{
+  if (connection_interfaces != NULL)
+    {
+      *connection_interfaces = g_strdupv (
+        (gchar **) haze_connection_get_implemented_interfaces ());
+    }
+
+  if (requestable_channel_classes != NULL)
+    {
+      *requestable_channel_classes = g_ptr_array_new ();
+
+      haze_im_channel_factory_append_channel_classes (
+          *requestable_channel_classes);
+      haze_contact_list_append_channel_classes (
+          *requestable_channel_classes);
+#ifdef ENABLE_MEDIA
+      haze_media_manager_append_channel_classes (
+          *requestable_channel_classes);
+#endif
+    }
+
+  /* stub implementations for now, clients have to be able to fall back */
+
+  if (english_name != NULL)
+    *english_name = g_strdup ("");
+
+  if (icon_name != NULL)
+    *icon_name = g_strdup ("");
+
+  if (vcard_field != NULL)
+    *vcard_field = g_strdup ("");
+}
+
 static void
 haze_protocol_class_init (HazeProtocolClass *cls)
 {
@@ -674,6 +745,10 @@ haze_protocol_class_init (HazeProtocolClass *cls)
 
   base_class->get_parameters = haze_protocol_get_parameters;
   base_class->new_connection = haze_protocol_new_connection;
+  base_class->normalize_contact = haze_protocol_normalize_contact;
+  base_class->identify_account = haze_protocol_identify_account;
+  base_class->get_interfaces = haze_protocol_get_interfaces;
+  base_class->get_connection_details = haze_protocol_get_connection_details;
 
   g_type_class_add_private (cls, sizeof (HazeProtocolPrivate));
   object_class->get_property = haze_protocol_get_property;

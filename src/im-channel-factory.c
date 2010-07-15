@@ -27,6 +27,7 @@
 #include <telepathy-glib/base-connection.h>
 #include <telepathy-glib/channel-manager.h>
 #include <telepathy-glib/dbus.h>
+#include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/handle-repo.h>
 #include <telepathy-glib/interfaces.h>
 
@@ -549,6 +550,25 @@ haze_im_channel_factory_foreach_channel_class (TpChannelManager *manager,
     func (manager, table, allowed_properties, user_data);
 
     g_hash_table_destroy (table);
+}
+
+static void
+append_to_ptr_array (TpChannelManager *null G_GNUC_UNUSED,
+    GHashTable *table,
+    const gchar * const *allowed,
+    gpointer user_data)
+{
+  g_ptr_array_add (user_data, tp_value_array_build (2,
+        TP_HASH_TYPE_CHANNEL_CLASS, table,
+        G_TYPE_STRV, allowed,
+        G_TYPE_INVALID));
+}
+
+void
+haze_im_channel_factory_append_channel_classes (GPtrArray *array)
+{
+  haze_im_channel_factory_foreach_channel_class (NULL, append_to_ptr_array,
+      array);
 }
 
 static gboolean
