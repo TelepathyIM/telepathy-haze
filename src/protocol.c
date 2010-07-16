@@ -776,7 +776,7 @@ haze_protocol_get_interfaces (TpBaseProtocol *base)
 static void
 haze_protocol_get_connection_details (TpBaseProtocol *base,
     GStrv *connection_interfaces,
-    GPtrArray **requestable_channel_classes,
+    GType **channel_manager_types,
     gchar **icon_name,
     gchar **english_name,
     gchar **vcard_field)
@@ -789,18 +789,16 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
         (gchar **) haze_connection_get_implemented_interfaces ());
     }
 
-  if (requestable_channel_classes != NULL)
+  if (channel_manager_types != NULL)
     {
-      *requestable_channel_classes = g_ptr_array_new ();
-
-      haze_im_channel_factory_append_channel_classes (
-          *requestable_channel_classes);
-      haze_contact_list_append_channel_classes (
-          *requestable_channel_classes);
+      GType types[] = { HAZE_TYPE_IM_CHANNEL_FACTORY,
+          HAZE_TYPE_CONTACT_LIST,
 #ifdef ENABLE_MEDIA
-      haze_media_manager_append_channel_classes (
-          *requestable_channel_classes);
+          HAZE_TYPE_MEDIA_MANAGER,
 #endif
+          G_TYPE_INVALID };
+
+      *channel_manager_types = g_memdup (types, sizeof (types));
     }
 
   if (english_name != NULL)

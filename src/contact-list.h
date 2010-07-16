@@ -64,6 +64,4 @@ HazeContactListChannel *haze_contact_list_get_channel (HazeContactList *self,
     guint handle_type, TpHandle handle, gpointer request_token,
     gboolean *created);
 
-void haze_contact_list_append_channel_classes (GPtrArray *array);
-
 #endif /* #ifndef __HAZE_CONTACT_LIST_H__*/

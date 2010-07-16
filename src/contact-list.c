@@ -385,25 +385,6 @@ haze_contact_list_foreach_channel_class (TpChannelManager *manager,
     g_hash_table_destroy (table);
 }
 
-static void
-append_to_ptr_array (TpChannelManager *null G_GNUC_UNUSED,
-    GHashTable *table,
-    const gchar * const *allowed,
-    gpointer user_data)
-{
-  g_ptr_array_add (user_data, tp_value_array_build (2,
-        TP_HASH_TYPE_CHANNEL_CLASS, table,
-        G_TYPE_STRV, allowed,
-        G_TYPE_INVALID));
-}
-
-void
-haze_contact_list_append_channel_classes (GPtrArray *array)
-{
-  haze_contact_list_foreach_channel_class (NULL, append_to_ptr_array,
-      array);
-}
-
 HazeContactListChannel *
 haze_contact_list_get_channel (HazeContactList *contact_list,
                                guint handle_type,
