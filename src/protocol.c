@@ -747,7 +747,7 @@ haze_protocol_normalize_contact (TpBaseProtocol *base,
     const gchar *contact,
     GError **error)
 {
-  /* FIXME: is it safe to pass a NULL account to prpl_info->account for all
+  /* FIXME: is it safe to pass a NULL account to prpl_info->normalize for all
    * prpls? If it is, we could do that to be more likely to normalize right */
   return g_strdup (purple_normalize (NULL, contact));
 }
