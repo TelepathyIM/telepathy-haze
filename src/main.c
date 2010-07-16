@@ -46,12 +46,6 @@
 #include <libpurple/dbus-server.h>
 #endif
 
-#if !PURPLE_VERSION_CHECK (2, 4, 0)
-extern const guint purple_major_version;
-extern const guint purple_minor_version;
-extern const guint purple_micro_version;
-#endif
-
 #include <telepathy-glib/run.h>
 
 #include "defines.h"

@@ -16,6 +16,8 @@ data/org.freedesktop.Telepathy.ConnectionManager.haze.service
 depcomp
 /extensions/extensions.html
 install-sh
+/lcov.html/
+/lcov.info
 libtool
 ltmain.sh
 m4/
@@ -34,4 +36,5 @@ tags
 *.swp
 *~
 *.pyc
+*.gc??
 autom4te.cache
