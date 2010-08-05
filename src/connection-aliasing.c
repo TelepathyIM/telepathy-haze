@@ -289,7 +289,6 @@ blist_node_aliased_cb (PurpleBlistNode *node,
     PurpleBuddy *buddy;
     TpBaseConnection *base_conn;
     GPtrArray *aliases;
-    GValue entry = {0, };
     TpHandle handle;
     TpHandleRepoIface *contact_handles;
 
