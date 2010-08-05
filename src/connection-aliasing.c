@@ -27,9 +27,6 @@
 #include "connection.h"
 #include "debug.h"
 
-#define HAZE_TP_ALIAS_PAIR_TYPE (dbus_g_type_get_struct ("GValueArray", \
-      G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID))
-
 static gboolean
 can_alias (HazeConnection *conn)
 {
@@ -305,22 +302,15 @@ blist_node_aliased_cb (PurpleBlistNode *node,
         tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
     handle = tp_handle_ensure (contact_handles, buddy->name, NULL, NULL);
 
-    g_value_init (&entry, HAZE_TP_ALIAS_PAIR_TYPE);
-    g_value_take_boxed (&entry,
-        dbus_g_type_specialized_construct (HAZE_TP_ALIAS_PAIR_TYPE));
-
-    dbus_g_type_struct_set (&entry,
-        0, handle,
-        1, purple_buddy_get_alias (buddy),
-        G_MAXUINT);
-
     aliases = g_ptr_array_sized_new (1);
-    g_ptr_array_add (aliases, g_value_get_boxed (&entry));
+    g_ptr_array_add (aliases, tp_value_array_build (2,
+          G_TYPE_UINT, handle,
+          G_TYPE_STRING, purple_buddy_get_alias (buddy),
+          G_TYPE_INVALID));
 
     tp_svc_connection_interface_aliasing_emit_aliases_changed (base_conn,
         aliases);
 
-    g_value_unset (&entry);
     g_ptr_array_free (aliases, TRUE);
     tp_handle_unref (contact_handles, handle);
 }

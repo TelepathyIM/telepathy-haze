@@ -71,7 +71,7 @@ AC_ARG_ENABLE(leaky-request-stubs,
   AC_DEFINE(ENABLE_LEAKY_REQUEST_STUBS, [], [Enable the leaky stub implementation of the request API for debugging purposes]))
 AC_SUBST(ENABLE_LEAKY_REQUEST_STUBS)
 
-PKG_CHECK_MODULES(PURPLE,[purple >= 2.6])
+PKG_CHECK_MODULES(PURPLE,[purple >= 2.7])
 PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.9.2])
 PKG_CHECK_MODULES(GLIB,[glib-2.0 >= 2.22, gobject-2.0])
 PKG_CHECK_MODULES(DBUS_GLIB,[dbus-glib-1 >= 0.73])
@@ -104,22 +104,13 @@ AC_MSG_RESULT([$TEST_PYTHON])
 AC_SUBST(TEST_PYTHON)
 AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 
-AC_MSG_CHECKING([for libpurple >= 2.7.0 (media support)])
 AC_ARG_ENABLE(media,
   AC_HELP_STRING([--disable-media],[disable audio/video calls]),
   [
-    AC_MSG_RESULT([disabled])
     AM_CONDITIONAL([MEDIA_ENABLED], false)
   ],[
-    PKG_CHECK_EXISTS([purple >= 2.7.0],
-      [
-        AC_MSG_RESULT([yes])
-        AC_DEFINE(ENABLE_MEDIA, [], [Enable audio/video calls])
-        AM_CONDITIONAL([MEDIA_ENABLED], true)
-      ],[
-        AC_MSG_RESULT([no])
-        AM_CONDITIONAL([MEDIA_ENABLED], false)
-      ])
+    AC_DEFINE(ENABLE_MEDIA, [], [Enable audio/video calls])
+    AM_CONDITIONAL([MEDIA_ENABLED], true)
   ])
 AC_SUBST(ENABLE_MEDIA)
 
