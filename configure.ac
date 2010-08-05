@@ -8,7 +8,7 @@ AC_PREREQ([2.59])
 
 m4_define([haze_major_version], [0])
 m4_define([haze_minor_version], [4])
-m4_define([haze_micro_version], [0])
+m4_define([haze_micro_version], [999])
 m4_define([haze_nano_version], [1])
 
 m4_define([haze_base_version],
@@ -19,7 +19,7 @@ m4_define([haze_version],
                  [haze_base_version].[haze_nano_version])])
 
 AC_INIT([telepathy-haze], [haze_version],
-        [https://bugs.freedesktop.org/enter_bug.cgi?product=Telepathy&component=haze&version=0.4])
+        [https://bugs.freedesktop.org/enter_bug.cgi?product=Telepathy&component=haze])
 
 AC_CONFIG_MACRO_DIR([m4])
 
