@@ -139,7 +139,7 @@ AC_ARG_ENABLE(media,
     AC_MSG_RESULT([disabled])
     AM_CONDITIONAL([MEDIA_ENABLED], false)
   ],[
-    PKG_CHECK_EXISTS([purple >= 2.7.0],
+    PKG_CHECK_EXISTS([purple >= 2.7.0, glib-2.0 >= 2.22],
       [
         AC_MSG_RESULT([yes])
         AC_DEFINE(ENABLE_MEDIA, [], [Enable audio/video calls])
