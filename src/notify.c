@@ -18,9 +18,14 @@
  *
  */
 
+#include "config.h"
+
 #include "notify.h"
-#include "connection-mail.h"
 #include "debug.h"
+
+#ifdef ENABLE_MAIL_NOTIFICATION
+#   include "connection-mail.h"
+#endif
 
 static const gchar *
 _account_name (PurpleConnection *gc)
@@ -89,8 +94,13 @@ haze_notify_userinfo (PurpleConnection *gc,
 static PurpleNotifyUiOps notify_ui_ops =
 {
     .notify_message = haze_notify_message,
+#ifdef ENABLE_MAIL_NOTIFICATION
     .notify_email = haze_connection_mail_notify_email,
     .notify_emails = haze_connection_mail_notify_emails,
+#else
+    .notify_email = NULL,
+    .notify_emails = NULL,
+#endif
     .notify_formatted = haze_notify_formatted,
     .notify_userinfo = haze_notify_userinfo,
     .notify_uri = haze_notify_uri,

@@ -35,8 +35,6 @@ telepathy_haze_SOURCES = main.c \
                          connection-capabilities.h \
                          connection-presence.c \
                          connection-presence.h \
-                         connection-mail.h \
-                         connection-mail.c \
                          connection.c \
                          connection.h \
                          contact-list.c \
@@ -54,6 +52,12 @@ telepathy_haze_SOURCES = main.c \
                          util.c \
                          util.h \
                          $(haze_media_sources)
+
+if ENABLE_MAIL_NOTIFICATION
+telepathy_haze_SOURCES += \
+                         connection-mail.h \
+                         connection-mail.c
+endif
 
 telepathy_haze_LDADD = $(top_builddir)/extensions/libhaze-extensions.la
 

@@ -41,11 +41,14 @@
 #include "connection-presence.h"
 #include "connection-aliasing.h"
 #include "connection-avatars.h"
-#include "connection-mail.h"
 #include "contact-list-channel.h"
 #include "extensions/extensions.h"
 
 #include "connection-capabilities.h"
+
+#ifdef ENABLE_MAIL_NOTIFICATION
+#   include "connection-mail.h"
+#endif
 
 #ifdef HAVE_LIBINTL_H
 #   include <libintl.h>
@@ -79,8 +82,10 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_capabilities_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
         tp_contacts_mixin_iface_init);
+#ifdef ENABLE_MAIL_NOTIFICATION
     G_IMPLEMENT_INTERFACE (HAZE_TYPE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
         haze_connection_mail_iface_init);
+#endif
     );
 
 struct _HazeConnectionPrivate
@@ -404,10 +409,13 @@ _haze_connection_start_connecting (TpBaseConnection *base,
     tp_base_connection_change_status(base, TP_CONNECTION_STATUS_CONNECTING,
                                      TP_CONNECTION_STATUS_REASON_REQUESTED);
 
+#ifdef ENABLE_MAIL_NOTIFICATION
     /* We systematically enable mail notification to avoid bugs in protocol
      * like GMail and MySpace where you need to do an action before connecting
      * to start receiving the notifications. */
     purple_account_set_check_mail(self->account, TRUE);
+#endif
+
     purple_account_set_enabled(self->account, UI_ID, TRUE);
     purple_account_connect(self->account);
 
@@ -574,7 +582,10 @@ haze_connection_constructor (GType type,
     haze_connection_avatars_init (object);
     haze_connection_capabilities_init (object);
     haze_connection_presence_init (object);
+
+#ifdef ENABLE_MAIL_NOTIFICATION
     haze_connection_mail_init (object);
+#endif
 
     return (GObject *)self;
 }
@@ -635,6 +646,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
          */
         TP_IFACE_CONNECTION_INTERFACE_ALIASING,
         NULL };
+#ifdef ENABLE_MAIL_NOTIFICATION
     static TpDBusPropertiesMixinPropImpl mail_props[] = {
         { "MailNotificationFlags", NULL, NULL },
         { "UnreadMailCount", NULL, NULL },
@@ -642,16 +654,19 @@ haze_connection_class_init (HazeConnectionClass *klass)
         { "MailAddress", NULL, NULL },
         { NULL }
     };
+#endif
     static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
         { TP_IFACE_CONNECTION_INTERFACE_AVATARS,
             haze_connection_avatars_properties_getter,
             NULL,
             NULL },     /* initialized a bit later */
+#ifdef ENABLE_MAIL_NOTIFICATION
         { HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
             haze_connection_mail_properties_getter,
             NULL,
             mail_props,
         },
+#endif
         { NULL }
     };
 
