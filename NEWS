@@ -1,7 +1,16 @@
-telepathy-haze 0.3.7 (UNRELEASED)
+telepathy-haze 0.4.0 (2010-08-05)
 =================================
 
-JESUS CHRIST IT'S A LION GET IN THE CAR!
+The "JESUS CHRIST IT'S A LION GET IN THE CAR!" release.
+
+Dependencies:
+
+ • libpurple ≥ 2.6 is now required
+
+Fixes:
+
+ • fd.o #23702: use uint16 for port numbers, and be permissive about
+   minor type variations in what we're actually given (wjt)
 
 telepathy-haze 0.3.6 (2010-07-09)
 =================================
