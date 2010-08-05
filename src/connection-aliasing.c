@@ -177,7 +177,7 @@ struct _g_hash_table_foreach_all_in_my_brain
 };
 
 static void
-set_alias_succeess_cb (PurpleAccount *account,
+set_alias_success_cb (PurpleAccount *account,
                        const char *new_alias)
 {
     TpBaseConnection *base_conn;
@@ -236,7 +236,7 @@ set_aliases_foreach (gpointer key,
     {
         purple_account_set_public_alias (data->conn->account,
                                          new_alias,
-                                         set_alias_succeess_cb,
+                                         set_alias_success_cb,
                                          set_alias_failure_cb);
     }
     else
