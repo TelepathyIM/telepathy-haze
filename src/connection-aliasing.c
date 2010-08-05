@@ -21,14 +21,12 @@
 #include "connection-aliasing.h"
 
 #include <telepathy-glib/contacts-mixin.h>
+#include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/handle.h>
 #include <telepathy-glib/interfaces.h>
 
 #include "connection.h"
 #include "debug.h"
-
-#define HAZE_TP_ALIAS_PAIR_TYPE (dbus_g_type_get_struct ("GValueArray", \
-      G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID))
 
 static gboolean
 can_alias (HazeConnection *conn)
@@ -186,9 +184,9 @@ set_alias_success_cb (PurpleAccount *account,
 
     base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
 
-    g_value_init (&entry, HAZE_TP_ALIAS_PAIR_TYPE);
+    g_value_init (&entry, TP_STRUCT_TYPE_ALIAS_PAIR);
     g_value_take_boxed (&entry,
-        dbus_g_type_specialized_construct (HAZE_TP_ALIAS_PAIR_TYPE));
+        dbus_g_type_specialized_construct (TP_STRUCT_TYPE_ALIAS_PAIR));
 
     dbus_g_type_struct_set (&entry,
         0, base_conn->self_handle,
@@ -342,9 +340,9 @@ blist_node_aliased_cb (PurpleBlistNode *node,
         tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
     handle = tp_handle_ensure (contact_handles, buddy->name, NULL, NULL);
 
-    g_value_init (&entry, HAZE_TP_ALIAS_PAIR_TYPE);
+    g_value_init (&entry, TP_STRUCT_TYPE_ALIAS_PAIR);
     g_value_take_boxed (&entry,
-        dbus_g_type_specialized_construct (HAZE_TP_ALIAS_PAIR_TYPE));
+        dbus_g_type_specialized_construct (TP_STRUCT_TYPE_ALIAS_PAIR));
 
     dbus_g_type_struct_set (&entry,
         0, handle,
