@@ -527,8 +527,8 @@ static void
 buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
 {
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (buddy->account);
-    HazeContactList *contact_list = conn->contact_list;
-    HazeContactListPrivate *priv = contact_list->priv;
+    HazeContactList *contact_list;
+    HazeContactListPrivate *priv;
     HazeContactListChannel *subscribe, *group;
     TpHandleSet *rem_handles;
     const char *group_name, *buddy_name;
@@ -540,6 +540,9 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
      */
     if (TP_BASE_CONNECTION (conn)->status == TP_CONNECTION_STATUS_DISCONNECTED)
         return;
+
+    contact_list = conn->contact_list;
+    priv = contact_list->priv;
 
     buddy_name = purple_buddy_get_name (buddy);
     DEBUG ("%s", buddy_name);
