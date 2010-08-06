@@ -182,6 +182,9 @@ set_alias_success_cb (PurpleAccount *account,
     GPtrArray *aliases;
     GValue entry = {0, };
 
+    DEBUG ("purple_account_set_public_alias succeeded, new alias %s",
+        new_alias);
+
     base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
 
     g_value_init (&entry, TP_STRUCT_TYPE_ALIAS_PAIR);
@@ -220,11 +223,8 @@ set_aliases_foreach (gpointer key,
     GError *error = NULL;
     TpHandle handle = GPOINTER_TO_INT (key);
     gchar *new_alias = (gchar *)value;
-    const gchar *bname = tp_handle_inspect (data->contact_handles, handle);
 
     g_assert (can_alias (data->conn));
-
-    DEBUG ("setting alias for %s to \"%s\"", bname, new_alias);
 
     if (!tp_handle_is_valid (data->contact_handles, handle, &error))
     {
@@ -232,6 +232,7 @@ set_aliases_foreach (gpointer key,
     }
     else if (handle == TP_BASE_CONNECTION (data->conn)->self_handle)
     {
+        DEBUG ("setting alias for myself to \"%s\"", new_alias);
         purple_account_set_public_alias (data->conn->account,
                                          new_alias,
                                          set_alias_success_cb,
@@ -239,15 +240,20 @@ set_aliases_foreach (gpointer key,
     }
     else
     {
+        const gchar *bname = tp_handle_inspect (data->contact_handles, handle);
         PurpleBuddy *buddy = purple_find_buddy (data->conn->account, bname);
 
         if (buddy == NULL)
         {
+            DEBUG ("can't set alias for %s to \"%s\": not on contact list",
+                bname, new_alias);
             g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-                "You can't set the alias of someone not on your contact list");
+                "can't set alias for %s to \"%s\": not on contact list",
+                bname, new_alias);
         }
         else
         {
+            DEBUG ("setting alias for %s to \"%s\"", bname, new_alias);
             purple_blist_alias_buddy (buddy, new_alias);
             serv_alias_buddy (buddy);
         }
@@ -339,6 +345,9 @@ blist_node_aliased_cb (PurpleBlistNode *node,
     contact_handles =
         tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
     handle = tp_handle_ensure (contact_handles, buddy->name, NULL, NULL);
+
+    DEBUG ("Contact #%u '%s' changed alias from \"%s\" to \"%s\"",
+        handle, buddy->name, old_alias, purple_buddy_get_alias (buddy));
 
     g_value_init (&entry, TP_STRUCT_TYPE_ALIAS_PAIR);
     g_value_take_boxed (&entry,
