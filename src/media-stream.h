@@ -25,8 +25,7 @@
 
 #include <glib-object.h>
 #include <libpurple/media.h>
-#include <telepathy-glib/dbus-properties-mixin.h>
-#include <telepathy-glib/enums.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 G_BEGIN_DECLS
 
@@ -100,6 +99,7 @@ gboolean haze_media_stream_change_direction (HazeMediaStream *stream,
 void haze_media_stream_accept_pending_local_send (HazeMediaStream *stream);
 
 HazeMediaStream *haze_media_stream_new (const gchar *object_path,
+    TpDBusDaemon *dbus_daemon,
     PurpleMedia *media,
     const gchar *name,
     const gchar *peer,
