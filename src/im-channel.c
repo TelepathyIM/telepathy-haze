@@ -564,7 +564,7 @@ haze_im_channel_constructor (GType type, guint n_props,
     HazeIMChannelPrivate *priv;
     TpHandleRepoIface *contact_handles;
     TpBaseConnection *conn;
-    DBusGConnection *bus;
+    TpDBusDaemon *bus;
 
     obj = G_OBJECT_CLASS (haze_im_channel_parent_class)->
         constructor (type, n_props, props);
@@ -583,8 +583,8 @@ haze_im_channel_constructor (GType type, guint n_props,
     tp_message_mixin_implement_sending (obj, haze_im_channel_send, 3,
         supported_message_types, 0, 0, supported_content_types);
 
-    bus = tp_get_bus ();
-    dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+    bus = tp_base_connection_get_dbus_daemon (conn);
+    tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
     priv->closed = FALSE;
     priv->dispose_has_run = FALSE;
