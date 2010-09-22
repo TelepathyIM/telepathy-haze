@@ -21,14 +21,12 @@
 #include "connection-aliasing.h"
 
 #include <telepathy-glib/contacts-mixin.h>
+#include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/handle.h>
 #include <telepathy-glib/interfaces.h>
 
 #include "connection.h"
 #include "debug.h"
-
-#define HAZE_TP_ALIAS_PAIR_TYPE (dbus_g_type_get_struct ("GValueArray", \
-      G_TYPE_UINT, G_TYPE_STRING, G_TYPE_INVALID))
 
 static gboolean
 can_alias (HazeConnection *conn)
@@ -177,6 +175,45 @@ struct _g_hash_table_foreach_all_in_my_brain
 };
 
 static void
+set_alias_success_cb (PurpleAccount *account,
+                       const char *new_alias)
+{
+    TpBaseConnection *base_conn;
+    GPtrArray *aliases;
+    GValue entry = {0, };
+
+    DEBUG ("purple_account_set_public_alias succeeded, new alias %s",
+        new_alias);
+
+    base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
+
+    g_value_init (&entry, TP_STRUCT_TYPE_ALIAS_PAIR);
+    g_value_take_boxed (&entry,
+        dbus_g_type_specialized_construct (TP_STRUCT_TYPE_ALIAS_PAIR));
+
+    dbus_g_type_struct_set (&entry,
+        0, base_conn->self_handle,
+        1, new_alias,
+        G_MAXUINT);
+
+    aliases = g_ptr_array_sized_new (1);
+    g_ptr_array_add (aliases, g_value_get_boxed (&entry));
+
+    tp_svc_connection_interface_aliasing_emit_aliases_changed (base_conn,
+        aliases);
+
+    g_value_unset (&entry);
+    g_ptr_array_free (aliases, TRUE);
+}
+
+static void
+set_alias_failure_cb (PurpleAccount *account,
+                      const char *error)
+{
+    DEBUG ("couldn't set alias: %s\n", error);
+}
+
+static void
 set_aliases_foreach (gpointer key,
                      gpointer value,
                      gpointer user_data)
@@ -186,11 +223,8 @@ set_aliases_foreach (gpointer key,
     GError *error = NULL;
     TpHandle handle = GPOINTER_TO_INT (key);
     gchar *new_alias = (gchar *)value;
-    const gchar *bname = tp_handle_inspect (data->contact_handles, handle);
 
     g_assert (can_alias (data->conn));
-
-    DEBUG ("setting alias for %s to \"%s\"", bname, new_alias);
 
     if (!tp_handle_is_valid (data->contact_handles, handle, &error))
     {
@@ -198,21 +232,28 @@ set_aliases_foreach (gpointer key,
     }
     else if (handle == TP_BASE_CONNECTION (data->conn)->self_handle)
     {
-        g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-            "Sadly, there's no general API in libpurple to set your own "
-            "server alias.");
+        DEBUG ("setting alias for myself to \"%s\"", new_alias);
+        purple_account_set_public_alias (data->conn->account,
+                                         new_alias,
+                                         set_alias_success_cb,
+                                         set_alias_failure_cb);
     }
     else
     {
+        const gchar *bname = tp_handle_inspect (data->contact_handles, handle);
         PurpleBuddy *buddy = purple_find_buddy (data->conn->account, bname);
 
         if (buddy == NULL)
         {
+            DEBUG ("can't set alias for %s to \"%s\": not on contact list",
+                bname, new_alias);
             g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
-                "You can't set the alias of someone not on your contact list");
+                "can't set alias for %s to \"%s\": not on contact list",
+                bname, new_alias);
         }
         else
         {
+            DEBUG ("setting alias for %s to \"%s\"", bname, new_alias);
             purple_blist_alias_buddy (buddy, new_alias);
             serv_alias_buddy (buddy);
         }
@@ -305,9 +346,12 @@ blist_node_aliased_cb (PurpleBlistNode *node,
         tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
     handle = tp_handle_ensure (contact_handles, buddy->name, NULL, NULL);
 
-    g_value_init (&entry, HAZE_TP_ALIAS_PAIR_TYPE);
+    DEBUG ("Contact #%u '%s' changed alias from \"%s\" to \"%s\"",
+        handle, buddy->name, old_alias, purple_buddy_get_alias (buddy));
+
+    g_value_init (&entry, TP_STRUCT_TYPE_ALIAS_PAIR);
     g_value_take_boxed (&entry,
-        dbus_g_type_specialized_construct (HAZE_TP_ALIAS_PAIR_TYPE));
+        dbus_g_type_specialized_construct (TP_STRUCT_TYPE_ALIAS_PAIR));
 
     dbus_g_type_struct_set (&entry,
         0, handle,
