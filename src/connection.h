@@ -116,6 +116,9 @@ GType haze_connection_get_type (void);
 
 const gchar *haze_get_fallback_group (void);
 
+const gchar **haze_connection_get_implemented_interfaces (void);
+const gchar **haze_connection_get_guaranteed_interfaces (void);
+
 G_END_DECLS
 
 #endif /* #ifndef __HAZE_CONNECTION_H__*/

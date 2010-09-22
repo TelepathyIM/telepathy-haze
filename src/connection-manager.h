@@ -24,6 +24,7 @@
 #include <glib-object.h>
 #include <telepathy-glib/base-connection-manager.h>
 
+#include "protocol.h"
 #include "connection.h"
 
 G_BEGIN_DECLS
@@ -33,36 +34,12 @@ typedef struct _HazeConnectionManagerClass HazeConnectionManagerClass;
 
 struct _HazeConnectionManagerClass {
     TpBaseConnectionManagerClass parent_class;
-
-    /** GHashTable of (gchar *)tp_protocol_name => HazeProtocolInfo */
-    GHashTable *protocol_info_table;
 };
 
 struct _HazeConnectionManager {
     TpBaseConnectionManager parent;
 
     gpointer priv;
-};
-
-typedef struct _HazeParameterMapping HazeParameterMapping;
-struct _HazeParameterMapping
-{
-    const gchar *purple_name;
-    const gchar *telepathy_name;
-};
-
-typedef struct _HazeProtocolInfo HazeProtocolInfo;
-struct _HazeProtocolInfo
-{
-    /** Not const for convenience, but should not be freed */
-    gchar *tp_protocol_name;
-
-    /** Not const for convenience, but should not be freed */
-    gchar *prpl_id;
-    PurplePluginProtocolInfo *prpl_info;
-
-    /* If not NULL, an array terminated by an entry with both names NULL. */
-    const HazeParameterMapping *parameter_map;
 };
 
 GType haze_connection_manager_get_type (void);

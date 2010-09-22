@@ -56,6 +56,8 @@
 enum
 {
     PROP_PARAMETERS = 1,
+    PROP_USERNAME,
+    PROP_PASSWORD,
     PROP_PRPL_ID,
     PROP_PRPL_INFO,
 
@@ -83,8 +85,44 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_mail_iface_init);
     );
 
+static const gchar * implemented_interfaces[] = {
+    /* Conditionally present */
+
+    TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+    HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
+#   define HAZE_NUM_CONDITIONAL_INTERFACES 2
+
+    /* Always present */
+
+    TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
+    TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
+    TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
+    TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES,
+    TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
+    /* TODO: This is a lie.  Not all protocols supported by libpurple
+     *       actually have the concept of a user-settable alias, but
+     *       there's no way for the UI to know (yet).
+     */
+    TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+    NULL
+};
+
+const gchar **
+haze_connection_get_implemented_interfaces (void)
+{
+  return implemented_interfaces;
+}
+
+const gchar **
+haze_connection_get_guaranteed_interfaces (void)
+{
+  return implemented_interfaces + HAZE_NUM_CONDITIONAL_INTERFACES;
+}
+
 struct _HazeConnectionPrivate
 {
+    gchar *username;
+    gchar *password;
     GHashTable *parameters;
 
     gchar *prpl_id;
@@ -241,63 +279,6 @@ _warn_unhandled_parameter (const gchar *key,
     g_warning ("received an unknown parameter '%s'; ignoring", key);
 }
 
-static gchar *
-_haze_connection_get_username (GHashTable *params,
-    PurplePluginProtocolInfo *prpl_info)
-{
-  const gchar *account = tp_asv_get_string (params, "account");
-  gchar *username;
-
-  /* 'account' is always flagged as Required. */
-  g_return_val_if_fail (account != NULL, NULL);
-
-  /* Does the protocol have user splits? */
-  if (prpl_info->user_splits != NULL &&
-      g_hash_table_lookup (params, "usersplit1") != NULL)
-    {
-      GString *string = g_string_new (account);
-      guint i;
-      GList *l;
-
-      for (i = 1, l = prpl_info->user_splits;
-           l != NULL;
-           i++, l = l->next)
-        {
-          PurpleAccountUserSplit *split = l->data;
-          gchar *param_name = g_strdup_printf ("usersplit%d", i);
-          GValue *value = g_hash_table_lookup (params, param_name);
-
-          g_string_append_c (string,
-              purple_account_user_split_get_separator (split));
-
-          if (value != NULL)
-            {
-              /* tp-glib should guarantee that this is a string. */
-              g_assert (G_VALUE_TYPE (value) == G_TYPE_STRING);
-              g_string_append (string, g_value_get_string (value));
-            }
-          else
-            {
-              g_string_append (string,
-                  purple_account_user_split_get_default_value(split));
-            }
-
-          g_hash_table_remove (params, param_name);
-          g_free (param_name);
-        }
-
-      username = g_string_free (string, FALSE);
-    }
-  else
-    {
-      username = g_strdup (account);
-    }
-
-  g_hash_table_remove (params, "account");
-
-  return username;
-}
-
 static void
 set_option (
     PurpleAccount *account,
@@ -348,41 +329,31 @@ haze_connection_create_account (HazeConnection *self,
     HazeConnectionPrivate *priv = self->priv;
     GHashTable *params = priv->parameters;
     PurplePluginProtocolInfo *prpl_info = priv->prpl_info;
-    gchar *username;
-    const gchar *password;
     GList *l;
 
     g_return_val_if_fail (self->account == NULL, FALSE);
 
-    username = _haze_connection_get_username (params, prpl_info);
-    g_return_val_if_fail (username != NULL, FALSE);
-
-    if (purple_accounts_find (username, priv->prpl_id) != NULL)
+    if (purple_accounts_find (priv->username, priv->prpl_id) != NULL)
       {
         g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-            "a connection already exists to %s on %s", username, priv->prpl_id);
-        g_free(username);
+            "a connection already exists to %s on %s", priv->username,
+            priv->prpl_id);
         return FALSE;
       }
 
-    self->account = purple_account_new (username, priv->prpl_id);
+    self->account = purple_account_new (priv->username, priv->prpl_id);
     purple_accounts_add (self->account);
 
-    self->account->ui_data = self;
+    if (priv->password != NULL)
+      purple_account_set_password (self->account, priv->password);
 
-    password = tp_asv_get_string (params, "password");
-    if (password)
-    {
-        purple_account_set_password (self->account, password);
-        g_hash_table_remove (params, "password");
-    }
+    self->account->ui_data = self;
 
     for (l = prpl_info->protocol_options; l != NULL; l = l->next)
       set_option (self->account, l->data, params);
 
     g_hash_table_foreach (params, (GHFunc) _warn_unhandled_parameter, "lala");
 
-    g_free(username);
     return TRUE;
 }
 
@@ -508,6 +479,12 @@ haze_connection_get_property (GObject    *object,
         case PROP_PARAMETERS:
             g_value_set_boxed (value, priv->parameters);
             break;
+        case PROP_USERNAME:
+            g_value_set_string (value, priv->username);
+            break;
+        case PROP_PASSWORD:
+            g_value_set_string (value, priv->password);
+            break;
         case PROP_PRPL_ID:
             g_value_set_string (value, priv->prpl_id);
             break;
@@ -530,6 +507,12 @@ haze_connection_set_property (GObject      *object,
     HazeConnectionPrivate *priv = self->priv;
 
     switch (property_id) {
+        case PROP_USERNAME:
+            priv->username = g_value_dup_string (value);
+            break;
+        case PROP_PASSWORD:
+            priv->password = g_value_dup_string (value);
+            break;
         case PROP_PARAMETERS:
             priv->parameters = g_value_dup_boxed (value);
             break;
@@ -602,11 +585,14 @@ static void
 haze_connection_finalize (GObject *object)
 {
     HazeConnection *self = HAZE_CONNECTION (object);
+    HazeConnectionPrivate *priv = self->priv;
 
     tp_contacts_mixin_finalize (object);
     tp_presence_mixin_finalize (object);
 
     g_strfreev (self->acceptable_avatar_mime_types);
+    g_free (priv->username);
+    g_free (priv->password);
 
     if (self->account != NULL)
       {
@@ -623,18 +609,6 @@ haze_connection_class_init (HazeConnectionClass *klass)
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     TpBaseConnectionClass *base_class = TP_BASE_CONNECTION_CLASS (klass);
     GParamSpec *param_spec;
-    static const gchar *interfaces_always_present[] = {
-        TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
-        TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
-        TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
-        TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES,
-        TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
-        /* TODO: This is a lie.  Not all protocols supported by libpurple
-         *       actually have the concept of a user-settable alias, but
-         *       there's no way for the UI to know (yet).
-         */
-        TP_IFACE_CONNECTION_INTERFACE_ALIASING,
-        NULL };
     static TpDBusPropertiesMixinPropImpl mail_props[] = {
         { "MailNotificationFlags", NULL, NULL },
         { "UnreadMailCount", NULL, NULL },
@@ -671,13 +645,24 @@ haze_connection_class_init (HazeConnectionClass *klass)
         haze_connection_get_unique_connection_name;
     base_class->start_connecting = _haze_connection_start_connecting;
     base_class->shut_down = _haze_connection_shut_down;
-    base_class->interfaces_always_present = interfaces_always_present;
+    base_class->interfaces_always_present =
+      haze_connection_get_guaranteed_interfaces();
 
     param_spec = g_param_spec_boxed ("parameters", "gchar * => GValue",
-        "Connection parameters (username, password, etc.)",
+        "Connection parameters (password, etc.)",
         G_TYPE_HASH_TABLE,
         G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property (object_class, PROP_PARAMETERS, param_spec);
+
+    param_spec = g_param_spec_string ("username", "username",
+        "protocol plugin username", NULL,
+        G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (object_class, PROP_USERNAME, param_spec);
+
+    param_spec = g_param_spec_string ("password", "password",
+        "protocol plugin password, or NULL if none", NULL,
+        G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+    g_object_class_install_property (object_class, PROP_PASSWORD, param_spec);
 
     param_spec = g_param_spec_string ("prpl-id", "protocol plugin ID",
         "protocol plugin ID", NULL,
