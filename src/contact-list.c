@@ -1076,6 +1076,8 @@ haze_contact_list_add_to_group (HazeContactList *self,
     const gchar *bname =
         haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
     PurpleBuddy *buddy;
+    /* This is correct, despite the naming: it returns a borrowed reference
+     * to an existing group (if possible) or to a new group (otherwise). */
     PurpleGroup *group = purple_group_new (group_name);
 
     g_return_if_fail (group != NULL);
