@@ -147,7 +147,7 @@ def test(q, bus, conn, stream):
     q.expect('dbus-signal', signal='StatusChanged',
             args=[cs.CONN_STATUS_DISCONNECTED, cs.CSR_REQUESTED])
     # make sure Haze didn't crash
-    bus.get_object(conn.bus_name, '/').Ping()
+    sync_dbus(bus, q, conn)
 
 if __name__ == '__main__':
     exec_test(test)
