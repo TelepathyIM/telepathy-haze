@@ -205,5 +205,19 @@ def test(q, bus, conn, stream):
     assertLength(1, groups)
     assertContains('Capulets', groups)
 
+    # At the end of a tragedy, everyone dies, so there's no need for this
+    # group.
+    call_async(q, still_alive, 'Close')
+    q.expect('dbus-signal', signal='Closed', path=still_alive.object_path)
+    q.expect('dbus-return', method='Close')
+
+    # Deleting a non-empty group is not allowed.
+    call_async(q, capulets, 'Close')
+    q.expect('dbus-error', method='Close', name=cs.NOT_AVAILABLE)
+
+    # Neither is deleting a List channel.
+    call_async(q, subscribe, 'Close')
+    q.expect('dbus-error', method='Close', name=cs.NOT_IMPLEMENTED)
+
 if __name__ == '__main__':
     exec_test(test)

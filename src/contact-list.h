@@ -64,4 +64,26 @@ HazeContactListChannel *haze_contact_list_get_channel (HazeContactList *self,
     guint handle_type, TpHandle handle, gpointer request_token,
     gboolean *created);
 
+gpointer haze_request_authorize (PurpleAccount *account,
+    const char *remote_user, const char *id, const char *alias,
+    const char *message, gboolean on_list,
+    PurpleAccountRequestAuthorizationCb authorize_cb,
+    PurpleAccountRequestAuthorizationCb deny_cb, void *user_data);
+void haze_close_account_request (gpointer request_data_);
+
+void haze_contact_list_accept_publish_request (HazeContactList *self,
+    TpHandle handle);
+void haze_contact_list_reject_publish_request (HazeContactList *self,
+    TpHandle handle);
+
+void haze_contact_list_request_subscription (HazeContactList *self,
+    TpHandle handle, const gchar *message);
+void haze_contact_list_remove_contact (HazeContactList *self,
+    TpHandle handle);
+
+void haze_contact_list_add_to_group (HazeContactList *self,
+    const gchar *group_name, TpHandle handle);
+gboolean haze_contact_list_remove_from_group (HazeContactList *self,
+    const gchar *group_name, TpHandle handle, GError **error);
+
 #endif /* #ifndef __HAZE_CONTACT_LIST_H__*/
