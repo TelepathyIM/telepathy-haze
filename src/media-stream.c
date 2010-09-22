@@ -50,6 +50,7 @@ G_DEFINE_TYPE_WITH_CODE (HazeMediaStream,
 enum
 {
   PROP_OBJECT_PATH = 1,
+  PROP_DBUS_DAEMON,
   PROP_NAME,
   PROP_PEER,
   PROP_ID,
@@ -75,6 +76,7 @@ struct _HazeMediaStreamPrivate
   PurpleMedia *media;
 
   gchar *object_path;
+  TpDBusDaemon *dbus_daemon;
   guint id;
   guint media_type;
 
@@ -108,6 +110,7 @@ struct _HazeMediaStreamPrivate
 
 HazeMediaStream *
 haze_media_stream_new (const gchar *object_path,
+    TpDBusDaemon *dbus_daemon,
     PurpleMedia *media,
     const gchar *name,
     const gchar *peer,
@@ -131,6 +134,7 @@ haze_media_stream_new (const gchar *object_path,
 
   result = g_object_new (HAZE_TYPE_MEDIA_STREAM,
       "object-path", object_path,
+      "dbus-daemon", dbus_daemon,
       "media", media,
       "name", name,
       "peer", peer,
@@ -172,7 +176,6 @@ haze_media_stream_constructor (GType type, guint n_props,
   GObject *obj;
   HazeMediaStream *stream;
   HazeMediaStreamPrivate *priv;
-  DBusGConnection *bus;
 
   /* call base class constructor */
   obj = G_OBJECT_CLASS (haze_media_stream_parent_class)->
@@ -183,8 +186,7 @@ haze_media_stream_constructor (GType type, guint n_props,
   g_assert (priv->media != NULL);
 
   /* go for the bus */
-  bus = tp_get_bus ();
-  dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+  tp_dbus_daemon_register_object (priv->dbus_daemon, priv->object_path, obj);
 
   if (priv->created_locally)
     {
@@ -215,6 +217,9 @@ haze_media_stream_get_property (GObject    *object,
   switch (property_id) {
     case PROP_OBJECT_PATH:
       g_value_set_string (value, priv->object_path);
+      break;
+    case PROP_DBUS_DAEMON:
+      g_value_set_object (value, priv->dbus_daemon);
       break;
     case PROP_NAME:
       g_value_set_string (value, stream->name);
@@ -280,6 +285,10 @@ haze_media_stream_set_property (GObject      *object,
     case PROP_OBJECT_PATH:
       g_free (priv->object_path);
       priv->object_path = g_value_dup_string (value);
+      break;
+    case PROP_DBUS_DAEMON:
+      g_assert (priv->dbus_daemon == NULL);     /* construct-only */
+      priv->dbus_daemon = g_value_dup_object (value);
       break;
     case PROP_NAME:
       g_free (stream->name);
@@ -377,6 +386,12 @@ haze_media_stream_class_init (HazeMediaStreamClass *haze_media_stream_class)
                                     G_PARAM_READWRITE |
                                     G_PARAM_STATIC_STRINGS);
   g_object_class_install_property (object_class, PROP_OBJECT_PATH, param_spec);
+
+  param_spec = g_param_spec_object ("dbus-daemon", "D-Bus connection",
+      "Connection to D-Bus",
+      TP_TYPE_DBUS_DAEMON,
+      G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+  g_object_class_install_property (object_class, PROP_DBUS_DAEMON, param_spec);
 
   param_spec = g_param_spec_string ("name", "Stream name",
       "An opaque name for the stream used in the signalling.", NULL,
@@ -518,6 +533,8 @@ haze_media_stream_dispose (GObject *object)
     return;
 
   priv->dispose_has_run = TRUE;
+
+  tp_clear_object (&priv->dbus_daemon);
 
   if (priv->local_candidates)
     {

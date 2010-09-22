@@ -533,7 +533,7 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
     TpBaseConnection *conn;
     TpHandle self_handle;
     TpHandleRepoIface *handle_repo, *contact_repo;
-    DBusGConnection *bus;
+    TpDBusDaemon *bus;
     guint handle_type;
 
     obj = G_OBJECT_CLASS (haze_contact_list_channel_parent_class)->
@@ -547,8 +547,8 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
     contact_repo = tp_base_connection_get_handles (conn,
                                                    TP_HANDLE_TYPE_CONTACT);
 
-    bus = tp_get_bus ();
-    dbus_g_connection_register_g_object (bus, priv->object_path, obj);
+    bus = tp_base_connection_get_dbus_daemon (conn);
+    tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
     g_assert (handle_type == TP_HANDLE_TYPE_LIST ||
               handle_type == TP_HANDLE_TYPE_GROUP);

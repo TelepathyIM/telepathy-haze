@@ -139,8 +139,14 @@ haze_media_backend_set_property (GObject      *object,
       priv->object_path = g_value_dup_string (value);
 
       if (priv->object_path != NULL)
-        dbus_g_connection_register_g_object (tp_get_bus (),
-            priv->object_path, G_OBJECT(backend));
+        {
+          TpDBusDaemon *dbus_daemon = tp_dbus_daemon_dup (NULL);
+
+          g_return_if_fail (dbus_daemon != NULL);
+          tp_dbus_daemon_register_object (dbus_daemon,
+              priv->object_path, G_OBJECT (backend));
+          g_object_unref (dbus_daemon);
+        }
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -292,8 +298,11 @@ haze_media_backend_add_stream (PurpleMediaBackend *self,
   gchar *object_path;
   guint media_type, id, stun_port = 3478; /* default stun port */
   const gchar *nat_traversal = NULL, *stun_server = NULL;
+  TpDBusDaemon *dbus_daemon = tp_dbus_daemon_dup (NULL);
 
   DEBUG ("called");
+
+  g_return_val_if_fail (dbus_daemon != NULL, FALSE);
 
   id = priv->next_stream_id++;
 
@@ -358,7 +367,7 @@ haze_media_backend_add_stream (PurpleMediaBackend *self,
       g_assert_not_reached ();
     }
 
-  stream = haze_media_stream_new (object_path, priv->media,
+  stream = haze_media_stream_new (object_path, dbus_daemon, priv->media,
       sid, who, media_type, id, initiator, nat_traversal, NULL, FALSE);
 
   if (stun_server != NULL)
@@ -373,6 +382,8 @@ haze_media_backend_add_stream (PurpleMediaBackend *self,
 
   if (priv->ready)
       _emit_new_stream (HAZE_MEDIA_BACKEND (self), stream);
+
+  g_object_unref (dbus_daemon);
 
   return TRUE;
 }
