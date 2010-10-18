@@ -446,9 +446,13 @@ _haze_connection_create_channel_managers (TpBaseConnection *base)
     g_ptr_array_add (channel_managers, self->im_factory);
 
 #ifdef ENABLE_MEDIA
-    self->media_manager = HAZE_MEDIA_MANAGER (
-        g_object_new (HAZE_TYPE_MEDIA_MANAGER, "connection", self, NULL));
-    g_ptr_array_add (channel_managers, self->media_manager);
+    /* Instantiate the media manager only if the protocol support calls */
+    if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC (self->priv->prpl_info, initiate_media))
+      {
+        self->media_manager = HAZE_MEDIA_MANAGER (
+            g_object_new (HAZE_TYPE_MEDIA_MANAGER, "connection", self, NULL));
+        g_ptr_array_add (channel_managers, self->media_manager);
+      }
 #endif
 
     self->contact_list = HAZE_CONTACT_LIST (
