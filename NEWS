@@ -1,6 +1,10 @@
 telepathy-haze 0.5.0 (UNRELEASED)
 =================================
 
+Fixes:
+
+ • haze no longer ships with a manager file. (jonny)
+
 …
 
 telepathy-haze 0.4.0 (2010-08-05)
