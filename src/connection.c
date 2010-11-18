@@ -179,10 +179,6 @@ haze_report_disconnect_reason (PurpleConnection *gc,
     switch (reason)
     {
         case PURPLE_CONNECTION_ERROR_NETWORK_ERROR:
-        /* TODO: this isn't the right mapping.  should this map to
-         *       NoneSpecified?
-         */
-        case PURPLE_CONNECTION_ERROR_OTHER_ERROR:
             tp_reason = TP_CONNECTION_STATUS_REASON_NETWORK_ERROR;
             break;
         case PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED:
@@ -193,6 +189,11 @@ haze_report_disconnect_reason (PurpleConnection *gc,
          */
         case PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE:
         case PURPLE_CONNECTION_ERROR_INVALID_SETTINGS:
+        /* TODO: This is not a very useful error. But it's fatal in libpurple —
+         * it's used for things like the ICQ server telling you that you're
+         * temporarily banned—so should map to a fatal error in Telepathy.
+         */
+        case PURPLE_CONNECTION_ERROR_OTHER_ERROR:
             tp_reason = TP_CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED;
             break;
         case PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT:
