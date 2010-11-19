@@ -160,81 +160,127 @@ connected_cb (PurpleConnection *pc)
 }
 
 static void
+map_purple_error_to_tp (
+    PurpleConnectionError purple_reason,
+    gboolean while_connecting,
+    TpConnectionStatusReason *tp_reason,
+    const gchar **tp_error_name)
+{
+  g_assert (tp_reason != NULL);
+  g_assert (tp_error_name != NULL);
+
+#define set_both(suffix) \
+  G_STMT_START { \
+    *tp_reason = TP_CONNECTION_STATUS_REASON_ ## suffix; \
+    *tp_error_name = TP_ERROR_STR_ ## suffix; \
+  } G_STMT_END
+
+#define trivial_case(suffix) \
+  case PURPLE_CONNECTION_ERROR_ ## suffix: \
+    set_both (suffix); \
+    break;
+
+  switch (purple_reason)
+    {
+      case PURPLE_CONNECTION_ERROR_NETWORK_ERROR:
+        if (while_connecting)
+          *tp_error_name = TP_ERROR_STR_CONNECTION_FAILED;
+        else
+          *tp_error_name = TP_ERROR_STR_CONNECTION_LOST;
+
+        *tp_reason = TP_CONNECTION_STATUS_REASON_NETWORK_ERROR;
+        break;
+
+      case PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED:
+      case PURPLE_CONNECTION_ERROR_INVALID_USERNAME:
+      /* TODO: the following don't really match the tp reason but it's the
+       * nearest match.  Invalid settings shouldn't get this far in the first
+       * place, and we ought to have some code for having no authentication
+       * mechanisms in common with the server. But the latter is currently a
+       * moot point since libpurple doesn't use this anywhere besides Jabber.
+       */
+      case PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE:
+      case PURPLE_CONNECTION_ERROR_INVALID_SETTINGS:
+
+      /* TODO: This is not a very useful error. But it's fatal in libpurple —
+       * it's used for things like the ICQ server telling you that you're
+       * temporarily banned—so should map to a fatal error in Telepathy.
+       *
+       * We ought really to have an error case for unrecoverable server errors
+       * where the best we can do is present a human-readable error from the
+       * server.
+       */
+      case PURPLE_CONNECTION_ERROR_OTHER_ERROR:
+        set_both (AUTHENTICATION_FAILED);
+        break;
+
+      case PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT:
+        *tp_reason = TP_CONNECTION_STATUS_REASON_ENCRYPTION_ERROR;
+        *tp_error_name = TP_ERROR_STR_ENCRYPTION_NOT_AVAILABLE;
+        break;
+
+      case PURPLE_CONNECTION_ERROR_NAME_IN_USE:
+        if (while_connecting)
+          *tp_error_name = TP_ERROR_STR_ALREADY_CONNECTED;
+        else
+          *tp_error_name = TP_ERROR_STR_CONNECTION_REPLACED;
+
+        *tp_reason = TP_CONNECTION_STATUS_REASON_NAME_IN_USE;
+        break;
+
+      case PURPLE_CONNECTION_ERROR_CERT_OTHER_ERROR:
+        *tp_reason = TP_CONNECTION_STATUS_REASON_CERT_OTHER_ERROR;
+        *tp_error_name = TP_ERROR_STR_CERT_INVALID;
+        break;
+
+      /* These members of the libpurple enum map 1-1 to the Telepathy enum and
+       * to similarly-named D-Bus error names.
+       */
+      trivial_case (ENCRYPTION_ERROR)
+      trivial_case (CERT_NOT_PROVIDED)
+      trivial_case (CERT_UNTRUSTED)
+      trivial_case (CERT_EXPIRED)
+      trivial_case (CERT_NOT_ACTIVATED)
+      trivial_case (CERT_HOSTNAME_MISMATCH)
+      trivial_case (CERT_FINGERPRINT_MISMATCH)
+      trivial_case (CERT_SELF_SIGNED)
+
+      default:
+        g_warning ("report_disconnect_cb: invalid PurpleDisconnectReason %u",
+            purple_reason);
+        *tp_reason = TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED;
+        *tp_error_name = TP_ERROR_STR_DISCONNECTED;
+    }
+
+#undef trivial_case
+#undef set_both
+}
+
+static void
 haze_report_disconnect_reason (PurpleConnection *gc,
                                PurpleConnectionError reason,
                                const char *text)
 {
-    PurpleAccount *account = purple_connection_get_account (gc);
-    HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
-    HazeConnectionPrivate *priv = conn->priv;
-    TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
+  PurpleAccount *account = purple_connection_get_account (gc);
+  HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
+  HazeConnectionPrivate *priv = conn->priv;
+  TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
+  GHashTable *details;
+  TpConnectionStatusReason tp_reason;
+  const gchar *tp_error_name;
 
-    TpConnectionStatusReason tp_reason;
+  /* When a connection error is reported by libpurple, an idle callback to
+   * purple_account_disconnect is added.
+   */
+  priv->disconnecting = TRUE;
 
-    /* When a connection error is reported by libpurple, an idle callback to
-     * purple_account_disconnect is added.
-     */
-    priv->disconnecting = TRUE;
-
-    switch (reason)
-    {
-        case PURPLE_CONNECTION_ERROR_NETWORK_ERROR:
-            tp_reason = TP_CONNECTION_STATUS_REASON_NETWORK_ERROR;
-            break;
-        case PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED:
-        case PURPLE_CONNECTION_ERROR_INVALID_USERNAME:
-        /* TODO: the following don't really match the tp reason but it's
-         *       the nearest match.  Invalid settings shouldn't exist in the
-         *       first place.
-         */
-        case PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE:
-        case PURPLE_CONNECTION_ERROR_INVALID_SETTINGS:
-        /* TODO: This is not a very useful error. But it's fatal in libpurple —
-         * it's used for things like the ICQ server telling you that you're
-         * temporarily banned—so should map to a fatal error in Telepathy.
-         */
-        case PURPLE_CONNECTION_ERROR_OTHER_ERROR:
-            tp_reason = TP_CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED;
-            break;
-        case PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT:
-        case PURPLE_CONNECTION_ERROR_ENCRYPTION_ERROR:
-            tp_reason = TP_CONNECTION_STATUS_REASON_ENCRYPTION_ERROR;
-            break;
-        case PURPLE_CONNECTION_ERROR_NAME_IN_USE:
-            tp_reason = TP_CONNECTION_STATUS_REASON_NAME_IN_USE;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_NOT_PROVIDED:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_NOT_PROVIDED;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_UNTRUSTED:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_UNTRUSTED;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_EXPIRED:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_EXPIRED;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_NOT_ACTIVATED:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_NOT_ACTIVATED;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_HOSTNAME_MISMATCH:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_HOSTNAME_MISMATCH;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_FINGERPRINT_MISMATCH:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_FINGERPRINT_MISMATCH;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_SELF_SIGNED:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_SELF_SIGNED;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_OTHER_ERROR:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_OTHER_ERROR;
-            break;
-        default:
-            g_warning ("report_disconnect_cb: "
-                       "invalid PurpleDisconnectReason %u", reason);
-            tp_reason = TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED;
-    }
-
-    tp_base_connection_change_status (base_conn,
-            TP_CONNECTION_STATUS_DISCONNECTED, tp_reason);
+  map_purple_error_to_tp (reason,
+      (base_conn->status == TP_CONNECTION_STATUS_CONNECTING),
+      &tp_reason, &tp_error_name);
+  details = tp_asv_new ("debug-message", G_TYPE_STRING, text, NULL);
+  tp_base_connection_disconnect_with_dbus_error (base_conn, tp_error_name,
+      details, tp_reason);
+  g_hash_table_unref (details);
 }
 
 static gboolean
