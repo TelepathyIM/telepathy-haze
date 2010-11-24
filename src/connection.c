@@ -133,6 +133,9 @@ struct _HazeConnectionPrivate
      */
     gboolean disconnecting;
 
+    /* Set to TRUE when purple_account_connect has been called. */
+    gboolean connect_called;
+
     gboolean dispose_has_run;
 };
 
@@ -404,13 +407,53 @@ haze_connection_create_account (HazeConnection *self,
     return TRUE;
 }
 
+static void
+_haze_connection_password_manager_prompt_cb (GObject *source,
+    GAsyncResult *result,
+    gpointer user_data)
+{
+  HazeConnection *self = user_data;
+  HazeConnectionPrivate *priv = self->priv;
+  TpBaseConnection *base_conn = (TpBaseConnection *) self;
+  const GString *password;
+  GError *error = NULL;
+
+  password = tp_simple_password_manager_prompt_finish (
+      TP_SIMPLE_PASSWORD_MANAGER (source), result, &error);
+
+  if (error != NULL)
+    {
+      DEBUG ("Simple password manager failed: %s", error->message);
+
+      tp_base_connection_change_status (base_conn,
+          TP_CONNECTION_STATUS_DISCONNECTED,
+          TP_CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED);
+
+      /* no need to call purple_account_disconnect because _connect
+       * was never called */
+
+      return;
+    }
+
+  g_free (priv->password);
+  priv->password = g_strdup (password->str);
+
+  purple_account_set_password (self->account, priv->password);
+
+  purple_account_set_enabled(self->account, UI_ID, TRUE);
+  purple_account_connect (self->account);
+  priv->connect_called = TRUE;
+}
+
 static gboolean
 _haze_connection_start_connecting (TpBaseConnection *base,
                                    GError **error)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
+    HazeConnectionPrivate *priv = self->priv;
     TpHandleRepoIface *contact_handles =
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+    const gchar *password;
 
     g_return_val_if_fail (self->account != NULL, FALSE);
 
@@ -426,8 +469,24 @@ _haze_connection_start_connecting (TpBaseConnection *base,
      * like GMail and MySpace where you need to do an action before connecting
      * to start receiving the notifications. */
     purple_account_set_check_mail(self->account, TRUE);
-    purple_account_set_enabled(self->account, UI_ID, TRUE);
-    purple_account_connect(self->account);
+
+    /* check whether we need to pop up an auth channel */
+    password = purple_account_get_password (self->account);
+
+    if (password == NULL
+        && !(priv->prpl_info->options & OPT_PROTO_NO_PASSWORD)
+        && !(priv->prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
+      {
+        /* pop up auth channel */
+        tp_simple_password_manager_prompt_async (self->password_manager,
+            _haze_connection_password_manager_prompt_cb, self);
+      }
+    else
+      {
+        purple_account_set_enabled(self->account, UI_ID, TRUE);
+        purple_account_connect (self->account);
+        priv->connect_called = TRUE;
+      }
 
     return TRUE;
 }
@@ -437,7 +496,7 @@ _haze_connection_shut_down (TpBaseConnection *base)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
     HazeConnectionPrivate *priv = self->priv;
-    if(!priv->disconnecting)
+    if(!priv->disconnecting && priv->connect_called)
     {
         priv->disconnecting = TRUE;
         purple_account_disconnect(self->account);
@@ -505,6 +564,10 @@ _haze_connection_create_channel_managers (TpBaseConnection *base)
     self->contact_list = HAZE_CONTACT_LIST (
         g_object_new (HAZE_TYPE_CONTACT_LIST, "connection", self, NULL));
     g_ptr_array_add (channel_managers, self->contact_list);
+
+    self->password_manager = tp_simple_password_manager_new (
+        TP_BASE_CONNECTION (self));
+    g_ptr_array_add (channel_managers, self->password_manager);
 
     return channel_managers;
 }

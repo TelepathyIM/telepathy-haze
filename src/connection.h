@@ -25,6 +25,7 @@
 #include <telepathy-glib/base-connection.h>
 #include <telepathy-glib/contacts-mixin.h>
 #include <telepathy-glib/presence-mixin.h>
+#include <telepathy-glib/simple-password-manager.h>
 
 #include <libpurple/account.h>
 #include <libpurple/prpl.h>
@@ -66,6 +67,7 @@ struct _HazeConnection {
     HazeContactList *contact_list;
     HazeImChannelFactory *im_factory;
     HazeMediaManager *media_manager;
+    TpSimplePasswordManager *password_manager;
 
     TpContactsMixin contacts;
     TpPresenceMixin presence;
