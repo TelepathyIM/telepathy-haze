@@ -432,6 +432,7 @@ _haze_connection_password_manager_prompt_cb (GObject *source,
       /* no need to call purple_account_disconnect because _connect
        * was never called */
 
+      g_error_free (error);
       return;
     }
 
