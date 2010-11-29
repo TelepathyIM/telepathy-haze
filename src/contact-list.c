@@ -77,6 +77,10 @@ struct _HazeContactListPrivate {
      */
     GHashTable *pending_publish_requests;
 
+    /* Contacts whose publish requests we've accepted or declined. */
+    TpHandleSet *publishing_to;
+    TpHandleSet *not_publishing_to;
+
     gboolean dispose_has_run;
 };
 
@@ -160,6 +164,7 @@ haze_contact_list_constructor (GType type, guint n_props,
 {
     GObject *obj;
     HazeContactList *self;
+    TpHandleRepoIface *contact_repo;
 
     obj = G_OBJECT_CLASS (haze_contact_list_parent_class)->
         constructor (type, n_props, props);
@@ -167,6 +172,12 @@ haze_contact_list_constructor (GType type, guint n_props,
     self = HAZE_CONTACT_LIST (obj);
     self->priv->status_changed_id = g_signal_connect (self->priv->conn,
         "status-changed", (GCallback) status_changed_cb, self);
+
+    contact_repo = tp_base_connection_get_handles (
+        (TpBaseConnection *) self->priv->conn, TP_HANDLE_TYPE_CONTACT);
+
+    self->priv->publishing_to = tp_handle_set_new (contact_repo);
+    self->priv->not_publishing_to = tp_handle_set_new (contact_repo);
 
     self->priv->pending_publish_requests = g_hash_table_new_full (NULL, NULL,
         NULL, (GDestroyNotify) publish_request_data_free);
@@ -188,6 +199,9 @@ haze_contact_list_dispose (GObject *object)
     haze_contact_list_close_all (self);
     g_assert (priv->list_channels == NULL);
     g_assert (priv->group_channels == NULL);
+
+    tp_clear_pointer (&priv->publishing_to, tp_handle_set_destroy);
+    tp_clear_pointer (&priv->not_publishing_to, tp_handle_set_destroy);
 
     if (priv->pending_publish_requests)
     {
@@ -919,6 +933,8 @@ haze_contact_list_accept_publish_request (HazeContactList *self,
       TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
   tp_intset_destroy (add);
 
+  tp_handle_set_add (self->priv->publishing_to, handle);
+
   remove_pending_publish_request (self, handle);
 }
 
@@ -946,6 +962,8 @@ haze_contact_list_reject_publish_request (HazeContactList *self,
       TP_CHANNEL_GROUP_CHANGE_REASON_NONE);
   tp_intset_destroy (to_remove);
 
+  tp_handle_set_add (self->priv->not_publishing_to, handle);
+
   remove_pending_publish_request (self, handle);
 }
 
@@ -965,6 +983,7 @@ haze_request_authorize (PurpleAccount *account,
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
     TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
         TP_HANDLE_TYPE_CONTACT);
+    HazeContactList *self = conn->contact_list;
     HazeContactListChannel *publish =
         haze_contact_list_get_channel (conn->contact_list,
             TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_PUBLISH, NULL, NULL);
@@ -988,6 +1007,11 @@ haze_request_authorize (PurpleAccount *account,
 
     g_hash_table_insert (conn->contact_list->priv->pending_publish_requests,
         GUINT_TO_POINTER (remote_handle), request_data);
+
+    /* If we got a publish request from them, then presumably we weren't
+     * already publishing to them? */
+    tp_handle_set_remove (self->priv->publishing_to, remote_handle);
+    tp_handle_set_add (self->priv->not_publishing_to, remote_handle);
 
     tp_intset_add (add_local_pending, remote_handle);
     changed = tp_group_mixin_change_members (G_OBJECT (publish), message, NULL,
