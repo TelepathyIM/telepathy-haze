@@ -1126,11 +1126,9 @@ haze_contact_list_add_to_group (HazeContactList *self,
 
     g_return_if_fail (group != NULL);
 
-    /* If the buddy is already in this group then this callback should
-     * never have been called.
-     */
-    g_assert (purple_find_buddy_in_group (conn->account, bname, group)
-        == NULL);
+    /* if the contact is in the group, we have nothing to do */
+    if (purple_find_buddy_in_group (conn->account, bname, group) != NULL)
+      return;
 
     buddy = purple_buddy_new (conn->account, bname, NULL);
 
