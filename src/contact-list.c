@@ -1149,11 +1149,14 @@ haze_contact_list_remove_from_group (HazeContactList *self,
         haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
     GSList *buddies;
     GSList *l;
+    gboolean is_in = FALSE;
     gboolean orphaned = TRUE;
     gboolean ret = TRUE;
     PurpleGroup *group = purple_find_group (group_name);
 
-    g_return_val_if_fail (group != NULL, FALSE);
+    /* no such group? that was easy, we "already removed them" */
+    if (group == NULL)
+      return TRUE;
 
     buddies = purple_find_buddies (account, bname);
 
@@ -1161,12 +1164,15 @@ haze_contact_list_remove_from_group (HazeContactList *self,
       {
         PurpleGroup *their_group = purple_buddy_get_group (l->data);
 
-        if (their_group != group)
-          {
-            orphaned = FALSE;
-            break;
-          }
+        if (their_group == group)
+          is_in = TRUE;
+        else
+          orphaned = FALSE;
       }
+
+    /* not in the group? that was easy, we "already removed them" */
+    if (!is_in)
+      return TRUE;
 
     if (orphaned)
       {
