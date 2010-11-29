@@ -907,7 +907,8 @@ haze_contact_list_accept_publish_request (HazeContactList *self,
   const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
       TP_HANDLE_TYPE_CONTACT, handle);
 
-  g_return_if_fail (request_data != NULL);
+  if (request_data == NULL)
+    return;
 
   DEBUG ("allowing publish request for %s", bname);
   request_data->allow(request_data->data);
@@ -933,7 +934,8 @@ haze_contact_list_reject_publish_request (HazeContactList *self,
   const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
       TP_HANDLE_TYPE_CONTACT, handle);
 
-  g_return_if_fail (request_data != NULL);
+  if (request_data == NULL)
+    return;
 
   DEBUG ("denying publish request for %s", bname);
   request_data->deny(request_data->data);
