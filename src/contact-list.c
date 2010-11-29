@@ -43,6 +43,7 @@ struct _PublishRequestData {
     HazeContactList *self;
     HazeContactListChannel *publish;
     TpHandle handle;
+    gchar *message;
 
     PurpleAccountRequestAuthorizationCb allow;
     PurpleAccountRequestAuthorizationCb deny;
@@ -60,6 +61,7 @@ static void
 publish_request_data_free (PublishRequestData *prd)
 {
     g_object_unref (prd->publish);
+    g_free (prd->message);
     g_slice_free (PublishRequestData, prd);
 }
 
@@ -980,6 +982,7 @@ haze_request_authorize (PurpleAccount *account,
     request_data->allow = authorize_cb;
     request_data->deny = deny_cb;
     request_data->data = user_data;
+    request_data->message = g_strdup (message);
 
     g_hash_table_insert (conn->contact_list->priv->pending_publish_requests,
         GUINT_TO_POINTER (remote_handle), request_data);
