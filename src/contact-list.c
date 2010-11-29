@@ -1067,16 +1067,7 @@ haze_contact_list_remove_contact (HazeContactList *self,
   GSList *buddies, *l;
 
   buddies = purple_find_buddies (account, bname);
-
-  if (buddies == NULL)
-    {
-      g_warning("'%s' is in the group mixin for '%s' but not on the "
-              "libpurple blist", bname, account->username);
-      /* This occurring is a bug in haze or libpurple, but I figure
-       * it's better not to explode
-       */
-      return;
-    }
+  /* buddies may be NULL, but that's a perfectly reasonable GSList */
 
   /* Removing a buddy from subscribe entails removing it from all
    * groups since you can't have a buddy without groups in libpurple.
