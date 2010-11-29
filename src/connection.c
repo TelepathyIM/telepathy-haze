@@ -449,11 +449,7 @@ static const char *list_handle_strings[] =
 {
     "subscribe",    /* HAZE_LIST_HANDLE_SUBSCRIBE */
     "publish",      /* HAZE_LIST_HANDLE_PUBLISH */
-#if 0
-    "hide",         /* HAZE_LIST_HANDLE_HIDE */
-    "allow",        /* HAZE_LIST_HANDLE_ALLOW */
-    "deny"          /* HAZE_LIST_HANDLE_DENY */
-#endif
+    "stored",       /* HAZE_LIST_HANDLE_STORED */
     NULL
 };
 

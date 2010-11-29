@@ -32,6 +32,17 @@ def test(q, bus, conn, stream):
     call_async(q, conn.Requests, 'EnsureChannel',{
         cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
         cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
+        cs.TARGET_ID: 'stored',
+        })
+    e = q.expect('dbus-return', method='EnsureChannel')
+    stored = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
+            cs.CHANNEL_TYPE_CONTACT_LIST)
+    jids = set(conn.InspectHandles(cs.HT_CONTACT, stored.Group.GetMembers()))
+    assertEquals(set(), jids)
+
+    call_async(q, conn.Requests, 'EnsureChannel',{
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
         cs.TARGET_ID: 'subscribe',
         })
     e = q.expect('dbus-return', method='EnsureChannel')
@@ -77,11 +88,15 @@ def test(q, bus, conn, stream):
 
     stream.send(iq)
 
-    _, _, new_group = q.expect_many(
+    _, _, _, new_group = q.expect_many(
             EventPattern('stream-iq', iq_type='result',
                 predicate=lambda e: e.stanza['id'] == 'roster-push'),
-            # this isn't really true, but it's the closest we can guess from
-            # libpurple
+            # Alice is genuinely on our server-side roster
+            EventPattern('dbus-signal', signal='MembersChanged',
+                path=stored.object_path,
+                args=['', [alice], [], [], [], 0, cs.GC_REASON_NONE]),
+            # She's not really on our subscribe list, but this is the closest
+            # we can guess from libpurple
             EventPattern('dbus-signal', signal='MembersChanged',
                 path=subscribe.object_path,
                 args=['', [alice], [], [], [], 0, cs.GC_REASON_NONE]),

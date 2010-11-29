@@ -94,6 +94,7 @@ _list_add_member_cb (HazeContactListChannel *chan,
     switch (priv->handle)
     {
         case HAZE_LIST_HANDLE_SUBSCRIBE:
+        case HAZE_LIST_HANDLE_STORED:
             haze_contact_list_request_subscription (conn->contact_list,
                 handle, message);
             return TRUE; /* FIXME: How am I meant to know if it failed? */
@@ -150,6 +151,7 @@ _list_remove_member_cb (HazeContactListChannel *chan,
     switch (priv->handle)
     {
         case HAZE_LIST_HANDLE_SUBSCRIBE:
+        case HAZE_LIST_HANDLE_STORED:
             haze_contact_list_remove_contact (conn->contact_list, handle);
             return TRUE;
 
@@ -251,6 +253,7 @@ haze_contact_list_channel_constructor (GType type, guint n_props,
         case TP_HANDLE_TYPE_LIST:
             switch (priv->handle) {
                 case HAZE_LIST_HANDLE_SUBSCRIBE:
+                case HAZE_LIST_HANDLE_STORED:
                     tp_group_mixin_change_flags (obj,
                             TP_CHANNEL_GROUP_FLAG_CAN_ADD |
                             TP_CHANNEL_GROUP_FLAG_CAN_REMOVE |

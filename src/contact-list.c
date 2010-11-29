@@ -113,7 +113,7 @@ haze_contact_list_init (HazeContactList *self)
 static void haze_contact_list_close_all (HazeContactList *self);
 
 static void _add_initial_buddies (HazeContactList *self,
-    HazeContactListChannel *subscribe);
+    HazeContactListChannel *subscribe, HazeContactListChannel *stored);
 
 static void
 status_changed_cb (HazeConnection *conn,
@@ -128,7 +128,7 @@ status_changed_cb (HazeConnection *conn,
         break;
     case TP_CONNECTION_STATUS_CONNECTED:
         {
-            HazeContactListChannel *subscribe, *publish;
+            HazeContactListChannel *subscribe, *publish, *stored;
 
             /* Ensure contact lists exist before going any further. */
             subscribe = haze_contact_list_get_channel (self,
@@ -136,11 +136,17 @@ status_changed_cb (HazeConnection *conn,
                 NULL, NULL /*created*/);
             g_assert (subscribe != NULL);
 
+            /* Ensure contact lists exist before going any further. */
+            stored = haze_contact_list_get_channel (self,
+                TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_STORED,
+                NULL, NULL /*created*/);
+            g_assert (stored != NULL);
+
             publish = haze_contact_list_get_channel (self, TP_HANDLE_TYPE_LIST,
                     HAZE_LIST_HANDLE_PUBLISH, NULL, NULL /*created*/);
             g_assert (publish != NULL);
 
-            _add_initial_buddies (self, subscribe);
+            _add_initial_buddies (self, subscribe, stored);
         }
         break;
     }
@@ -544,7 +550,7 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (buddy->account);
     HazeContactList *contact_list = conn->contact_list;
     HazeContactListPrivate *priv = contact_list->priv;
-    HazeContactListChannel *subscribe, *group;
+    HazeContactListChannel *subscribe, *stored, *group;
     TpHandleSet *add_handles;
     const char *group_name;
 
@@ -560,8 +566,12 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
 
     subscribe = haze_contact_list_get_channel (contact_list,
         TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_SUBSCRIBE, NULL, NULL);
+    stored = haze_contact_list_get_channel (contact_list,
+        TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_STORED, NULL, NULL);
 
     tp_group_mixin_change_members (G_OBJECT (subscribe), "",
+        tp_handle_set_peek (add_handles), NULL, NULL, NULL, 0, 0);
+    tp_group_mixin_change_members (G_OBJECT (stored), "",
         tp_handle_set_peek (add_handles), NULL, NULL, NULL, 0, 0);
 
     group_name = purple_group_get_name (purple_buddy_get_group (buddy));
@@ -579,7 +589,7 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (buddy->account);
     HazeContactList *contact_list;
     HazeContactListPrivate *priv;
-    HazeContactListChannel *subscribe, *group;
+    HazeContactListChannel *subscribe, *stored, *group;
     TpHandleSet *rem_handles;
     const char *group_name, *buddy_name;
     GSList *buddies, *l;
@@ -614,8 +624,12 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
     {
         subscribe = haze_contact_list_get_channel (contact_list,
             TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_SUBSCRIBE, NULL, NULL);
+        stored = haze_contact_list_get_channel (contact_list,
+            TP_HANDLE_TYPE_LIST, HAZE_LIST_HANDLE_STORED, NULL, NULL);
 
         tp_group_mixin_change_members (G_OBJECT (subscribe), "",
+            NULL, tp_handle_set_peek (rem_handles), NULL, NULL, 0, 0);
+        tp_group_mixin_change_members (G_OBJECT (stored), "",
             NULL, tp_handle_set_peek (rem_handles), NULL, NULL, 0, 0);
     }
 
@@ -705,7 +719,8 @@ _create_initial_group(gchar *group_name,
  */
 static void
 _add_initial_buddies (HazeContactList *self,
-                      HazeContactListChannel *subscribe)
+                      HazeContactListChannel *subscribe,
+                      HazeContactListChannel *stored)
 {
     HazeContactListPrivate *priv = self->priv;
 
@@ -725,6 +740,8 @@ _add_initial_buddies (HazeContactList *self,
     g_slist_free (buddies);
 
     tp_group_mixin_change_members (G_OBJECT (subscribe), "",
+        tp_handle_set_peek (add_handles), NULL, NULL, NULL, 0, 0);
+    tp_group_mixin_change_members (G_OBJECT (stored), "",
         tp_handle_set_peek (add_handles), NULL, NULL, NULL, 0, 0);
 
     g_hash_table_foreach_remove (group_handles, (GHRFunc) _create_initial_group,
