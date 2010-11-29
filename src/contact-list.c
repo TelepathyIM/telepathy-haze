@@ -1137,79 +1137,157 @@ haze_contact_list_add_to_group (HazeContactList *self,
     purple_account_add_buddy (conn->account, buddy);
 }
 
+/* Prepare to @contacts from @group_name. If some of the @contacts are not in
+ * any other group, add them to the fallback group, or if @group_name *is* the
+ * fallback group, fail without doing anything else. */
+static gboolean
+haze_contact_list_prep_remove_from_group (HazeContactList *self,
+    const gchar *group_name,
+    TpHandleSet *contacts,
+    GError **error)
+{
+  HazeConnection *conn = self->priv->conn;
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
+      TP_HANDLE_TYPE_CONTACT);
+  PurpleAccount *account = conn->account;
+  PurpleGroup *group = purple_find_group (group_name);
+  TpIntsetFastIter iter;
+  TpHandle handle;
+  TpHandleSet *orphans;
+
+  /* no such group? that was easy, we "already removed them" */
+  if (group == NULL)
+    return TRUE;
+
+  orphans = tp_handle_set_new (contact_repo);
+
+  tp_intset_fast_iter_init (&iter, tp_handle_set_peek (contacts));
+
+  while (tp_intset_fast_iter_next (&iter, &handle))
+    {
+      gboolean is_in = FALSE;
+      gboolean orphaned = TRUE;
+      GSList *buddies;
+      GSList *l;
+      const gchar *bname =
+          haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT,
+              handle);
+
+      g_assert (bname != NULL);
+
+      buddies = purple_find_buddies (account, bname);
+
+      for (l = buddies; l != NULL; l = l->next)
+        {
+          PurpleGroup *their_group = purple_buddy_get_group (l->data);
+
+          if (their_group == group)
+            is_in = TRUE;
+          else
+            orphaned = FALSE;
+        }
+
+      if (is_in && orphaned)
+        tp_handle_set_add (orphans, handle);
+
+      g_slist_free (buddies);
+    }
+
+  /* If they're in the group and it's their last group, we need to move
+   * them to the fallback group. If the group they're being removed from *is*
+   * the fallback group, we just fail (before we've actually done anything). */
+  if (!tp_handle_set_is_empty (orphans))
+    {
+      PurpleGroup *default_group = purple_group_new (
+          haze_get_fallback_group ());
+
+      if (default_group == group)
+        {
+          g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+              "Contacts can't be removed from '%s' unless they are in "
+              "another group", group->name);
+          return FALSE;
+        }
+
+      tp_intset_fast_iter_init (&iter, tp_handle_set_peek (orphans));
+
+      while (tp_intset_fast_iter_next (&iter, &handle))
+        {
+          const gchar *bname =
+              haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT,
+                  handle);
+
+          PurpleBuddy *copy = purple_buddy_new (conn->account, bname, NULL);
+          purple_blist_add_buddy (copy, NULL, default_group, NULL);
+          purple_account_add_buddy (account, copy);
+        }
+    }
+
+  return TRUE;
+}
+
+/* haze_contact_list_prep_remove_from_group() must succeed first. */
+static void
+haze_contact_list_remove_many_from_group (HazeContactList *self,
+    const gchar *group_name,
+    TpHandleSet *contacts)
+{
+  PurpleAccount *account = self->priv->conn->account;
+  PurpleGroup *group = purple_find_group (group_name);
+  TpIntsetFastIter iter;
+  TpHandle handle;
+
+  if (group == NULL)
+    return;
+
+  tp_intset_fast_iter_init (&iter, tp_handle_set_peek (contacts));
+
+  while (tp_intset_fast_iter_next (&iter, &handle))
+    {
+      GSList *buddies;
+      GSList *l;
+      const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
+          TP_HANDLE_TYPE_CONTACT, handle);
+
+      buddies = purple_find_buddies (account, bname);
+
+      /* See if the buddy was in the group more than once, since this is
+       * possible in libpurple... */
+      for (l = buddies; l != NULL; l = l->next)
+        {
+          PurpleGroup *their_group = purple_buddy_get_group (l->data);
+
+          if (their_group == group)
+            {
+              purple_account_remove_buddy (account, l->data, group);
+              purple_blist_remove_buddy (l->data);
+            }
+        }
+    }
+}
+
 gboolean
 haze_contact_list_remove_from_group (HazeContactList *self,
     const gchar *group_name,
     TpHandle handle,
     GError **error)
 {
-    HazeConnection *conn = self->priv->conn;
-    PurpleAccount *account = conn->account;
-    const gchar *bname =
-        haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
-    GSList *buddies;
-    GSList *l;
-    gboolean is_in = FALSE;
-    gboolean orphaned = TRUE;
-    gboolean ret = TRUE;
-    PurpleGroup *group = purple_find_group (group_name);
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->conn);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
+      TP_HANDLE_TYPE_CONTACT);
+  gboolean ok;
+  TpHandleSet *contacts = tp_handle_set_new_containing (contact_repo, handle);
 
-    /* no such group? that was easy, we "already removed them" */
-    if (group == NULL)
-      return TRUE;
+  ok = haze_contact_list_prep_remove_from_group (self, group_name, contacts,
+      error);
 
-    buddies = purple_find_buddies (account, bname);
+  if (ok)
+    haze_contact_list_remove_many_from_group (self, group_name, contacts);
 
-    for (l = buddies; l != NULL; l = l->next)
-      {
-        PurpleGroup *their_group = purple_buddy_get_group (l->data);
+  tp_handle_set_destroy (contacts);
+  return ok;
 
-        if (their_group == group)
-          is_in = TRUE;
-        else
-          orphaned = FALSE;
-      }
 
-    /* not in the group? that was easy, we "already removed them" */
-    if (!is_in)
-      return TRUE;
 
-    if (orphaned)
-      {
-        /* the contact needs to be copied to the default group first */
-        PurpleGroup *default_group = purple_group_new (
-            haze_get_fallback_group ());
-        PurpleBuddy *copy;
-
-        if (default_group == group)
-          {
-            /* we could make them bounce back, but that'd be insane */
-            g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-                "Contacts can't be removed from '%s' unless they are in "
-                "another group", group->name);
-            ret = FALSE;
-            goto finally;
-          }
-
-        copy = purple_buddy_new (conn->account, bname, NULL);
-        purple_blist_add_buddy (copy, NULL, default_group, NULL);
-        purple_account_add_buddy (account, copy);
-      }
-
-    /* See if the buddy was in the group more than once, since this is
-     * possible in libpurple... */
-    for (l = buddies; l != NULL; l = l->next)
-      {
-        PurpleGroup *their_group = purple_buddy_get_group (l->data);
-
-        if (their_group == group)
-          {
-            purple_account_remove_buddy (account, l->data, group);
-            purple_blist_remove_buddy (l->data);
-          }
-      }
-
-finally:
-    g_slist_free (buddies);
-    return ret;
 }
