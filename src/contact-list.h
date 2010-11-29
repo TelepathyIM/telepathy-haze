@@ -22,6 +22,8 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/base-contact-list.h>
+
 #include "contact-list-channel.h"
 
 G_BEGIN_DECLS
