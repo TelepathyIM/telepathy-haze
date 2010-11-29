@@ -1081,6 +1081,9 @@ haze_contact_list_remove_contact (HazeContactList *self,
       purple_blist_remove_buddy (buddy);
     }
 
+  /* Also decline any publication requests we might have had */
+  haze_contact_list_reject_publish_request (self, handle);
+
   g_slist_free (buddies);
 }
 
