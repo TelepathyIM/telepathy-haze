@@ -17,6 +17,7 @@ def test(q, bus, conn, stream):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged',
             args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
+    self_handle = conn.GetSelfHandle()
 
     # Close all Group channels to get a clean slate, so we can rely on
     # the NewChannels signal for the default group later
@@ -135,7 +136,7 @@ def test(q, bus, conn, stream):
                 query_ns=ns.ROSTER),
             EventPattern('dbus-signal', signal='MembersChanged',
                 path=scots.object_path,
-                args=['', [duncan], [], [], [], 0, cs.GC_REASON_NONE]),
+                args=['', [duncan], [], [], [], self_handle, cs.GC_REASON_NONE]),
             EventPattern('dbus-return', method='AddMembers'),
             )
     assertEquals('duncan@scotland.lit', iq.stanza.query.item['jid'])
@@ -152,7 +153,7 @@ def test(q, bus, conn, stream):
                 query_ns=ns.ROSTER),
             EventPattern('dbus-signal', signal='MembersChanged',
                 path=default_group.object_path,
-                args=['', [], [duncan], [], [], 0, cs.GC_REASON_NONE]),
+                args=['', [], [duncan], [], [], self_handle, cs.GC_REASON_NONE]),
             EventPattern('dbus-return', method='RemoveMembers'),
             )
     assertEquals('duncan@scotland.lit', iq.stanza.query.item['jid'])
@@ -172,10 +173,10 @@ def test(q, bus, conn, stream):
                 query_ns=ns.ROSTER),
             EventPattern('dbus-signal', signal='MembersChanged',
                 path=still_alive.object_path,
-                args=['', [], [romeo], [], [], 0, cs.GC_REASON_NONE]),
+                args=['', [], [romeo], [], [], self_handle, cs.GC_REASON_NONE]),
             EventPattern('dbus-signal', signal='MembersChanged',
                 path=default_group.object_path,
-                args=['', [romeo], [], [], [], 0, cs.GC_REASON_NONE]),
+                args=['', [romeo], [], [], [], self_handle, cs.GC_REASON_NONE]),
             EventPattern('dbus-return', method='RemoveMembers'),
             )
 
@@ -200,7 +201,7 @@ def test(q, bus, conn, stream):
                 query_ns=ns.ROSTER),
             EventPattern('dbus-signal', signal='MembersChanged',
                 path=still_alive.object_path,
-                args=['', [], [juliet], [], [], 0, cs.GC_REASON_NONE]),
+                args=['', [], [juliet], [], [], self_handle, cs.GC_REASON_NONE]),
             EventPattern('dbus-return', method='RemoveMembers'),
             )
     assertEquals('juliet@capulet.lit', iq.stanza.query.item['jid'])

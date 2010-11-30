@@ -27,7 +27,6 @@
 #include <telepathy-glib/dbus-properties-mixin.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/handle-repo-dynamic.h>
-#include <telepathy-glib/handle-repo-static.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/svc-generic.h>
 
@@ -42,7 +41,6 @@
 #include "connection-aliasing.h"
 #include "connection-avatars.h"
 #include "connection-mail.h"
-#include "contact-list-channel.h"
 #include "extensions/extensions.h"
 
 #include "connection-capabilities.h"
@@ -81,6 +79,10 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_capabilities_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
         tp_contacts_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_LIST,
+        tp_base_contact_list_mixin_list_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_GROUPS,
+        tp_base_contact_list_mixin_groups_iface_init);
     G_IMPLEMENT_INTERFACE (HAZE_TYPE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
         haze_connection_mail_iface_init);
     );
@@ -94,6 +96,8 @@ static const gchar * implemented_interfaces[] = {
 
     /* Always present */
 
+    TP_IFACE_CONNECTION_INTERFACE_CONTACT_LIST,
+    TP_IFACE_CONNECTION_INTERFACE_CONTACT_GROUPS,
     TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
@@ -153,6 +157,9 @@ connected_cb (PurpleConnection *pc)
             NULL };
         tp_base_connection_add_interfaces (base_conn, avatar_ifaces);
     }
+
+    tp_base_contact_list_set_list_received (
+        (TpBaseContactList *) conn->contact_list);
 
     tp_base_connection_change_status (base_conn,
         TP_CONNECTION_STATUS_CONNECTED,
@@ -444,15 +451,6 @@ _haze_connection_shut_down (TpBaseConnection *base)
     }
 }
 
-/* Must be in the same order as HazeListHandle in connection.h */
-static const char *list_handle_strings[] =
-{
-    "subscribe",    /* HAZE_LIST_HANDLE_SUBSCRIBE */
-    "publish",      /* HAZE_LIST_HANDLE_PUBLISH */
-    "stored",       /* HAZE_LIST_HANDLE_STORED */
-    NULL
-};
-
 static gchar*
 _contact_normalize (TpHandleRepoIface *repo,
                     const gchar *id,
@@ -472,10 +470,6 @@ _haze_connection_create_handle_repos (TpBaseConnection *base,
         tp_dynamic_handle_repo_new (TP_HANDLE_TYPE_CONTACT, _contact_normalize,
                                     base);
     /* repos[TP_HANDLE_TYPE_ROOM] = XXX MUC */
-    repos[TP_HANDLE_TYPE_GROUP] =
-        tp_dynamic_handle_repo_new (TP_HANDLE_TYPE_GROUP, NULL, NULL);
-    repos[TP_HANDLE_TYPE_LIST] =
-        tp_static_handle_repo_new (TP_HANDLE_TYPE_LIST, list_handle_strings);
 }
 
 static GPtrArray *
@@ -584,6 +578,7 @@ haze_connection_constructor (GType type,
     HazeConnection *self = HAZE_CONNECTION (
             G_OBJECT_CLASS (haze_connection_parent_class)->constructor (
                 type, n_construct_properties, construct_params));
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (self);
     GObject *object = (GObject *) self;
     HazeConnectionPrivate *priv = self->priv;
 
@@ -597,8 +592,8 @@ haze_connection_constructor (GType type,
 
     tp_contacts_mixin_init (object,
         G_STRUCT_OFFSET (HazeConnection, contacts));
-    tp_base_connection_register_with_contacts_mixin (
-        TP_BASE_CONNECTION (self));
+    tp_base_connection_register_with_contacts_mixin (base_conn);
+    tp_base_contact_list_mixin_register_with_contacts_mixin (base_conn);
 
     haze_connection_aliasing_init (object);
     haze_connection_avatars_init (object);
@@ -728,6 +723,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
 
     tp_contacts_mixin_class_init (object_class,
         G_STRUCT_OFFSET (HazeConnectionClass, contacts_class));
+    tp_base_contact_list_mixin_class_init (base_class);
 
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);

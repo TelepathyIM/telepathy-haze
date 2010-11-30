@@ -65,9 +65,20 @@ def test(q, bus, conn, stream):
     stream.send(presence)
 
     # it seems either libpurple or haze doesn't pass the message through
-    q.expect('dbus-signal', path=publish.object_path,
-            args=['', [], [], [alice], [], alice,
-                cs.GC_REASON_NONE])
+    q.expect_many(
+            EventPattern('dbus-signal', path=publish.object_path,
+                args=['', [], [], [alice], [], alice,
+                    cs.GC_REASON_NONE]),
+            # In the Conn.I.ContactList world, 'stored' has been
+            # re-purposed to mean "we have some reason to care", so she
+            # appears here even though she's not on the server-side roster
+            # just yet
+            EventPattern('dbus-signal', signal='MembersChanged',
+                path=stored.object_path,
+                args=['', [alice], [], [], [], 0, cs.GC_REASON_NONE]),
+            )
+
+    self_handle = conn.GetSelfHandle()
 
     # accept
     call_async(q, publish.Group, 'AddMembers', [alice], '')
@@ -77,7 +88,7 @@ def test(q, bus, conn, stream):
                 to='alice@wonderland.lit'),
             EventPattern('dbus-signal', signal='MembersChanged',
                 path=publish.object_path,
-                args=['', [alice], [], [], [], conn.GetSelfHandle(),
+                args=['', [alice], [], [], [], self_handle,
                     cs.GC_REASON_NONE]),
             EventPattern('dbus-return', method='AddMembers'),
             )
@@ -92,18 +103,16 @@ def test(q, bus, conn, stream):
 
     stream.send(iq)
 
-    _, _, _, new_group = q.expect_many(
+    _, _, new_group = q.expect_many(
             EventPattern('stream-iq', iq_type='result',
                 predicate=lambda e: e.stanza['id'] == 'roster-push'),
-            # Alice is genuinely on our server-side roster
-            EventPattern('dbus-signal', signal='MembersChanged',
-                path=stored.object_path,
-                args=['', [alice], [], [], [], 0, cs.GC_REASON_NONE]),
             # She's not really on our subscribe list, but this is the closest
             # we can guess from libpurple
+            # FIXME: TpBaseContactList assumes she's the actor - she must have
+            # accepted our request, right? Not actually true in libpurple.
             EventPattern('dbus-signal', signal='MembersChanged',
                 path=subscribe.object_path,
-                args=['', [alice], [], [], [], 0, cs.GC_REASON_NONE]),
+                args=['', [alice], [], [], [], alice, cs.GC_REASON_NONE]),
             # the buddy needs a group, because libpurple
             EventPattern('dbus-signal', signal='NewChannels',
                 predicate=lambda e:
@@ -141,8 +150,7 @@ def test(q, bus, conn, stream):
                 to='queen.of.hearts@wonderland.lit'),
             EventPattern('dbus-signal', signal='MembersChanged',
                 path=publish.object_path,
-                args=['', [], [queen], [], [], conn.GetSelfHandle(),
-                    cs.GC_REASON_NONE]),
+                args=['', [], [queen], [], [], 0, cs.GC_REASON_NONE]),
             EventPattern('dbus-return', method='RemoveMembers'),
             )
 

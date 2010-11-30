@@ -35,14 +35,6 @@
 
 G_BEGIN_DECLS
 
-/* Must be in the same order as list_handle_strings in connection.c */
-typedef enum
-{
-    HAZE_LIST_HANDLE_SUBSCRIBE = 1,
-    HAZE_LIST_HANDLE_PUBLISH,
-    HAZE_LIST_HANDLE_STORED,
-} HazeListHandle;
-
 typedef struct _HazeConnection HazeConnection;
 typedef struct _HazeConnectionPrivate HazeConnectionPrivate;
 typedef struct _HazeConnectionClass HazeConnectionClass;
