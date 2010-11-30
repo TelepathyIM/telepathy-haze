@@ -792,3 +792,13 @@ def make_presence(_from, to='test@localhost', type=None, show=None,
         x.addElement('photo').addContent(photo)
 
     return presence
+
+def close_all_groups(q, bus, conn, stream):
+    channels = conn.Properties.Get(cs.CONN_IFACE_REQUESTS, 'Channels')
+    for path, props in channels:
+        if props.get(cs.CHANNEL_TYPE) != cs.CHANNEL_TYPE_CONTACT_LIST:
+            continue
+        if props.get(cs.TARGET_HANDLE_TYPE) != cs.HT_GROUP:
+            continue
+        wrap_channel(bus.get_object(conn.bus_name, path),
+                cs.CHANNEL_TYPE_CONTACT_LIST).Close()

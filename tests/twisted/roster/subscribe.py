@@ -8,7 +8,7 @@ from twisted.words.xish import domish
 
 from servicetest import (EventPattern, wrap_channel, assertLength,
         assertEquals, call_async, sync_dbus)
-from hazetest import acknowledge_iq, exec_test, sync_stream
+from hazetest import acknowledge_iq, exec_test, sync_stream, close_all_groups
 import constants as cs
 import ns
 
@@ -16,6 +16,10 @@ def test(q, bus, conn, stream):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged',
             args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
+
+    # Close all Group channels to get a clean slate, so we can rely on
+    # the NewChannels signal for the default group later
+    close_all_groups(q, bus, conn, stream)
 
     call_async(q, conn.Requests, 'EnsureChannel',{
         cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
