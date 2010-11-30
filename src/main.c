@@ -233,6 +233,9 @@ get_cm (void)
     fatal_mask &= ~G_LOG_LEVEL_CRITICAL;
     g_log_set_always_fatal (fatal_mask);
 
+    g_log_set_fatal_mask ("tp-glib",
+        g_log_set_fatal_mask ("tp-glib", 0) | G_LOG_LEVEL_CRITICAL);
+
     return (TpBaseConnectionManager *) g_object_new (HAZE_TYPE_CONNECTION_MANAGER, NULL);
 }
 
