@@ -631,7 +631,7 @@ haze_contact_list_remove_contacts_async (TpBaseContactList *cl,
     haze_contact_list_remove_contact (self, handle);
 
   tp_simple_async_report_success_in_idle ((GObject *) self, callback,
-      user_data, haze_contact_list_request_subscription_async);
+      user_data, haze_contact_list_remove_contacts_async);
 }
 
 void
