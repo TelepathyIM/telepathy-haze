@@ -50,18 +50,17 @@ def test(q, bus, conn, stream):
     q.expect('dbus-signal', signal='StatusChanged',
             args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
 
-    # there is no 'stored' yet; when it exists, it should have Amy, Bob and
-    # Chris
-    #call_async(q, conn.Requests, 'EnsureChannel',{
-    #    cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-    #    cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
-    #    cs.TARGET_ID: 'stored',
-    #    })
-    #e = q.expect('dbus-return', method='EnsureChannel')
-    #stored = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
-    #        cs.CHANNEL_TYPE_CONTACT_LIST)
-    #jids = set(conn.InspectHandles(cs.HT_CONTACT, stored.Group.GetMembers()))
-    #assertEquals(set(['amy@foo.com', 'bob@foo.com', 'chris@foo.com']), jids)
+    # Amy, Bob and Chris are all stored on our server-side roster
+    call_async(q, conn.Requests, 'EnsureChannel',{
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
+        cs.TARGET_ID: 'stored',
+        })
+    e = q.expect('dbus-return', method='EnsureChannel')
+    stored = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
+            cs.CHANNEL_TYPE_CONTACT_LIST)
+    jids = set(conn.InspectHandles(cs.HT_CONTACT, stored.Group.GetMembers()))
+    assertEquals(set(['amy@foo.com', 'bob@foo.com', 'chris@foo.com']), jids)
 
     call_async(q, conn.Requests, 'EnsureChannel',{
         cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,

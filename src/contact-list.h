@@ -22,7 +22,7 @@
 
 #include <glib-object.h>
 
-#include "contact-list-channel.h"
+#include <telepathy-glib/base-contact-list.h>
 
 G_BEGIN_DECLS
 
@@ -31,11 +31,11 @@ typedef struct _HazeContactListClass HazeContactListClass;
 typedef struct _HazeContactListPrivate HazeContactListPrivate;
 
 struct _HazeContactListClass {
-    GObjectClass parent_class;
+    TpBaseContactListClass parent_class;
 };
 
 struct _HazeContactList {
-    GObject parent;
+    TpBaseContactList parent;
     HazeContactListPrivate *priv;
 };
 
@@ -59,10 +59,6 @@ GType haze_contact_list_get_type (void);
                               HazeContactListClass))
 
 G_END_DECLS
-
-HazeContactListChannel *haze_contact_list_get_channel (HazeContactList *self,
-    guint handle_type, TpHandle handle, gpointer request_token,
-    gboolean *created);
 
 gpointer haze_request_authorize (PurpleAccount *account,
     const char *remote_user, const char *id, const char *alias,

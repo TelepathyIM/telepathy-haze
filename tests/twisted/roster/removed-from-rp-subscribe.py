@@ -29,6 +29,15 @@ def test(q, bus, conn, stream, remove, local):
     call_async(q, conn.Requests, 'EnsureChannel',{
         cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
         cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
+        cs.TARGET_ID: 'stored',
+        })
+    e = q.expect('dbus-return', method='EnsureChannel')
+    stored = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
+            cs.CHANNEL_TYPE_CONTACT_LIST)
+
+    call_async(q, conn.Requests, 'EnsureChannel',{
+        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
+        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
         cs.TARGET_ID: 'publish',
         })
     e = q.expect('dbus-return', method='EnsureChannel')
@@ -58,9 +67,13 @@ def test(q, bus, conn, stream, remove, local):
     stream.send(iq)
 
     # In response, Haze adds Marco to the roster, which we guess (wrongly,
-    # in this case) means subscribe
-    q.expect('dbus-signal', signal='MembersChanged',
-        args=['', [h], [], [], [], 0, 0], path=subscribe.object_path)
+    # in this case) also means subscribe
+    q.expect_many(
+            EventPattern('dbus-signal', signal='MembersChanged',
+                args=['', [h], [], [], [], h, 0], path=subscribe.object_path),
+            EventPattern('dbus-signal', signal='MembersChanged',
+                args=['', [h], [], [], [], 0, 0], path=stored.object_path),
+            )
 
     # Gajim sends a <presence type='subscribe'/> to Marco. 'As a result, the
     # user's server MUST initiate a second roster push to all of the user's
@@ -81,9 +94,8 @@ def test(q, bus, conn, stream, remove, local):
     if remove:
         # ...removes him from the roster...
         if local:
-            # ...by telling Haze to remove him from subscribe (which is
-            # really more like stored)
-            subscribe.Group.RemoveMembers([h], '')
+            # ...by telling Haze to remove him from stored
+            stored.Group.RemoveMembers([h], '')
 
             event = q.expect('stream-iq', iq_type='set', query_ns=ns.ROSTER)
             item = event.query.firstChildElement()
@@ -107,12 +119,14 @@ def test(q, bus, conn, stream, remove, local):
         stream.send(iq)
 
         # In response, Haze should announce that Marco has been removed from
-        # subscribe:remote-pending and stored:members: but it has no stored
-        # channel.
+        # subscribe:remote-pending and stored:members
         q.expect_many(
             EventPattern('dbus-signal', signal='MembersChanged',
                 args=['', [], [h], [], [], 0, 0],
                 path=subscribe.object_path),
+            EventPattern('dbus-signal', signal='MembersChanged',
+                args=['', [], [h], [], [], 0, 0],
+                path=stored.object_path),
             )
     else:
         # ...rescinds the subscription request...

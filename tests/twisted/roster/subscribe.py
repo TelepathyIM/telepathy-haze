@@ -8,7 +8,7 @@ from twisted.words.xish import domish
 
 from servicetest import (EventPattern, wrap_channel, assertLength,
         assertEquals, call_async, sync_dbus)
-from hazetest import acknowledge_iq, exec_test, sync_stream
+from hazetest import acknowledge_iq, exec_test, sync_stream, close_all_groups
 import constants as cs
 import ns
 
@@ -16,6 +16,11 @@ def test(q, bus, conn, stream):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged',
             args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
+    self_handle = conn.GetSelfHandle()
+
+    # Close all Group channels to get a clean slate, so we can rely on
+    # the NewChannels signal for the default group later
+    close_all_groups(q, bus, conn, stream)
 
     call_async(q, conn.Requests, 'EnsureChannel',{
         cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
@@ -44,9 +49,11 @@ def test(q, bus, conn, stream):
             EventPattern('stream-presence', presence_type='subscribe',
                 to='suggs@night.boat.cairo'),
             EventPattern('dbus-return', method='AddMembers', value=()),
+            # FIXME: TpBaseContactList wrongly assumes that he's the actor,
+            # because he must have accepted our request... right? Wrong.
             EventPattern('dbus-signal', signal='MembersChanged',
                 path=subscribe.object_path,
-                args=['', [handle], [], [], [], 0, 0]),
+                args=['', [handle], [], [], [], handle, 0]),
             EventPattern('dbus-signal', signal='NewChannels',
                 predicate=lambda e:
                     e.args[0][0][1].get(cs.TARGET_HANDLE_TYPE) == cs.HT_GROUP),
@@ -85,10 +92,10 @@ def test(q, bus, conn, stream):
             EventPattern('dbus-return', method='AddMembers', value=()),
             EventPattern('dbus-signal', signal='MembersChanged',
                 path=subscribe.object_path,
-                args=['', [handle], [], [], [], 0, 0]),
+                args=['', [handle], [], [], [], handle, 0]),
             EventPattern('dbus-signal', signal='MembersChanged',
                 path=def_group.object_path,
-                args=['', [handle], [], [], [], 0, 0]),
+                args=['', [handle], [], [], [], self_handle, 0]),
             )
 
     acknowledge_iq(stream, set_iq.stanza)
