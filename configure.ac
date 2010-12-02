@@ -72,7 +72,7 @@ AC_ARG_ENABLE(leaky-request-stubs,
 AC_SUBST(ENABLE_LEAKY_REQUEST_STUBS)
 
 PKG_CHECK_MODULES(PURPLE,[purple >= 2.7])
-PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.11.16])
+PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.13.8])
 PKG_CHECK_MODULES(GLIB,[glib-2.0 >= 2.22, gobject-2.0, gio-2.0])
 PKG_CHECK_MODULES(DBUS_GLIB,[dbus-glib-1 >= 0.73])
 
