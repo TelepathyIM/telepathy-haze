@@ -542,7 +542,7 @@ haze_protocol_get_parameters (TpBaseProtocol *protocol)
           (gpointer) "account", NULL };
     TpCMParamSpec password_spec =
         { "password", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
-          TP_CONN_MGR_PARAM_FLAG_REQUIRED | TP_CONN_MGR_PARAM_FLAG_SECRET,
+          TP_CONN_MGR_PARAM_FLAG_SECRET,
           NULL, 0, NULL, NULL,
           (gpointer) "password", NULL };
     GArray *paramspecs;
@@ -563,11 +563,7 @@ haze_protocol_get_parameters (TpBaseProtocol *protocol)
 
     /* Password parameter: */
     if (!(self->priv->prpl_info->options & OPT_PROTO_NO_PASSWORD))
-    {
-        if (self->priv->prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL)
-            password_spec.flags &= ~TP_CONN_MGR_PARAM_FLAG_REQUIRED;
-        g_array_append_val (paramspecs, password_spec);
-    }
+      g_array_append_val (paramspecs, password_spec);
 
     for (opts = self->priv->prpl_info->protocol_options;
         opts != NULL;
