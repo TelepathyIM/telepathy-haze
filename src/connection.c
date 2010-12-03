@@ -507,11 +507,19 @@ _haze_connection_shut_down (TpBaseConnection *base)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
     HazeConnectionPrivate *priv = self->priv;
+
     if(!priv->disconnecting && priv->connect_called)
-    {
+      {
         priv->disconnecting = TRUE;
         purple_account_disconnect(self->account);
-    }
+      }
+    else if (!priv->connect_called)
+      {
+        /* purple_account_connect was never actually called, so we
+         * won't get to disconnected_cb and so finish_shutdown won't
+         * be called unless we call it here. */
+        tp_base_connection_finish_shutdown (base);
+      }
 }
 
 static gchar*
