@@ -942,6 +942,17 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
     }
 }
 
+static GStrv
+haze_protocol_dup_authentication_types (TpBaseProtocol *base)
+{
+  static const gchar *types[] = {
+    TP_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION,
+    NULL
+  };
+
+  return g_strdupv ((GStrv) types);
+}
+
 static void
 haze_protocol_class_init (HazeProtocolClass *cls)
 {
@@ -955,6 +966,8 @@ haze_protocol_class_init (HazeProtocolClass *cls)
   base_class->identify_account = haze_protocol_identify_account;
   base_class->get_interfaces = haze_protocol_get_interfaces;
   base_class->get_connection_details = haze_protocol_get_connection_details;
+  base_class->dup_authentication_types =
+    haze_protocol_dup_authentication_types;
 
   g_type_class_add_private (cls, sizeof (HazeProtocolPrivate));
   object_class->get_property = haze_protocol_get_property;
