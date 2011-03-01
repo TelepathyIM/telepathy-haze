@@ -768,9 +768,9 @@ _make_message (HazeIMChannel *self,
    *        or the test are broken.
    */
   if (flags & PURPLE_MESSAGE_DELAYED || mtime != now)
-    tp_message_set_uint64 (message, 0, "message-sent", mtime);
+    tp_message_set_int64 (message, 0, "message-sent", mtime);
 
-  tp_message_set_uint64 (message, 0, "message-received", now);
+  tp_message_set_int64 (message, 0, "message-received", now);
 
   /* Body */
   tp_message_set_string (message, 1, "content-type", "text/plain");
