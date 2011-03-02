@@ -1,7 +1,25 @@
 telepathy-haze 0.5.0 (UNRELEASED)
 =================================
 
-…
+Enhancements:
+
+ • fd.o #19902: use TpBaseContactList to implement Conn.I.ContactList,
+   Conn.I.ContactGroups, and the stored list (smcv)
+
+Fixes:
+
+ • haze no longer ships with a manager file. (jonny)
+
+ • Map PURPLE_CONNECTION_ERROR_OTHER_ERROR to AuthenticationFailed,
+   since it's used for errors like being temporarily banned from the
+   ICQ server, which should result in Mission Control not trying to
+   reconnect (wjt)
+
+ • fd.o #31846: translate the Jabber connection_security parameter in
+   newer libpurple versions into two booleans, old-ssl and
+   require-encryption (smcv)
+
+ • fd.o #26155: make telepathy-glib criticals fatal by default (smcv)
 
 telepathy-haze 0.4.0 (2010-08-05)
 =================================

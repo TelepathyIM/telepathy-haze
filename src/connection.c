@@ -27,7 +27,6 @@
 #include <telepathy-glib/dbus-properties-mixin.h>
 #include <telepathy-glib/errors.h>
 #include <telepathy-glib/handle-repo-dynamic.h>
-#include <telepathy-glib/handle-repo-static.h>
 #include <telepathy-glib/interfaces.h>
 #include <telepathy-glib/svc-generic.h>
 
@@ -42,7 +41,6 @@
 #include "connection-aliasing.h"
 #include "connection-avatars.h"
 #include "connection-mail.h"
-#include "contact-list-channel.h"
 #include "extensions/extensions.h"
 
 #include "connection-capabilities.h"
@@ -81,6 +79,10 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_capabilities_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
         tp_contacts_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_LIST,
+        tp_base_contact_list_mixin_list_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_GROUPS,
+        tp_base_contact_list_mixin_groups_iface_init);
     G_IMPLEMENT_INTERFACE (HAZE_TYPE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
         haze_connection_mail_iface_init);
     );
@@ -94,6 +96,8 @@ static const gchar * implemented_interfaces[] = {
 
     /* Always present */
 
+    TP_IFACE_CONNECTION_INTERFACE_CONTACT_LIST,
+    TP_IFACE_CONNECTION_INTERFACE_CONTACT_GROUPS,
     TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
@@ -133,6 +137,9 @@ struct _HazeConnectionPrivate
      */
     gboolean disconnecting;
 
+    /* Set to TRUE when purple_account_connect has been called. */
+    gboolean connect_called;
+
     gboolean dispose_has_run;
 };
 
@@ -154,9 +161,109 @@ connected_cb (PurpleConnection *pc)
         tp_base_connection_add_interfaces (base_conn, avatar_ifaces);
     }
 
+    tp_base_contact_list_set_list_received (
+        (TpBaseContactList *) conn->contact_list);
+
     tp_base_connection_change_status (base_conn,
         TP_CONNECTION_STATUS_CONNECTED,
         TP_CONNECTION_STATUS_REASON_REQUESTED);
+}
+
+static void
+map_purple_error_to_tp (
+    PurpleConnectionError purple_reason,
+    gboolean while_connecting,
+    TpConnectionStatusReason *tp_reason,
+    const gchar **tp_error_name)
+{
+  g_assert (tp_reason != NULL);
+  g_assert (tp_error_name != NULL);
+
+#define set_both(suffix) \
+  G_STMT_START { \
+    *tp_reason = TP_CONNECTION_STATUS_REASON_ ## suffix; \
+    *tp_error_name = TP_ERROR_STR_ ## suffix; \
+  } G_STMT_END
+
+#define trivial_case(suffix) \
+  case PURPLE_CONNECTION_ERROR_ ## suffix: \
+    set_both (suffix); \
+    break;
+
+  switch (purple_reason)
+    {
+      case PURPLE_CONNECTION_ERROR_NETWORK_ERROR:
+        if (while_connecting)
+          *tp_error_name = TP_ERROR_STR_CONNECTION_FAILED;
+        else
+          *tp_error_name = TP_ERROR_STR_CONNECTION_LOST;
+
+        *tp_reason = TP_CONNECTION_STATUS_REASON_NETWORK_ERROR;
+        break;
+
+      case PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED:
+      case PURPLE_CONNECTION_ERROR_INVALID_USERNAME:
+      /* TODO: the following don't really match the tp reason but it's the
+       * nearest match.  Invalid settings shouldn't get this far in the first
+       * place, and we ought to have some code for having no authentication
+       * mechanisms in common with the server. But the latter is currently a
+       * moot point since libpurple doesn't use this anywhere besides Jabber.
+       */
+      case PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE:
+      case PURPLE_CONNECTION_ERROR_INVALID_SETTINGS:
+
+      /* TODO: This is not a very useful error. But it's fatal in libpurple —
+       * it's used for things like the ICQ server telling you that you're
+       * temporarily banned—so should map to a fatal error in Telepathy.
+       *
+       * We ought really to have an error case for unrecoverable server errors
+       * where the best we can do is present a human-readable error from the
+       * server.
+       */
+      case PURPLE_CONNECTION_ERROR_OTHER_ERROR:
+        set_both (AUTHENTICATION_FAILED);
+        break;
+
+      case PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT:
+        *tp_reason = TP_CONNECTION_STATUS_REASON_ENCRYPTION_ERROR;
+        *tp_error_name = TP_ERROR_STR_ENCRYPTION_NOT_AVAILABLE;
+        break;
+
+      case PURPLE_CONNECTION_ERROR_NAME_IN_USE:
+        if (while_connecting)
+          *tp_error_name = TP_ERROR_STR_ALREADY_CONNECTED;
+        else
+          *tp_error_name = TP_ERROR_STR_CONNECTION_REPLACED;
+
+        *tp_reason = TP_CONNECTION_STATUS_REASON_NAME_IN_USE;
+        break;
+
+      case PURPLE_CONNECTION_ERROR_CERT_OTHER_ERROR:
+        *tp_reason = TP_CONNECTION_STATUS_REASON_CERT_OTHER_ERROR;
+        *tp_error_name = TP_ERROR_STR_CERT_INVALID;
+        break;
+
+      /* These members of the libpurple enum map 1-1 to the Telepathy enum and
+       * to similarly-named D-Bus error names.
+       */
+      trivial_case (ENCRYPTION_ERROR)
+      trivial_case (CERT_NOT_PROVIDED)
+      trivial_case (CERT_UNTRUSTED)
+      trivial_case (CERT_EXPIRED)
+      trivial_case (CERT_NOT_ACTIVATED)
+      trivial_case (CERT_HOSTNAME_MISMATCH)
+      trivial_case (CERT_FINGERPRINT_MISMATCH)
+      trivial_case (CERT_SELF_SIGNED)
+
+      default:
+        g_warning ("report_disconnect_cb: invalid PurpleDisconnectReason %u",
+            purple_reason);
+        *tp_reason = TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED;
+        *tp_error_name = TP_ERROR_STR_DISCONNECTED;
+    }
+
+#undef trivial_case
+#undef set_both
 }
 
 static void
@@ -164,76 +271,26 @@ haze_report_disconnect_reason (PurpleConnection *gc,
                                PurpleConnectionError reason,
                                const char *text)
 {
-    PurpleAccount *account = purple_connection_get_account (gc);
-    HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
-    HazeConnectionPrivate *priv = conn->priv;
-    TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
+  PurpleAccount *account = purple_connection_get_account (gc);
+  HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
+  HazeConnectionPrivate *priv = conn->priv;
+  TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
+  GHashTable *details;
+  TpConnectionStatusReason tp_reason;
+  const gchar *tp_error_name;
 
-    TpConnectionStatusReason tp_reason;
+  /* When a connection error is reported by libpurple, an idle callback to
+   * purple_account_disconnect is added.
+   */
+  priv->disconnecting = TRUE;
 
-    /* When a connection error is reported by libpurple, an idle callback to
-     * purple_account_disconnect is added.
-     */
-    priv->disconnecting = TRUE;
-
-    switch (reason)
-    {
-        case PURPLE_CONNECTION_ERROR_NETWORK_ERROR:
-        /* TODO: this isn't the right mapping.  should this map to
-         *       NoneSpecified?
-         */
-        case PURPLE_CONNECTION_ERROR_OTHER_ERROR:
-            tp_reason = TP_CONNECTION_STATUS_REASON_NETWORK_ERROR;
-            break;
-        case PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED:
-        case PURPLE_CONNECTION_ERROR_INVALID_USERNAME:
-        /* TODO: the following don't really match the tp reason but it's
-         *       the nearest match.  Invalid settings shouldn't exist in the
-         *       first place.
-         */
-        case PURPLE_CONNECTION_ERROR_AUTHENTICATION_IMPOSSIBLE:
-        case PURPLE_CONNECTION_ERROR_INVALID_SETTINGS:
-            tp_reason = TP_CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED;
-            break;
-        case PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT:
-        case PURPLE_CONNECTION_ERROR_ENCRYPTION_ERROR:
-            tp_reason = TP_CONNECTION_STATUS_REASON_ENCRYPTION_ERROR;
-            break;
-        case PURPLE_CONNECTION_ERROR_NAME_IN_USE:
-            tp_reason = TP_CONNECTION_STATUS_REASON_NAME_IN_USE;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_NOT_PROVIDED:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_NOT_PROVIDED;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_UNTRUSTED:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_UNTRUSTED;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_EXPIRED:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_EXPIRED;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_NOT_ACTIVATED:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_NOT_ACTIVATED;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_HOSTNAME_MISMATCH:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_HOSTNAME_MISMATCH;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_FINGERPRINT_MISMATCH:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_FINGERPRINT_MISMATCH;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_SELF_SIGNED:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_SELF_SIGNED;
-            break;
-        case PURPLE_CONNECTION_ERROR_CERT_OTHER_ERROR:
-            tp_reason = TP_CONNECTION_STATUS_REASON_CERT_OTHER_ERROR;
-            break;
-        default:
-            g_warning ("report_disconnect_cb: "
-                       "invalid PurpleDisconnectReason %u", reason);
-            tp_reason = TP_CONNECTION_STATUS_REASON_NONE_SPECIFIED;
-    }
-
-    tp_base_connection_change_status (base_conn,
-            TP_CONNECTION_STATUS_DISCONNECTED, tp_reason);
+  map_purple_error_to_tp (reason,
+      (base_conn->status == TP_CONNECTION_STATUS_CONNECTING),
+      &tp_reason, &tp_error_name);
+  details = tp_asv_new ("debug-message", G_TYPE_STRING, text, NULL);
+  tp_base_connection_disconnect_with_dbus_error (base_conn, tp_error_name,
+      details, tp_reason);
+  g_hash_table_unref (details);
 }
 
 static gboolean
@@ -357,13 +414,57 @@ haze_connection_create_account (HazeConnection *self,
     return TRUE;
 }
 
+static void
+_haze_connection_password_manager_prompt_cb (GObject *source,
+    GAsyncResult *result,
+    gpointer user_data)
+{
+  HazeConnection *self = user_data;
+  HazeConnectionPrivate *priv = self->priv;
+  TpBaseConnection *base_conn = (TpBaseConnection *) self;
+  const GString *password;
+  GError *error = NULL;
+
+  password = tp_simple_password_manager_prompt_finish (
+      TP_SIMPLE_PASSWORD_MANAGER (source), result, &error);
+
+  if (error != NULL)
+    {
+      DEBUG ("Simple password manager failed: %s", error->message);
+
+      if (base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
+        {
+          tp_base_connection_disconnect_with_dbus_error (base_conn,
+              tp_error_get_dbus_name (error->code), NULL,
+              TP_CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED);
+        }
+
+      /* no need to call purple_account_disconnect because _connect
+       * was never called */
+
+      g_error_free (error);
+      return;
+    }
+
+  g_free (priv->password);
+  priv->password = g_strdup (password->str);
+
+  purple_account_set_password (self->account, priv->password);
+
+  purple_account_set_enabled(self->account, UI_ID, TRUE);
+  purple_account_connect (self->account);
+  priv->connect_called = TRUE;
+}
+
 static gboolean
 _haze_connection_start_connecting (TpBaseConnection *base,
                                    GError **error)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
+    HazeConnectionPrivate *priv = self->priv;
     TpHandleRepoIface *contact_handles =
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+    const gchar *password;
 
     g_return_val_if_fail (self->account != NULL, FALSE);
 
@@ -379,8 +480,24 @@ _haze_connection_start_connecting (TpBaseConnection *base,
      * like GMail and MySpace where you need to do an action before connecting
      * to start receiving the notifications. */
     purple_account_set_check_mail(self->account, TRUE);
-    purple_account_set_enabled(self->account, UI_ID, TRUE);
-    purple_account_connect(self->account);
+
+    /* check whether we need to pop up an auth channel */
+    password = purple_account_get_password (self->account);
+
+    if (password == NULL
+        && !(priv->prpl_info->options & OPT_PROTO_NO_PASSWORD)
+        && !(priv->prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL))
+      {
+        /* pop up auth channel */
+        tp_simple_password_manager_prompt_async (self->password_manager,
+            _haze_connection_password_manager_prompt_cb, self);
+      }
+    else
+      {
+        purple_account_set_enabled(self->account, UI_ID, TRUE);
+        purple_account_connect (self->account);
+        priv->connect_called = TRUE;
+      }
 
     return TRUE;
 }
@@ -390,25 +507,20 @@ _haze_connection_shut_down (TpBaseConnection *base)
 {
     HazeConnection *self = HAZE_CONNECTION(base);
     HazeConnectionPrivate *priv = self->priv;
-    if(!priv->disconnecting)
-    {
+
+    if(!priv->disconnecting && priv->connect_called)
+      {
         priv->disconnecting = TRUE;
         purple_account_disconnect(self->account);
-    }
+      }
+    else if (!priv->connect_called)
+      {
+        /* purple_account_connect was never actually called, so we
+         * won't get to disconnected_cb and so finish_shutdown won't
+         * be called unless we call it here. */
+        tp_base_connection_finish_shutdown (base);
+      }
 }
-
-/* Must be in the same order as HazeListHandle in connection.h */
-static const char *list_handle_strings[] =
-{
-    "subscribe",    /* HAZE_LIST_HANDLE_SUBSCRIBE */
-    "publish",      /* HAZE_LIST_HANDLE_PUBLISH */
-#if 0
-    "hide",         /* HAZE_LIST_HANDLE_HIDE */
-    "allow",        /* HAZE_LIST_HANDLE_ALLOW */
-    "deny"          /* HAZE_LIST_HANDLE_DENY */
-#endif
-    NULL
-};
 
 static gchar*
 _contact_normalize (TpHandleRepoIface *repo,
@@ -429,10 +541,6 @@ _haze_connection_create_handle_repos (TpBaseConnection *base,
         tp_dynamic_handle_repo_new (TP_HANDLE_TYPE_CONTACT, _contact_normalize,
                                     base);
     /* repos[TP_HANDLE_TYPE_ROOM] = XXX MUC */
-    repos[TP_HANDLE_TYPE_GROUP] =
-        tp_dynamic_handle_repo_new (TP_HANDLE_TYPE_GROUP, NULL, NULL);
-    repos[TP_HANDLE_TYPE_LIST] =
-        tp_static_handle_repo_new (TP_HANDLE_TYPE_LIST, list_handle_strings);
 }
 
 static GPtrArray *
@@ -458,6 +566,10 @@ _haze_connection_create_channel_managers (TpBaseConnection *base)
     self->contact_list = HAZE_CONTACT_LIST (
         g_object_new (HAZE_TYPE_CONTACT_LIST, "connection", self, NULL));
     g_ptr_array_add (channel_managers, self->contact_list);
+
+    self->password_manager = tp_simple_password_manager_new (
+        TP_BASE_CONNECTION (self));
+    g_ptr_array_add (channel_managers, self->password_manager);
 
     return channel_managers;
 }
@@ -541,6 +653,7 @@ haze_connection_constructor (GType type,
     HazeConnection *self = HAZE_CONNECTION (
             G_OBJECT_CLASS (haze_connection_parent_class)->constructor (
                 type, n_construct_properties, construct_params));
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (self);
     GObject *object = (GObject *) self;
     HazeConnectionPrivate *priv = self->priv;
 
@@ -554,8 +667,8 @@ haze_connection_constructor (GType type,
 
     tp_contacts_mixin_init (object,
         G_STRUCT_OFFSET (HazeConnection, contacts));
-    tp_base_connection_register_with_contacts_mixin (
-        TP_BASE_CONNECTION (self));
+    tp_base_connection_register_with_contacts_mixin (base_conn);
+    tp_base_contact_list_mixin_register_with_contacts_mixin (base_conn);
 
     haze_connection_aliasing_init (object);
     haze_connection_avatars_init (object);
@@ -685,6 +798,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
 
     tp_contacts_mixin_class_init (object_class,
         G_STRUCT_OFFSET (HazeConnectionClass, contacts_class));
+    tp_base_contact_list_mixin_class_init (base_class);
 
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);

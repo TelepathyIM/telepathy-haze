@@ -25,6 +25,7 @@
 #include <telepathy-glib/base-connection.h>
 #include <telepathy-glib/contacts-mixin.h>
 #include <telepathy-glib/presence-mixin.h>
+#include <telepathy-glib/simple-password-manager.h>
 
 #include <libpurple/account.h>
 #include <libpurple/prpl.h>
@@ -34,18 +35,6 @@
 #include "media-manager.h"
 
 G_BEGIN_DECLS
-
-/* Must be in the same order as list_handle_strings in connection.c */
-typedef enum
-{
-    HAZE_LIST_HANDLE_SUBSCRIBE = 1,
-    HAZE_LIST_HANDLE_PUBLISH,
-#if 0
-    HAZE_LIST_HANDLE_HIDE,
-    HAZE_LIST_HANDLE_ALLOW,
-    HAZE_LIST_HANDLE_DENY
-#endif
-} HazeListHandle;
 
 typedef struct _HazeConnection HazeConnection;
 typedef struct _HazeConnectionPrivate HazeConnectionPrivate;
@@ -66,6 +55,7 @@ struct _HazeConnection {
     HazeContactList *contact_list;
     HazeImChannelFactory *im_factory;
     HazeMediaManager *media_manager;
+    TpSimplePasswordManager *password_manager;
 
     TpContactsMixin contacts;
     TpPresenceMixin presence;

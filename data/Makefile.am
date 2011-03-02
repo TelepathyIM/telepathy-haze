@@ -1,7 +1,3 @@
-# Telepathy manager file
-managerdir = $(datadir)/telepathy/managers
-dist_manager_DATA = haze.manager
-
 # Dbus service file
 servicedir = $(datadir)/dbus-1/services
 service_in_files = org.freedesktop.Telepathy.ConnectionManager.haze.service.in

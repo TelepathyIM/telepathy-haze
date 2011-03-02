@@ -52,7 +52,13 @@ struct _KnownProtocolInfo
     /* vCard field in lower case.
      * If "", we know that there's no applicable vCard field. */
     const gchar *vcard_field;
+    /* Function to call to add/remove param specs. */
+    void (*fixup) (HazeProtocol *self, GArray *paramspecs);
 };
+
+typedef enum {
+    HAZE_PROTOCOL_FLAG_JABBER_CONNECTION_SECURITY = 1 << 0
+} HazeProtocolFlags;
 
 struct _HazeProtocolPrivate {
     PurplePlugin *plugin;
@@ -60,6 +66,9 @@ struct _HazeProtocolPrivate {
     PurplePluginProtocolInfo *prpl_info;
     TpCMParamSpec *paramspecs;
     const KnownProtocolInfo *known_protocol;
+    HazeProtocolFlags flags;
+    gboolean def_old_ssl;
+    gboolean def_require_encryption;
 };
 
 /* For some protocols, removing the "prpl-" prefix from its name in libpurple
@@ -86,6 +95,10 @@ static const HazeParameterMapping jabber_mappings[] = {
      * JID (user@domain. Ideally we'd have some way to split the resource
      * off (fd.o #14212). */
     { "require_tls", "require-encryption" },
+    /* Pidgin 2.7.4 removes require_tls and adds a connection_security string
+     * param with values "require_tls", "opportunistic_tls" and "old_ssl".
+     * Mangle this specially. */
+    { "connection_security", "IGNORE" },
     { NULL, NULL }
 };
 
@@ -105,6 +118,76 @@ static const HazeParameterMapping yahoo_mappings[] = {
     { NULL, NULL }
 };
 
+static void
+cm_param_spec_set_default (TpCMParamSpec *spec,
+    gconstpointer def)
+{
+  spec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
+  spec->def = def;
+}
+
+#define cm_param_spec_set_default_int(spec, def) \
+  cm_param_spec_set_default (spec, GINT_TO_POINTER (def))
+#define cm_param_spec_set_default_bool(spec, def) \
+  cm_param_spec_set_default (spec, GINT_TO_POINTER (def))
+
+static void
+jabber_fixup (HazeProtocol *self,
+    GArray *paramspecs)
+{
+  const gchar *default_cs = NULL;
+  const GList *opts;
+
+  for (opts = self->priv->prpl_info->protocol_options;
+      opts != NULL;
+      opts = opts->next)
+    {
+      if (!tp_strdiff (purple_account_option_get_setting (opts->data),
+            "connection_security"))
+        {
+          self->priv->flags |= HAZE_PROTOCOL_FLAG_JABBER_CONNECTION_SECURITY;
+          default_cs = purple_account_option_get_default_list_value (
+              opts->data);
+          break;
+        }
+    }
+
+  if (self->priv->flags & HAZE_PROTOCOL_FLAG_JABBER_CONNECTION_SECURITY)
+    {
+      TpCMParamSpec old_ssl_spec = { "old-ssl", "b", G_TYPE_BOOLEAN };
+      TpCMParamSpec require_encryption_spec = { "require-encryption", "b",
+          G_TYPE_BOOLEAN };
+
+      if (!tp_strdiff (default_cs, "old_ssl"))
+        {
+          cm_param_spec_set_default_bool (&require_encryption_spec, TRUE);
+          cm_param_spec_set_default_bool (&old_ssl_spec, TRUE);
+          self->priv->def_old_ssl = self->priv->def_require_encryption = TRUE;
+        }
+      else if (!tp_strdiff (default_cs, "require_tls"))
+        {
+          cm_param_spec_set_default_bool (&require_encryption_spec, TRUE);
+          cm_param_spec_set_default_bool (&old_ssl_spec, FALSE);
+          self->priv->def_old_ssl = FALSE;
+          self->priv->def_require_encryption = TRUE;
+        }
+      else if (!tp_strdiff (default_cs, "opportunistic_tls"))
+        {
+          cm_param_spec_set_default_bool (&require_encryption_spec, FALSE);
+          cm_param_spec_set_default_bool (&old_ssl_spec, FALSE);
+          self->priv->def_old_ssl = self->priv->def_require_encryption = FALSE;
+        }
+      else
+        {
+          DEBUG ("default value '%s' for connection_security not understood",
+              default_cs == NULL ? "(null)" : default_cs);
+        }
+
+      g_array_append_val (paramspecs, old_ssl_spec);
+      g_array_append_val (paramspecs, require_encryption_spec);
+    }
+}
+
 static const KnownProtocolInfo known_protocol_info[] = {
     { "aim", "prpl-aim", NULL, "x-aim" },
     /* Seriously. */
@@ -113,7 +196,7 @@ static const KnownProtocolInfo known_protocol_info[] = {
     { "groupwise", "prpl-novell", NULL, "x-groupwise" },
     { "irc", "prpl-irc", irc_mappings, "x-irc" /* ? */ },
     { "icq", "prpl-icq", encoding_to_charset, "x-icq" },
-    { "jabber", "prpl-jabber", jabber_mappings, "x-jabber" },
+    { "jabber", "prpl-jabber", jabber_mappings, "x-jabber", jabber_fixup },
     { "local-xmpp", "prpl-bonjour", bonjour_mappings, "" /* ? */ },
     { "msn", "prpl-msn", NULL, "x-msn" },
     { "qq", "prpl-qq", NULL, "x-qq" /* ? */ },
@@ -320,6 +403,11 @@ _translate_protocol_option (PurpleAccountOption *option,
     gchar *name = NULL;
     const HazeParameterMapping *m = haze_protocol_lookup_param (self, pref_name);
 
+    if (m != NULL && !tp_strdiff (m->telepathy_name, "IGNORE"))
+    {
+        return FALSE;
+    }
+
     /* Intentional once-per-protocol-per-process leak. */
     if (m != NULL)
       name = g_strdup (m->telepathy_name);
@@ -343,8 +431,7 @@ _translate_protocol_option (PurpleAccountOption *option,
         case PURPLE_PREF_BOOLEAN:
             paramspec->dtype = DBUS_TYPE_BOOLEAN_AS_STRING;
             paramspec->gtype = G_TYPE_BOOLEAN;
-            paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
-            paramspec->def = GINT_TO_POINTER (
+            cm_param_spec_set_default_bool (paramspec,
                 purple_account_option_get_default_bool (option));
             break;
         case PURPLE_PREF_INT:
@@ -364,8 +451,7 @@ _translate_protocol_option (PurpleAccountOption *option,
                 paramspec->gtype = G_TYPE_INT;
               }
 
-            paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
-            paramspec->def = GINT_TO_POINTER (
+            cm_param_spec_set_default_int (paramspec,
                 purple_account_option_get_default_int (option));
             break;
         case PURPLE_PREF_STRING:
@@ -390,8 +476,7 @@ _translate_protocol_option (PurpleAccountOption *option,
 
             if (def != NULL && *def != '\0')
             {
-                paramspec->def = def;
-                paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
+                cm_param_spec_set_default (paramspec, def);
             }
             break;
         }
@@ -420,8 +505,7 @@ _translate_protocol_option (PurpleAccountOption *option,
             def = purple_account_option_get_default_list_value (option);
             if (def != NULL && *def != '\0')
             {
-                paramspec->def = def;
-                paramspec->flags |= TP_CONN_MGR_PARAM_FLAG_HAS_DEFAULT;
+                cm_param_spec_set_default (paramspec, def);
             }
             break;
         }
@@ -458,7 +542,7 @@ haze_protocol_get_parameters (TpBaseProtocol *protocol)
           (gpointer) "account", NULL };
     TpCMParamSpec password_spec =
         { "password", DBUS_TYPE_STRING_AS_STRING, G_TYPE_STRING,
-          TP_CONN_MGR_PARAM_FLAG_REQUIRED | TP_CONN_MGR_PARAM_FLAG_SECRET,
+          TP_CONN_MGR_PARAM_FLAG_SECRET,
           NULL, 0, NULL, NULL,
           (gpointer) "password", NULL };
     GArray *paramspecs;
@@ -479,11 +563,7 @@ haze_protocol_get_parameters (TpBaseProtocol *protocol)
 
     /* Password parameter: */
     if (!(self->priv->prpl_info->options & OPT_PROTO_NO_PASSWORD))
-    {
-        if (self->priv->prpl_info->options & OPT_PROTO_PASSWORD_OPTIONAL)
-            password_spec.flags &= ~TP_CONN_MGR_PARAM_FLAG_REQUIRED;
-        g_array_append_val (paramspecs, password_spec);
-    }
+      g_array_append_val (paramspecs, password_spec);
 
     for (opts = self->priv->prpl_info->protocol_options;
         opts != NULL;
@@ -494,7 +574,15 @@ haze_protocol_get_parameters (TpBaseProtocol *protocol)
             { NULL, NULL, 0, 0, NULL, 0, NULL, NULL, NULL, NULL};
 
         if (_translate_protocol_option (option, &paramspec, self))
+        {
             g_array_append_val (paramspecs, paramspec);
+        }
+    }
+
+    if (self->priv->known_protocol != NULL &&
+        self->priv->known_protocol->fixup != NULL)
+    {
+        self->priv->known_protocol->fixup (self, paramspecs);
     }
 
     self->priv->paramspecs = (TpCMParamSpec *) g_array_free (paramspecs,
@@ -598,7 +686,7 @@ haze_protocol_translate_parameters (HazeProtocol *self,
       gchar *prpl_param_name = (gchar *) pspec->setter_data;
       const GValue *value = tp_asv_lookup (asv, pspec->name);
 
-      if (value == NULL)
+      if (value == NULL || prpl_param_name == NULL)
         continue;
 
       DEBUG ("setting parameter %s (telepathy name %s)", prpl_param_name,
@@ -607,6 +695,26 @@ haze_protocol_translate_parameters (HazeProtocol *self,
       g_hash_table_insert (purple_params, prpl_param_name,
           tp_g_value_slice_dup (value));
       g_hash_table_remove (unused, pspec->name);
+    }
+
+  /* special cases for particular protocols */
+
+  if (self->priv->flags & HAZE_PROTOCOL_FLAG_JABBER_CONNECTION_SECURITY)
+    {
+      /* we may assume that the defaults have been applied if necessary
+       * (TpBaseProtocol ensures this) */
+      if (tp_asv_get_boolean (asv, "old-ssl", NULL))
+        tp_asv_set_static_string (purple_params, "connection_security",
+            "old_ssl");
+      else if (tp_asv_get_boolean (asv, "require-encryption", NULL))
+        tp_asv_set_static_string (purple_params, "connection_security",
+            "require_tls");
+      else
+        tp_asv_set_static_string (purple_params, "connection_security",
+            "opportunistic_tls");
+
+      g_hash_table_remove (unused, "old-ssl");
+      g_hash_table_remove (unused, "require-encryption");
     }
 
   /* telepathy-glib isn't meant to give us parameters we don't understand */
@@ -834,6 +942,17 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
     }
 }
 
+static GStrv
+haze_protocol_dup_authentication_types (TpBaseProtocol *base)
+{
+  static const gchar *types[] = {
+    TP_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION,
+    NULL
+  };
+
+  return g_strdupv ((GStrv) types);
+}
+
 static void
 haze_protocol_class_init (HazeProtocolClass *cls)
 {
@@ -847,6 +966,8 @@ haze_protocol_class_init (HazeProtocolClass *cls)
   base_class->identify_account = haze_protocol_identify_account;
   base_class->get_interfaces = haze_protocol_get_interfaces;
   base_class->get_connection_details = haze_protocol_get_connection_details;
+  base_class->dup_authentication_types =
+    haze_protocol_dup_authentication_types;
 
   g_type_class_add_private (cls, sizeof (HazeProtocolPrivate));
   object_class->get_property = haze_protocol_get_property;
