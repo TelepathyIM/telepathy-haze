@@ -817,11 +817,8 @@ haze_media_stream_codec_choice (TpSvcMediaStreamHandler *iface,
                                 DBusGMethodInvocation *context)
 {
   HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
-  HazeMediaStreamPrivate *priv;
 
   g_assert (HAZE_IS_MEDIA_STREAM (self));
-
-  priv = self->priv;
 
   tp_svc_media_stream_handler_return_from_codec_choice (context);
 }
@@ -1278,28 +1275,11 @@ haze_media_stream_stream_state (TpSvcMediaStreamHandler *iface,
                                 DBusGMethodInvocation *context)
 {
   HazeMediaStream *self = HAZE_MEDIA_STREAM (iface);
-  PurpleMediaState media_state = PURPLE_MEDIA_STATE_END;
-
-  switch (connection_state) {
-    case TP_MEDIA_STREAM_STATE_DISCONNECTED:
-      media_state = PURPLE_MEDIA_STATE_END;
-      break;
-    case TP_MEDIA_STREAM_STATE_CONNECTING:
-      media_state = PURPLE_MEDIA_STATE_NEW;
-      break;
-    case TP_MEDIA_STREAM_STATE_CONNECTED:
-      media_state = PURPLE_MEDIA_STATE_CONNECTED;
-      break;
-    default:
-      DEBUG ("ignoring unknown connection state %u", connection_state);
-      goto OUT;
-  }
 
   g_object_set (self, "connection-state", connection_state, NULL);
 
   // emit connection state here
 
-OUT:
   tp_svc_media_stream_handler_return_from_stream_state (context);
 }
 
