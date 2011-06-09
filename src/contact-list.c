@@ -1296,6 +1296,15 @@ unblock_contacts_async(TpBaseContactList *cl,
       user_data, unblock_contacts_async);
 }
 
+static gboolean
+can_block (TpBaseContactList *cl)
+{
+  HazeContactList *self = HAZE_CONTACT_LIST (cl);
+
+  return (self->priv->conn->account->gc != NULL &&
+      HAZE_CONNECTION_GET_PRPL_INFO (self->priv->conn)->add_deny != NULL);
+}
+
 static void
 haze_contact_list_blockable_init(
     TpBlockableContactListInterface *vtable)
@@ -1303,4 +1312,6 @@ haze_contact_list_blockable_init(
   vtable->dup_blocked_contacts = dup_blocked_contacts;
   vtable->block_contacts_async = block_contacts_async;
   vtable->unblock_contacts_async = unblock_contacts_async;
+
+  vtable->can_block = can_block;
 }
