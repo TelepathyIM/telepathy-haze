@@ -145,6 +145,7 @@ haze_ui_init (void)
     purple_request_set_ui_ops (haze_request_get_ui_ops ());
 #endif
     purple_notify_set_ui_ops (haze_notify_get_ui_ops ());
+    purple_privacy_set_ui_ops (haze_get_privacy_ui_ops ());
 }
 
 static PurpleCoreUiOps haze_core_uiops = 

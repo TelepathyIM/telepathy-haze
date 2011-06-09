@@ -82,4 +82,6 @@ void haze_contact_list_add_to_group (HazeContactList *self,
 gboolean haze_contact_list_remove_from_group (HazeContactList *self,
     const gchar *group_name, TpHandle handle, GError **error);
 
+PurplePrivacyUiOps *haze_get_privacy_ui_ops (void);
+
 #endif /* #ifndef __HAZE_CONTACT_LIST_H__*/

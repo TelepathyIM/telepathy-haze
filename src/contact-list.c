@@ -1315,3 +1315,44 @@ haze_contact_list_blockable_init(
 
   vtable->can_block = can_block;
 }
+
+static void
+haze_contact_list_deny_changed (
+    PurpleAccount *account,
+    const char *name)
+{
+  HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
+      TP_HANDLE_TYPE_CONTACT);
+  GError *error = NULL;
+  TpHandle handle = tp_handle_ensure (contact_repo, name, NULL, &error);
+  TpHandleSet *set;
+
+  if (handle == 0)
+    {
+      g_warning ("Couldn't normalize id '%s': '%s'", name, error->message);
+      g_clear_error (&error);
+      return;
+    }
+
+  set = tp_handle_set_new_containing (contact_repo, handle);
+  tp_base_contact_list_contact_blocking_changed (
+      TP_BASE_CONTACT_LIST (conn->contact_list),
+      set);
+  g_object_unref (set);
+}
+
+static PurplePrivacyUiOps privacy_ui_ops =
+{
+  /* .permit_added = */ NULL,
+  /* .permit_removed = */ NULL,
+  /* .deny_added = */ haze_contact_list_deny_changed,
+  /* .deny_removed = */ haze_contact_list_deny_changed
+};
+
+PurplePrivacyUiOps *
+haze_get_privacy_ui_ops (void)
+{
+  return &privacy_ui_ops;
+}
