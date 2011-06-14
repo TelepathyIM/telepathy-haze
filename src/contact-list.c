@@ -80,6 +80,7 @@ static void haze_contact_list_mutable_init (TpMutableContactListInterface *);
 static void haze_contact_list_groups_init (TpContactGroupListInterface *);
 static void haze_contact_list_mutable_groups_init (
     TpMutableContactGroupListInterface *);
+static void haze_contact_list_blockable_init (TpBlockableContactListInterface *);
 
 G_DEFINE_TYPE_WITH_CODE(HazeContactList,
     haze_contact_list,
@@ -89,7 +90,9 @@ G_DEFINE_TYPE_WITH_CODE(HazeContactList,
     G_IMPLEMENT_INTERFACE (TP_TYPE_CONTACT_GROUP_LIST,
       haze_contact_list_groups_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_MUTABLE_CONTACT_GROUP_LIST,
-      haze_contact_list_mutable_groups_init))
+      haze_contact_list_mutable_groups_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_BLOCKABLE_CONTACT_LIST,
+      haze_contact_list_blockable_init))
 
 static void
 haze_contact_list_init (HazeContactList *self)
@@ -1222,4 +1225,134 @@ haze_contact_list_mutable_groups_init (
   vtable->remove_group_async = haze_contact_list_remove_group_async;
   vtable->rename_group_async = haze_contact_list_rename_group_async;
   /* assume default: groups are stored persistently */
+}
+
+static TpHandleSet *
+dup_blocked_contacts (TpBaseContactList *cl)
+{
+  HazeContactList *self = HAZE_CONTACT_LIST (cl);
+  PurpleAccount *account = self->priv->conn->account;
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->conn);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
+      TP_HANDLE_TYPE_CONTACT);
+  TpHandleSet *blocked = tp_handle_set_new (contact_repo);
+  GSList *l;
+
+  for (l = account->deny; l != NULL; l = l->next) {
+    TpHandle handle = tp_handle_ensure (contact_repo, l->data, NULL, NULL);
+
+    if (G_LIKELY (handle != 0))
+      tp_handle_set_add (blocked, handle);
+  }
+
+  return blocked;
+}
+
+static void
+set_contacts_privacy (TpBaseContactList *cl,
+    TpHandleSet *contacts,
+    gboolean block)
+{
+  HazeContactList *self = HAZE_CONTACT_LIST (cl);
+  PurpleAccount *account = self->priv->conn->account;
+  TpIntsetFastIter iter;
+  TpHandle handle;
+
+  tp_intset_fast_iter_init (&iter, tp_handle_set_peek (contacts));
+
+  while (tp_intset_fast_iter_next (&iter, &handle))
+    {
+      const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
+          TP_HANDLE_TYPE_CONTACT, handle);
+
+      if (block)
+        purple_privacy_deny (account, bname, FALSE, FALSE);
+      else
+        purple_privacy_allow (account, bname, FALSE, FALSE);
+    }
+}
+
+static void
+block_contacts_async(TpBaseContactList *cl,
+    TpHandleSet *contacts,
+    GAsyncReadyCallback callback,
+    gpointer user_data)
+{
+  set_contacts_privacy (cl, contacts, TRUE);
+
+  tp_simple_async_report_success_in_idle ((GObject *) cl, callback,
+      user_data, block_contacts_async);
+}
+
+static void
+unblock_contacts_async(TpBaseContactList *cl,
+    TpHandleSet *contacts,
+    GAsyncReadyCallback callback,
+    gpointer user_data)
+{
+  set_contacts_privacy (cl, contacts, FALSE);
+
+  tp_simple_async_report_success_in_idle ((GObject *) cl, callback,
+      user_data, unblock_contacts_async);
+}
+
+static gboolean
+can_block (TpBaseContactList *cl)
+{
+  HazeContactList *self = HAZE_CONTACT_LIST (cl);
+
+  return (self->priv->conn->account->gc != NULL &&
+      HAZE_CONNECTION_GET_PRPL_INFO (self->priv->conn)->add_deny != NULL);
+}
+
+static void
+haze_contact_list_blockable_init(
+    TpBlockableContactListInterface *vtable)
+{
+  vtable->dup_blocked_contacts = dup_blocked_contacts;
+  vtable->block_contacts_async = block_contacts_async;
+  vtable->unblock_contacts_async = unblock_contacts_async;
+
+  vtable->can_block = can_block;
+}
+
+static void
+haze_contact_list_deny_changed (
+    PurpleAccount *account,
+    const char *name)
+{
+  HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
+      TP_HANDLE_TYPE_CONTACT);
+  GError *error = NULL;
+  TpHandle handle = tp_handle_ensure (contact_repo, name, NULL, &error);
+  TpHandleSet *set;
+
+  if (handle == 0)
+    {
+      g_warning ("Couldn't normalize id '%s': '%s'", name, error->message);
+      g_clear_error (&error);
+      return;
+    }
+
+  set = tp_handle_set_new_containing (contact_repo, handle);
+  tp_base_contact_list_contact_blocking_changed (
+      TP_BASE_CONTACT_LIST (conn->contact_list),
+      set);
+  g_object_unref (set);
+}
+
+static PurplePrivacyUiOps privacy_ui_ops =
+{
+  /* .permit_added = */ NULL,
+  /* .permit_removed = */ NULL,
+  /* .deny_added = */ haze_contact_list_deny_changed,
+  /* .deny_removed = */ haze_contact_list_deny_changed
+};
+
+PurplePrivacyUiOps *
+haze_get_privacy_ui_ops (void)
+{
+  return &privacy_ui_ops;
 }

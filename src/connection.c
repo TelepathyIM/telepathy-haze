@@ -92,7 +92,8 @@ static const gchar * implemented_interfaces[] = {
 
     TP_IFACE_CONNECTION_INTERFACE_AVATARS,
     HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
-#   define HAZE_NUM_CONDITIONAL_INTERFACES 2
+    TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING,
+#   define HAZE_NUM_CONDITIONAL_INTERFACES 3
 
     /* Always present */
 
@@ -159,6 +160,14 @@ connected_cb (PurpleConnection *pc)
             TP_IFACE_CONNECTION_INTERFACE_AVATARS,
             NULL };
         tp_base_connection_add_interfaces (base_conn, avatar_ifaces);
+    }
+
+    if (prpl_info->add_deny != NULL)
+    {
+        static const gchar *blocking_ifaces[] = {
+            TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING,
+            NULL };
+        tp_base_connection_add_interfaces (base_conn, blocking_ifaces);
     }
 
     tp_base_contact_list_set_list_received (
