@@ -71,7 +71,7 @@ def test(q, bus, conn, stream):
         if name == 'gadugadu':
             assertEquals('x-gadugadu', flat_props['VCardField'])
             assertEquals('im-gadugadu', flat_props['Icon'])
-            assertEquals((cs.PARAM_REQUIRED | cs.PARAM_SECRET, 's', ''),
+            assertEquals((cs.PARAM_SECRET, 's', ''),
                     param_map['password'])
             assertEquals('s', param_type['nick'])
             assertEquals('s', param_type['gg-server'])
