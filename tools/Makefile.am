@@ -9,6 +9,7 @@ EXTRA_DIST = \
     identity.xsl \
     libglibcodegen.py \
     libtpcodegen.py \
+    make-release-mail.py \
     telepathy.am
 
 CLEANFILES = *.pyc *.pyo
