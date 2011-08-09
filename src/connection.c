@@ -83,6 +83,8 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         tp_base_contact_list_mixin_list_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_GROUPS,
         tp_base_contact_list_mixin_groups_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_BLOCKING,
+        tp_base_contact_list_mixin_blocking_iface_init);
     G_IMPLEMENT_INTERFACE (HAZE_TYPE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
         haze_connection_mail_iface_init);
     );
