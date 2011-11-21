@@ -476,8 +476,9 @@ def make_connection(bus, event_func, params=None, suffix=''):
     default_params = {
         'account': account,
         'password': 'pass',
-        # XXX Haze: fd.o#14212
+        # XXX Haze: fd.o#14212.
         #'resource': 'Resource',
+        'ft-proxies': sys.argv[0],
         'server': 'localhost',
         'port': dbus.UInt32(4242),
         # XXX Haze
