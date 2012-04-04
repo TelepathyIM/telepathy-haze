@@ -1,7 +1,23 @@
-telepathy-haze 0.5.1 (UNRELEASED)
+telepathy-haze 0.6.0 (UNRELEASED)
 =================================
 
+This is the start of a new stable branch.
 
+Changes since 0.5.0:
+
+• The ContactBlocking interface has been implemented. (Jasper
+  St. Pierre, Will)
+
+Summary of particularly noteworthy changes since 0.4.x:
+
+• telepathy-glib ≥ 0.13.9 and libpurple ≥ 2.7.0 are now required.
+
+• The ContactList interface has been implemented.
+
+• Support for setting your own alias has been added.
+
+• The ServerAuthentication channel type has been implemented so users
+  can provide an account password when connecting.
 
 telepathy-haze 0.5.0 (2011-07-09)
 =================================
