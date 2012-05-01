@@ -1,5 +1,6 @@
 TWISTED_TESTS = \
 	avatar-requirements.py \
+	simple-caps.py \
 	cm/protocols.py \
 	connect/fail.py \
 	connect/success.py \
