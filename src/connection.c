@@ -75,6 +75,8 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_aliasing_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
         haze_connection_avatars_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+        haze_connection_contact_capabilities_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CAPABILITIES,
         haze_connection_capabilities_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
@@ -105,6 +107,7 @@ static const gchar * implemented_interfaces[] = {
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_SIMPLE_PRESENCE,
     TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES,
+    TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
     TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
     /* TODO: This is a lie.  Not all protocols supported by libpurple
      *       actually have the concept of a user-settable alias, but
