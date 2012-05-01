@@ -20,6 +20,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+#include "config.h"
+
 #include "connection-capabilities.h"
 
 #include <telepathy-glib/contacts-mixin.h>
@@ -103,6 +105,8 @@ _emit_capabilities_changed (HazeConnection *conn,
   if (caps_arr->len)
     tp_svc_connection_interface_capabilities_emit_capabilities_changed (
         conn, caps_arr);
+
+  /* TODO: ContactCaps */
 
   for (i = 0; i < caps_arr->len; i++)
     {
@@ -271,16 +275,29 @@ static GPtrArray *
 haze_connection_get_handle_contact_capabilities (HazeConnection *self,
                                                  TpHandle handle)
 {
+#ifdef ENABLE_MEDIA
+  PurpleAccount *account = self->account;
+  TpBaseConnection *conn = TP_BASE_CONNECTION (self);
+  TpHandleRepoIface *contact_handles =
+      tp_base_connection_get_handles (conn, TP_HANDLE_TYPE_CONTACT);
+  const gchar *bname;
+  PurpleMediaCaps caps;
+  GValue media_monster = {0, };
+  guint typeflags = 0;
+  const gchar * const sm_allowed_audio[] = {
+    TP_PROP_CHANNEL_TYPE_STREAMED_MEDIA_INITIAL_AUDIO, NULL };
+  const gchar * const sm_allowed_video[] = {
+    TP_PROP_CHANNEL_TYPE_STREAMED_MEDIA_INITIAL_AUDIO,
+    TP_PROP_CHANNEL_TYPE_STREAMED_MEDIA_INITIAL_VIDEO,
+    NULL };
+#endif
   GPtrArray *arr = g_ptr_array_new ();
   GValue monster = {0, };
   GHashTable *fixed_properties;
   GValue *channel_type_value;
   GValue *target_handle_type_value;
-  gchar *text_allowed_properties[] =
-      {
-        TP_IFACE_CHANNEL ".TargetHandle",
-        NULL
-      };
+  const gchar * const text_allowed_properties[] = {
+    TP_PROP_CHANNEL_TARGET_HANDLE, NULL };
 
   if (0 == handle)
     {
@@ -290,7 +307,56 @@ haze_connection_get_handle_contact_capabilities (HazeConnection *self,
 
   /* TODO: Check for presence */
 
-  /* TODO: do media */
+#ifdef ENABLE_MEDIA
+  if (handle == conn->self_handle)
+    caps = purple_media_manager_get_ui_caps (purple_media_manager_get ());
+  else
+    {
+      bname = tp_handle_inspect (contact_handles, handle);
+      caps = purple_prpl_get_media_caps (account, bname);
+    }
+
+  typeflags = purple_caps_to_tp_flags(caps);
+
+  if (typeflags != 0)
+    {
+      const gchar * const *allowed;
+
+      g_value_init (&media_monster,
+          TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS);
+      g_value_take_boxed (&media_monster,
+          dbus_g_type_specialized_construct (
+              TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS));
+
+      fixed_properties = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+          (GDestroyNotify) tp_g_value_slice_free);
+
+      channel_type_value = tp_g_value_slice_new (G_TYPE_STRING);
+      g_value_set_static_string (channel_type_value,
+          TP_IFACE_CHANNEL_TYPE_STREAMED_MEDIA);
+      g_hash_table_insert (fixed_properties, TP_PROP_CHANNEL_CHANNEL_TYPE,
+          channel_type_value);
+
+      target_handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+      g_value_set_uint (target_handle_type_value, TP_HANDLE_TYPE_CONTACT);
+      g_hash_table_insert (fixed_properties, TP_PROP_CHANNEL_TARGET_HANDLE_TYPE,
+          target_handle_type_value);
+
+      if (typeflags & TP_CHANNEL_MEDIA_CAPABILITY_VIDEO)
+        allowed = sm_allowed_video;
+      else
+        allowed = sm_allowed_audio;
+
+      dbus_g_type_struct_set (&media_monster,
+          0, fixed_properties,
+          1, allowed,
+          G_MAXUINT);
+
+      g_hash_table_unref (fixed_properties);
+
+      g_ptr_array_add (arr, g_value_get_boxed (&media_monster));
+    }
+#endif
 
   g_value_init (&monster, TP_STRUCT_TYPE_REQUESTABLE_CHANNEL_CLASS);
   g_value_take_boxed (&monster,
