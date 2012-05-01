@@ -35,6 +35,12 @@
 #include "mediamanager.h"
 #endif
 
+static void
+free_rcc_list (GPtrArray *rccs)
+{
+  g_boxed_free (TP_ARRAY_TYPE_REQUESTABLE_CHANNEL_CLASS_LIST, rccs);
+}
+
 #ifdef ENABLE_MEDIA
 static PurpleMediaCaps
 tp_flags_to_purple_caps (guint flags)
@@ -57,6 +63,9 @@ purple_caps_to_tp_flags (PurpleMediaCaps caps)
     flags |= TP_CHANNEL_MEDIA_CAPABILITY_VIDEO;
   return flags;
 }
+
+static GPtrArray * haze_connection_get_handle_contact_capabilities (
+    HazeConnection *self, TpHandle handle);
 
 static void
 _emit_capabilities_changed (HazeConnection *conn,
@@ -106,7 +115,20 @@ _emit_capabilities_changed (HazeConnection *conn,
     tp_svc_connection_interface_capabilities_emit_capabilities_changed (
         conn, caps_arr);
 
-  /* TODO: ContactCaps */
+  if (caps_arr->len > 0)
+    {
+      GHashTable *ret = g_hash_table_new_full (g_direct_hash, g_direct_equal,
+          NULL, (GDestroyNotify) free_rcc_list);
+      GPtrArray *arr;
+
+      arr = haze_connection_get_handle_contact_capabilities (conn, handle);
+      g_hash_table_insert (ret, GUINT_TO_POINTER (handle), arr);
+
+      tp_svc_connection_interface_contact_capabilities_emit_contact_capabilities_changed (
+          conn, ret);
+
+      g_hash_table_unref (ret);
+    }
 
   for (i = 0; i < caps_arr->len; i++)
     {
@@ -515,12 +537,6 @@ haze_connection_capabilities_iface_init (gpointer g_iface,
   IMPLEMENT(advertise_capabilities);
   IMPLEMENT(get_capabilities);
 #undef IMPLEMENT
-}
-
-static void
-free_rcc_list (GPtrArray *rccs)
-{
-  g_boxed_free (TP_ARRAY_TYPE_REQUESTABLE_CHANNEL_CLASS_LIST, rccs);
 }
 
 static void
