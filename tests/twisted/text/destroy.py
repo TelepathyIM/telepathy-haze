@@ -76,7 +76,14 @@ def test(q, bus, conn, stream):
     assert channel_props['InitiatorID'] == 'test@localhost',\
             channel_props['InitiatorID']
 
-    text_iface.Send(0, 'hey')
+    hey = [
+        dbus.Dictionary({ 'message-type': cs.MT_NORMAL,
+                        }, signature='sv'),
+        { 'content-type': 'text/plain',
+          'content': u"hey",
+        }
+    ]
+    text_iface.SendMessage(hey, 0)
 
     event = q.expect('stream-message')
 
@@ -99,23 +106,21 @@ def test(q, bus, conn, stream):
     m.addElement('body', content='hello')
     stream.send(m)
 
-    event = q.expect('dbus-signal', signal='Received')
+    event = q.expect('dbus-signal', signal='MessageReceived')
 
-    hello_message_id = event.args[0]
-    hello_message_time = event.args[1]
-    assert event.args[2] == foo_handle
+    assertEquals(2, len(event.args[0]))
+    header, body = event.args[0]
+    hello_message_id = header['pending-message-id']
+    hello_message_time = header['message-received'],
+    assert header['message-sender'] == foo_handle
     # message type: normal
-    assert event.args[3] == 0
-    # flags: none
-    assert event.args[4] == 0
+    assert header['message-type'] == cs.MT_NORMAL
     # body
-    assert event.args[5] == 'hello'
+    assert body['content'] == 'hello'
 
-    messages = text_chan.ListPendingMessages(False,
-            dbus_interface='org.freedesktop.Telepathy.Channel.Type.Text')
-    assert messages == \
-            [(hello_message_id, hello_message_time, foo_handle,
-                0, 0, 'hello')], messages
+    messages = text_chan.Get(cs.CHANNEL_TYPE_TEXT, 'PendingMessages',
+                            dbus_interface=cs.PROPERTIES_IFACE)
+    assert messages == [[header, body]], messages
 
     # destroy the channel without acking the message; it does not come back
 

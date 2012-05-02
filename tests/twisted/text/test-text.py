@@ -56,21 +56,9 @@ def test(q, bus, conn, stream):
     assert channel_props['InitiatorID'] == jid,\
             (channel_props['InitiatorID'], jid)
 
-    received, message_received = q.expect_many(
-        EventPattern('dbus-signal', signal='Received'),
-        EventPattern('dbus-signal', signal='MessageReceived'),
-        )
+    message_received = q.expect('dbus-signal', signal='MessageReceived')
 
-    # Check that C.T.Text.Received looks right
-    # message type: normal
-    assert received.args[3] == 0
-    # flags: none
-    assert received.args[4] == 0
-    # body
-    assert received.args[5] == 'hello'
-
-
-    # Check that C.I.Messages.MessageReceived looks right.
+    # Check that MessageReceived looks right.
     message = message_received.args[0]
 
     # message should have two parts: the header and one content part
@@ -109,13 +97,11 @@ def test(q, bus, conn, stream):
         }
     ]
 
-    dbus.Interface(text_chan,
-        u'org.freedesktop.Telepathy.Channel.Interface.Messages'
-        ).SendMessage(greeting, dbus.UInt32(0))
+    dbus.Interface(text_chan, cs.CHANNEL_TYPE_TEXT
+                   ).SendMessage(greeting, dbus.UInt32(0))
 
-    stream_message, sent, message_sent = q.expect_many(
+    stream_message, message_sent = q.expect_many(
         EventPattern('stream-message'),
-        EventPattern('dbus-signal', signal='Sent'),
         EventPattern('dbus-signal', signal='MessageSent'),
         )
 
@@ -138,46 +124,6 @@ def test(q, bus, conn, stream):
     body = sent_message[1]
     assert body['content-type'] == 'text/plain', body
     assert body['content'] == u'waves', body
-
-    assert sent.args[1] == 1, sent.args # Action
-    assert sent.args[2] == u'waves', sent.args
-
-
-    # Send a message using Channel.Type.Text API
-    dbus.Interface(text_chan,
-        u'org.freedesktop.Telepathy.Channel.Type.Text').Send(0, 'goodbye')
-
-    stream_message, sent, message_sent = q.expect_many(
-        EventPattern('stream-message'),
-        EventPattern('dbus-signal', signal='Sent'),
-        EventPattern('dbus-signal', signal='MessageSent'),
-        )
-
-    elem = stream_message.stanza
-    assert elem.name == 'message'
-    assert elem['type'] == 'chat'
-
-    found = False
-    for e in elem.elements():
-        if e.name == 'body':
-            found = True
-            e.children[0] == u'goodbye'
-            break
-    assert found, elem.toXml()
-
-    sent_message = message_sent.args[0]
-    assert len(sent_message) == 2, sent_message
-    header = sent_message[0]
-    # the spec says that message-type "MAY be omitted for normal chat
-    # messages."
-    assert 'message-type' not in header or header['message-type'] == 0, header
-    body = sent_message[1]
-    assert body['content-type'] == 'text/plain', body
-    assert body['content'] == u'goodbye', body
-
-    assert sent.args[1] == 0, sent.args # message type normal
-    assert sent.args[2] == u'goodbye', sent.args
-
 
     conn.Disconnect()
     q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])

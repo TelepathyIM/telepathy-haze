@@ -68,9 +68,7 @@ static void chat_state_iface_init (gpointer g_iface, gpointer iface_data);
 G_DEFINE_TYPE_WITH_CODE(HazeIMChannel, haze_im_channel, G_TYPE_OBJECT,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL, channel_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT,
-        tp_message_mixin_text_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_MESSAGES,
-        tp_message_mixin_messages_iface_init);
+        tp_message_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_CHANNEL_IFACE, NULL);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_DESTROYABLE,
         destroyable_iface_init);
@@ -138,7 +136,6 @@ _haze_im_channel_interfaces (HazeIMChannel *chan)
 {
   static const char * const interfaces[] = {
       TP_IFACE_CHANNEL_INTERFACE_CHAT_STATE,
-      TP_IFACE_CHANNEL_INTERFACE_MESSAGES,
       TP_IFACE_CHANNEL_INTERFACE_DESTROYABLE,
       NULL
   };
@@ -468,13 +465,13 @@ haze_im_channel_get_property (GObject    *object,
                     TP_IFACE_CHANNEL, "InitiatorID",
                     TP_IFACE_CHANNEL, "Requested",
                     TP_IFACE_CHANNEL, "Interfaces",
-                    TP_IFACE_CHANNEL_INTERFACE_MESSAGES,
+                    TP_IFACE_CHANNEL_TYPE_TEXT,
                         "MessagePartSupportFlags",
-                    TP_IFACE_CHANNEL_INTERFACE_MESSAGES,
+                    TP_IFACE_CHANNEL_TYPE_TEXT,
                         "DeliveryReportingSupport",
-                    TP_IFACE_CHANNEL_INTERFACE_MESSAGES,
+                    TP_IFACE_CHANNEL_TYPE_TEXT,
                         "SupportedContentTypes",
-                    TP_IFACE_CHANNEL_INTERFACE_MESSAGES, "MessageTypes",
+                    TP_IFACE_CHANNEL_TYPE_TEXT, "MessageTypes",
                     NULL));
             break;
         default:
