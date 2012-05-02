@@ -141,74 +141,6 @@ _emit_capabilities_changed (HazeConnection *conn,
 }
 #endif
 
-/**
- * haze_connection_advertise_capabilities
- *
- * Implements D-Bus method AdvertiseCapabilities
- * on interface org.freedesktop.Telepathy.Connection.Interface.Capabilities
- */
-static void
-haze_connection_advertise_capabilities (TpSvcConnectionInterfaceCapabilities *iface,
-                                        const GPtrArray *add,
-                                        const gchar **del,
-                                        DBusGMethodInvocation *context)
-{
-  HazeConnection *self = HAZE_CONNECTION (iface);
-  TpBaseConnection *base = (TpBaseConnection *) self;
-#ifdef ENABLE_MEDIA
-  guint i;
-  PurpleMediaCaps old_caps, caps;
-#endif
-  GPtrArray *ret;
-
-  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
-
-#ifdef ENABLE_MEDIA
-  caps = old_caps = purple_media_manager_get_ui_caps (
-      purple_media_manager_get ());
-  for (i = 0; i < add->len; i++)
-    {
-      GValue iface_flags_pair = {0, };
-      gchar *channel_type;
-      guint flags;
-
-      g_value_init (&iface_flags_pair, TP_STRUCT_TYPE_CAPABILITY_PAIR);
-      g_value_set_static_boxed (&iface_flags_pair, g_ptr_array_index (add, i));
-
-      dbus_g_type_struct_get (&iface_flags_pair,
-                              0, &channel_type,
-                              1, &flags,
-                              G_MAXUINT);
-
-      if (g_str_equal (channel_type, TP_IFACE_CHANNEL_TYPE_STREAMED_MEDIA))
-        caps |= tp_flags_to_purple_caps(flags);
-
-      g_free (channel_type);
-    }
-
-  for (i = 0; NULL != del[i]; i++)
-    {
-      if (g_str_equal (del[i], TP_IFACE_CHANNEL_TYPE_STREAMED_MEDIA))
-        {
-          caps = PURPLE_MEDIA_CAPS_NONE;
-          break;
-        }
-    }
-
-  purple_media_manager_set_ui_caps (purple_media_manager_get(), caps);
-
-  _emit_capabilities_changed (self, base->self_handle, old_caps, caps);
-#endif
-
-  ret = g_ptr_array_new ();
-
-/* TODO: store caps and return them properly */
-
-  tp_svc_connection_interface_capabilities_return_from_advertise_capabilities (
-      context, ret);
-  g_ptr_array_free (ret, TRUE);
-}
-
 typedef enum {
   CAPS_FLAGS_AUDIO = 1 << 0,
   CAPS_FLAGS_VIDEO = 1 << 1,
@@ -293,91 +225,6 @@ haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities
 
   tp_svc_connection_interface_contact_capabilities_return_from_update_capabilities (
       context);
-}
-
-static const gchar *assumed_caps[] =
-{
-  TP_IFACE_CHANNEL_TYPE_TEXT,
-  NULL
-};
-
-/**
- * haze_connection_get_handle_capabilities
- *
- * Add capabilities of handle to the given GPtrArray
- */
-static void
-haze_connection_get_handle_capabilities (HazeConnection *self,
-                                         TpHandle handle,
-                                         GPtrArray *arr)
-{
-#ifdef ENABLE_MEDIA
-  TpBaseConnection *conn = TP_BASE_CONNECTION (self);
-  PurpleAccount *account = self->account;
-  TpHandleRepoIface *contact_handles =
-      tp_base_connection_get_handles (conn, TP_HANDLE_TYPE_CONTACT);
-  const gchar *bname;
-  guint typeflags = 0;
-  PurpleMediaCaps caps;
-#endif
-  const gchar **assumed;
-
-  if (0 == handle)
-    {
-      /* obsolete request for the connection's capabilities, do nothing */
-      return;
-    }
-
-  /* TODO: Check for presence */
-
-#ifdef ENABLE_MEDIA
-  if (handle == conn->self_handle)
-    caps = purple_media_manager_get_ui_caps (purple_media_manager_get ());
-  else
-    {
-      bname = tp_handle_inspect (contact_handles, handle);
-      caps = purple_prpl_get_media_caps (account, bname);
-    }
-
-  typeflags = purple_caps_to_tp_flags(caps);
-
-  if (typeflags != 0)
-    {
-      GValue monster = {0, };
-      g_value_init (&monster, TP_STRUCT_TYPE_CONTACT_CAPABILITY);
-      g_value_take_boxed (&monster,
-          dbus_g_type_specialized_construct (
-          TP_STRUCT_TYPE_CONTACT_CAPABILITY));
-      dbus_g_type_struct_set (&monster,
-          0, handle,
-          1, TP_IFACE_CHANNEL_TYPE_STREAMED_MEDIA,
-          2, TP_CONNECTION_CAPABILITY_FLAG_CREATE |
-             TP_CONNECTION_CAPABILITY_FLAG_INVITE,
-          3, typeflags,
-          G_MAXUINT);
-
-      g_ptr_array_add (arr, g_value_get_boxed (&monster));
-    }
-#endif
-
-  for (assumed = assumed_caps; NULL != *assumed; assumed++)
-    {
-      GValue monster = {0, };
-      g_value_init (&monster, TP_STRUCT_TYPE_CONTACT_CAPABILITY);
-      g_value_take_boxed (&monster,
-          dbus_g_type_specialized_construct (
-          TP_STRUCT_TYPE_CONTACT_CAPABILITY));
-
-      dbus_g_type_struct_set (&monster,
-          0, handle,
-          1, *assumed,
-          2, TP_CONNECTION_CAPABILITY_FLAG_CREATE |
-             TP_CONNECTION_CAPABILITY_FLAG_INVITE,
-          3, 0,
-          G_MAXUINT);
-
-      g_ptr_array_add (arr, g_value_get_boxed (&monster));
-    }
 }
 
 static GPtrArray *
@@ -497,90 +344,6 @@ haze_connection_get_handle_contact_capabilities (HazeConnection *self,
   return arr;
 }
 
-/**
- * haze_connection_get_capabilities
- *
- * Implements D-Bus method GetCapabilities
- * on interface org.freedesktop.Telepathy.Connection.Interface.Capabilities
- */
-static void
-haze_connection_get_capabilities (TpSvcConnectionInterfaceCapabilities *iface,
-                                  const GArray *handles,
-                                  DBusGMethodInvocation *context)
-{
-  HazeConnection *self = HAZE_CONNECTION (iface);
-  TpBaseConnection *conn = TP_BASE_CONNECTION (self);
-  TpHandleRepoIface *contact_handles = tp_base_connection_get_handles (conn,
-      TP_HANDLE_TYPE_CONTACT);
-  guint i;
-  GPtrArray *ret;
-  GError *error = NULL;
-
-  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (conn, context);
-
-  if (!tp_handles_are_valid (contact_handles, handles, TRUE, &error))
-    {
-      dbus_g_method_return_error (context, error);
-      g_error_free (error);
-      return;
-    }
-
-  ret = g_ptr_array_new ();
-
-  for (i = 0; i < handles->len; i++)
-    {
-      TpHandle handle = g_array_index (handles, TpHandle, i);
-
-      haze_connection_get_handle_capabilities (self, handle, ret);
-    }
-
-  tp_svc_connection_interface_capabilities_return_from_get_capabilities (
-      context, ret);
-
-  for (i = 0; i < ret->len; i++)
-    {
-      g_value_array_free (g_ptr_array_index (ret, i));
-    }
-
-  g_ptr_array_free (ret, TRUE);
-}
-
-static void
-conn_capabilities_fill_contact_attributes (GObject *obj,
-                                           const GArray *contacts,
-                                           GHashTable *attributes_hash)
-{
-  HazeConnection *self = HAZE_CONNECTION (obj);
-  guint i;
-  GPtrArray *array = NULL;
-
-  for (i = 0; i < contacts->len; i++)
-    {
-      TpHandle handle = g_array_index (contacts, TpHandle, i);
-
-      if (array == NULL)
-        array = g_ptr_array_new ();
-
-      haze_connection_get_handle_capabilities (self, handle, array);
-
-      if (array->len > 0)
-        {
-          GValue *val =  tp_g_value_slice_new (
-              TP_ARRAY_TYPE_CONTACT_CAPABILITY_LIST);
-
-          g_value_take_boxed (val, array);
-          tp_contacts_mixin_set_contact_attribute (attributes_hash,
-              handle, TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES"/caps",
-              val);
-
-          array = NULL;
-        }
-    }
-
-    if (array != NULL)
-      g_ptr_array_free (array, TRUE);
-}
-
 static void
 conn_capabilities_fill_contact_attributes_contact_caps (
     GObject *obj,
@@ -610,20 +373,6 @@ conn_capabilities_fill_contact_attributes_contact_caps (
       else
         g_ptr_array_free (array, TRUE);
     }
-}
-
-void
-haze_connection_capabilities_iface_init (gpointer g_iface,
-                                         gpointer iface_data)
-{
-  TpSvcConnectionInterfaceCapabilitiesClass *klass = g_iface;
-
-#define IMPLEMENT(x) \
-    tp_svc_connection_interface_capabilities_implement_##x (\
-    klass, haze_connection_##x)
-  IMPLEMENT(advertise_capabilities);
-  IMPLEMENT(get_capabilities);
-#undef IMPLEMENT
 }
 
 static void
@@ -715,9 +464,6 @@ haze_connection_capabilities_init (GObject *object)
 {
   HazeConnection *self = HAZE_CONNECTION (object);
 
-  tp_contacts_mixin_add_contact_attributes_iface (object,
-      TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES,
-      conn_capabilities_fill_contact_attributes);
   tp_contacts_mixin_add_contact_attributes_iface (object,
       TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
       conn_capabilities_fill_contact_attributes_contact_caps);
