@@ -6,7 +6,9 @@ new text channel.
 
 from twisted.words.xish import domish
 
+from servicetest import assertEquals
 from hazetest import exec_test
+import constants as cs
 
 import ns
 
@@ -30,10 +32,11 @@ def test(q, bus, conn, stream):
     stream.send(m)
 
     # first message should be from Bob, not Alice
-    event = q.expect('dbus-signal', signal='NewChannel')
-    assert event.args[1] == u'org.freedesktop.Telepathy.Channel.Type.Text'
-    jid = conn.InspectHandles(1, [event.args[3]])[0]
-    assert jid == 'bob@foo.com'
+    event = q.expect('dbus-signal', signal='NewChannels')
+    assertEquals(1, len(event.args[0]))
+    path, props = event.args[0][0]
+    assertEquals(cs.CHANNEL_TYPE_TEXT, props[cs.CHANNEL_TYPE])
+    assertEquals('bob@foo.com', props[cs.TARGET_ID])
     conn.Disconnect()
     q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])
 

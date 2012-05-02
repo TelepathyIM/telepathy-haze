@@ -8,12 +8,13 @@ from twisted.words.xish import domish
 
 from hazetest import exec_test
 from servicetest import call_async, EventPattern, assertEquals
+import constants as cs
 
 def test(q, bus, conn, stream):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
 
-    self_handle = conn.GetSelfHandle()
+    self_handle = conn.Properties.Get(cs.CONN, 'SelfHandle')
 
     jid = 'foo@bar.com'
     call_async(q, conn, 'RequestHandles', 1, [jid])
@@ -21,12 +22,14 @@ def test(q, bus, conn, stream):
     event = q.expect('dbus-return', method='RequestHandles')
     foo_handle = event.value[0][0]
 
-    call_async(q, conn, 'RequestChannel',
-        'org.freedesktop.Telepathy.Channel.Type.Text', 1, foo_handle, True)
+    call_async(q, conn.Requests, 'CreateChannel', {
+            cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_TEXT,
+            cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
+            cs.TARGET_HANDLE: foo_handle
+            })
 
-    ret, old_sig, new_sig = q.expect_many(
-        EventPattern('dbus-return', method='RequestChannel'),
-        EventPattern('dbus-signal', signal='NewChannel'),
+    ret, new_sig = q.expect_many(
+        EventPattern('dbus-return', method='CreateChannel'),
         EventPattern('dbus-signal', signal='NewChannels'),
         )
 
@@ -34,14 +37,7 @@ def test(q, bus, conn, stream):
     chan_iface = dbus.Interface(text_chan,
             'im.telepathy1.Channel')
     text_iface = dbus.Interface(text_chan,
-            'org.freedesktop.Telepathy.Channel.Type.Text')
-
-    assert old_sig.args[0] == ret.value[0]
-    assert old_sig.args[1] == u'org.freedesktop.Telepathy.Channel.Type.Text'
-    # check that handle type == contact handle
-    assert old_sig.args[2] == 1
-    assert old_sig.args[3] == foo_handle
-    assert old_sig.args[4] == True      # suppress handler
+            'im.telepathy1.Channel.Type.Text')
 
     assert len(new_sig.args) == 1
     assert len(new_sig.args[0]) == 1        # one channel
@@ -130,12 +126,13 @@ def test(q, bus, conn, stream):
     assertEquals(text_chan.object_path, old.path)
     assertEquals(text_chan.object_path, new.args[0])
 
-    event = q.expect('dbus-signal', signal='NewChannel')
-    assert event.args[0] == text_chan.object_path
-    assert event.args[1] == u'org.freedesktop.Telepathy.Channel.Type.Text'
-    assert event.args[2] == 1   # CONTACT
-    assert event.args[3] == foo_handle
-    assert event.args[4] == False   # suppress handler
+    event = q.expect('dbus-signal', signal='NewChannels')
+    assertEquals(1, len(event.args[0]))
+    path, props  = event.args[0][0]
+    assert path == text_chan.object_path
+    assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT
+    assert props[cs.TARGET_HANDLE_TYPE] == cs.HT_CONTACT
+    assert props[cs.TARGET_HANDLE] == foo_handle
 
     event = q.expect('dbus-return', method='Close')
 

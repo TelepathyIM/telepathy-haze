@@ -15,7 +15,7 @@ def test(q, bus, conn, stream):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
 
-    self_handle = conn.GetSelfHandle()
+    self_handle = conn.Properties.Get(cs.CONN, 'SelfHandle')
 
     jid = 'foo@bar.com'
     call_async(q, conn, 'RequestHandles', 1, [jid])
@@ -49,9 +49,8 @@ def test(q, bus, conn, stream):
               'im.telepathy1.Channel.TargetHandle': foo_handle,
               })
 
-    ret, old_sig, new_sig = q.expect_many(
+    ret, new_sig = q.expect_many(
         EventPattern('dbus-return', method='CreateChannel'),
-        EventPattern('dbus-signal', signal='NewChannel'),
         EventPattern('dbus-signal', signal='NewChannels'),
         )
 
@@ -70,13 +69,6 @@ def test(q, bus, conn, stream):
             'InitiatorHandle'] == self_handle
     assert emitted_props['im.telepathy1.Channel.'
             'InitiatorID'] == 'test@localhost'
-
-    assert old_sig.args[0] == ret.value[0]
-    assert old_sig.args[1] == u'org.freedesktop.Telepathy.Channel.Type.Text'
-    # check that handle type == contact handle
-    assert old_sig.args[2] == 1
-    assert old_sig.args[3] == foo_handle
-    assert old_sig.args[4] == True      # suppress handler
 
     assert len(new_sig.args) == 1
     assert len(new_sig.args[0]) == 1        # one channel

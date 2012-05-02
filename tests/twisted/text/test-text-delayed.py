@@ -8,7 +8,8 @@ import datetime
 from twisted.words.xish import domish
 
 from hazetest import exec_test
-from servicetest import EventPattern
+from servicetest import EventPattern, assertEquals
+import constants as cs
 
 def test(q, bus, conn, stream):
     conn.Connect()
@@ -25,21 +26,15 @@ def test(q, bus, conn, stream):
 
     stream.send(m)
 
-    event = q.expect('dbus-signal', signal='NewChannel')
-    assert event.args[1] == u'org.freedesktop.Telepathy.Channel.Type.Text'
+    event = q.expect('dbus-signal', signal='NewChannels')
+    assertEquals(1, len(event.args[0]))
+    path, props = event.args[0][0]
+    assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT
     # check that handle type == contact handle
-    assert event.args[2] == 1
-    jid = conn.InspectHandles(1, [event.args[3]])[0]
-    assert jid == 'foo@bar.com'
+    assert props[cs.TARGET_HANDLE_TYPE] == cs.HT_CONTACT
+    assert props[cs.TARGET_ID] == 'foo@bar.com'
 
-    received, message_received = q.expect_many(
-        EventPattern('dbus-signal', signal='Received'),
-        EventPattern('dbus-signal', signal='MessageReceived'),
-        )
-
-    old_signal_time = str(datetime.datetime.utcfromtimestamp(received.args[1]))
-    assert old_signal_time == '2007-05-17 16:15:01', old_signal_time
-    assert received.args[5] == 'hello'
+    message_received = q.expect('dbus-signal', signal='MessageReceived')
 
     message = message_received.args[0]
     header = message[0]

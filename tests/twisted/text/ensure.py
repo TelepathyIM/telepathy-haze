@@ -17,7 +17,7 @@ def test(q, bus, conn, stream):
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
 
-    self_handle = conn.GetSelfHandle()
+    self_handle = conn.Properties.Get(cs.CONN, 'SelfHandle')
 
     jids = ['foo@bar.com', 'truc@cafe.fr']
     call_async(q, conn, 'RequestHandles', 1, jids)
@@ -60,9 +60,8 @@ def test_ensure_ensure(q, conn, self_handle, jid, handle):
     # Check that Ensuring a channel that doesn't exist succeeds
     call_async(q, conn.Requests, 'EnsureChannel', request_props (handle))
 
-    ret, old_sig, new_sig = q.expect_many(
+    ret, new_sig = q.expect_many(
         EventPattern('dbus-return', method='EnsureChannel'),
-        EventPattern('dbus-signal', signal='NewChannel'),
         EventPattern('dbus-signal', signal='NewChannels'),
         )
 
@@ -74,16 +73,6 @@ def test_ensure_ensure(q, conn, self_handle, jid, handle):
     assert yours, ret.value
 
     check_props(emitted_props, self_handle, handle, jid)
-
-    assert len(old_sig.args) == 5
-    old_path, old_ct, old_ht, old_h, old_sh = old_sig.args
-
-    assert old_path == path
-    assert old_ct == u'org.freedesktop.Telepathy.Channel.Type.Text'
-    # check that handle type == contact handle
-    assert old_ht == 1
-    assert old_h == handle
-    assert old_sh == True      # suppress handler
 
     assert len(new_sig.args) == 1
     assert len(new_sig.args[0]) == 1        # one channel
@@ -121,9 +110,8 @@ def test_request_ensure(q, conn, self_handle, jid, handle):
 
     call_async(q, conn.Requests, 'CreateChannel', request_props (handle))
 
-    ret, old_sig, new_sig = q.expect_many(
+    ret, new_sig = q.expect_many(
         EventPattern('dbus-return', method='CreateChannel'),
-        EventPattern('dbus-signal', signal='NewChannel'),
         EventPattern('dbus-signal', signal='NewChannels'),
         )
 
@@ -131,16 +119,6 @@ def test_request_ensure(q, conn, self_handle, jid, handle):
     path, emitted_props = ret.value
 
     check_props(emitted_props, self_handle, handle, jid)
-
-    assert len(old_sig.args) == 5
-    old_path, old_ct, old_ht, old_h, old_sh = old_sig.args
-
-    assert old_path == path
-    assert old_ct == u'org.freedesktop.Telepathy.Channel.Type.Text'
-    # check that handle type == contact handle
-    assert old_ht == 1
-    assert old_h == handle
-    assert old_sh == True      # suppress handler
 
     assert len(new_sig.args) == 1
     assert len(new_sig.args[0]) == 1        # one channel
