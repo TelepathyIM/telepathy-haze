@@ -571,10 +571,6 @@ _haze_connection_create_channel_managers (TpBaseConnection *base)
       }
 #endif
 
-    self->contact_list = HAZE_CONTACT_LIST (
-        g_object_new (HAZE_TYPE_CONTACT_LIST, "connection", self, NULL));
-    g_ptr_array_add (channel_managers, self->contact_list);
-
     self->password_manager = tp_simple_password_manager_new (
         TP_BASE_CONNECTION (self));
     g_ptr_array_add (channel_managers, self->password_manager);
@@ -676,7 +672,11 @@ haze_connection_constructor (GType type,
     tp_contacts_mixin_init (object,
         G_STRUCT_OFFSET (HazeConnection, contacts));
     tp_base_connection_register_with_contacts_mixin (base_conn);
-    tp_base_contact_list_mixin_register_with_contacts_mixin (base_conn);
+
+    self->contact_list = HAZE_CONTACT_LIST (
+        g_object_new (HAZE_TYPE_CONTACT_LIST, "connection", self, NULL));
+    tp_base_contact_list_mixin_register_with_contacts_mixin (
+        TP_BASE_CONTACT_LIST (self->contact_list), base_conn);
 
     haze_connection_aliasing_init (object);
     haze_connection_avatars_init (object);

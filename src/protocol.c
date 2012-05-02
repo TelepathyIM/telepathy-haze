@@ -900,7 +900,6 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
   if (channel_manager_types != NULL)
     {
       GType types[] = { HAZE_TYPE_IM_CHANNEL_FACTORY,
-          HAZE_TYPE_CONTACT_LIST,
 #ifdef ENABLE_MEDIA
           HAZE_TYPE_MEDIA_MANAGER,
 #endif
