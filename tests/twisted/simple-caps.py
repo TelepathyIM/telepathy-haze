@@ -27,8 +27,7 @@ def check_rccs(conn, handle):
     check_text_only(rccs[handle])
 
     attrs = conn.Contacts.GetContactAttributes([handle],
-                                               [cs.CONN_IFACE_CONTACT_CAPS],
-                                               False)
+                                               [cs.CONN_IFACE_CONTACT_CAPS])
     rccs = attrs[handle][cs.CONN_IFACE_CONTACT_CAPS + '/capabilities']
     check_text_only(rccs)
 
