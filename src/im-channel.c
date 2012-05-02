@@ -124,24 +124,6 @@ out:
     tp_svc_channel_return_from_close(context);
 }
 
-static void
-haze_im_channel_get_channel_type (TpSvcChannel *iface,
-                                  DBusGMethodInvocation *context)
-{
-    tp_svc_channel_return_from_get_channel_type (context,
-        TP_IFACE_CHANNEL_TYPE_TEXT);
-}
-
-static void
-haze_im_channel_get_handle (TpSvcChannel *iface,
-                            DBusGMethodInvocation *context)
-{
-    HazeIMChannel *self = HAZE_IM_CHANNEL (iface);
-
-    tp_svc_channel_return_from_get_handle (context, TP_HANDLE_TYPE_CONTACT,
-        self->priv->handle);
-}
-
 static gboolean
 _chat_state_available (HazeIMChannel *chan)
 {
@@ -168,14 +150,6 @@ _haze_im_channel_interfaces (HazeIMChannel *chan)
 }
 
 static void
-haze_im_channel_get_interfaces (TpSvcChannel *iface,
-                                DBusGMethodInvocation *context)
-{
-    tp_svc_channel_return_from_get_interfaces (context,
-        (const char **)_haze_im_channel_interfaces (HAZE_IM_CHANNEL (iface)));
-}
-
-static void
 channel_iface_init (gpointer g_iface, gpointer iface_data)
 {
     TpSvcChannelClass *klass = (TpSvcChannelClass *)g_iface;
@@ -183,9 +157,6 @@ channel_iface_init (gpointer g_iface, gpointer iface_data)
 #define IMPLEMENT(x) tp_svc_channel_implement_##x (\
     klass, haze_im_channel_##x)
     IMPLEMENT(close);
-    IMPLEMENT(get_channel_type);
-    IMPLEMENT(get_handle);
-    IMPLEMENT(get_interfaces);
 #undef IMPLEMENT
 }
 
