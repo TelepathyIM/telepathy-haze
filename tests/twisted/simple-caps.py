@@ -6,8 +6,10 @@ Make sure ContactCaps works well enough.
 from twisted.words.xish import domish
 
 from servicetest import assertEquals, assertContains, EventPattern
-from hazetest import exec_test
+from hazetest import exec_test, sync_stream
 import constants as cs
+
+import config
 
 import ns
 
@@ -68,7 +70,36 @@ def test_someone_else(q, bus, conn, stream):
     amy_handle = conn.RequestHandles(cs.HT_CONTACT, ['amy@foo.com'])[0]
     check_rccs(conn, amy_handle)
 
+def test_media(q, bus, conn, stream):
+    conn.Connect()
+    q.expect('dbus-signal', signal='StatusChanged',
+            args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
+
+    sync_stream(q, stream)
+
+    conn.ContactCapabilities.UpdateCapabilities([(
+                'im.telepathy1.Client.Foobar',
+                [{ cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_STREAMED_MEDIA,
+                   cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
+                   cs.INITIAL_AUDIO: True },
+                 { cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_STREAMED_MEDIA,
+                   cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
+                   cs.INITIAL_VIDEO: True }],
+                [],
+                )])
+
+    q.expect('stream-presence') # can't be bothered checking this
+
+    conn.ContactCapabilities.UpdateCapabilities([(
+                'im.telepathy1.Client.Foobar',
+                [], [])])
+
+    q.expect('stream-presence') # can't be bothered checking this
+
 if __name__ == '__main__':
     exec_test(test_self_handle)
     exec_test(test_someone_else)
+
+    if config.MEDIA_ENABLED:
+        exec_test(test_media)
 
