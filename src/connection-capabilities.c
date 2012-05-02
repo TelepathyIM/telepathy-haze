@@ -28,6 +28,7 @@
 #include <telepathy-glib/gtypes.h>
 #include <telepathy-glib/handle.h>
 #include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/dbus.h>
 
 #include "connection.h"
 #include "debug.h"
@@ -206,6 +207,92 @@ haze_connection_advertise_capabilities (TpSvcConnectionInterfaceCapabilities *if
   tp_svc_connection_interface_capabilities_return_from_advertise_capabilities (
       context, ret);
   g_ptr_array_free (ret, TRUE);
+}
+
+typedef enum {
+  CAPS_FLAGS_AUDIO = 1 << 0,
+  CAPS_FLAGS_VIDEO = 1 << 1,
+} CapsFlags;
+
+static void
+haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities *iface,
+                                     const GPtrArray *clients,
+                                     DBusGMethodInvocation *context)
+{
+  HazeConnection *self = HAZE_CONNECTION (iface);
+  TpBaseConnection *base = (TpBaseConnection *) self;
+#ifdef ENABLE_MEDIA
+  guint i;
+  PurpleMediaCaps old_caps, caps;
+  GHashTableIter iter;
+  gpointer value;
+#endif
+
+  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
+
+#ifdef ENABLE_MEDIA
+  caps = PURPLE_MEDIA_CAPS_NONE;
+  old_caps = purple_media_manager_get_ui_caps (
+      purple_media_manager_get ());
+
+  DEBUG ("enter");
+
+  /* go through all the clients and if they can do audio or video save
+   * it in the client_caps hash table */
+  for (i = 0; i < clients->len; i++)
+    {
+      GValueArray *va = g_ptr_array_index (clients, i);
+      const gchar *client_name = g_value_get_string (va->values + 0);
+      const GPtrArray *rccs = g_value_get_boxed (va->values + 1);
+      guint j;
+      CapsFlags flags = 0;
+
+      g_hash_table_remove (self->client_caps, client_name);
+
+      for (j = 0; j < rccs->len; j++)
+        {
+          GHashTable *class = g_ptr_array_index (rccs, i);
+
+          if (tp_strdiff (tp_asv_get_string (class, TP_PROP_CHANNEL_CHANNEL_TYPE),
+                  TP_IFACE_CHANNEL_TYPE_STREAMED_MEDIA))
+            continue;
+
+          if (tp_asv_get_boolean (class,
+                  TP_PROP_CHANNEL_TYPE_STREAMED_MEDIA_INITIAL_AUDIO, NULL))
+            flags |= CAPS_FLAGS_AUDIO;
+
+          if (tp_asv_get_boolean (class,
+                  TP_PROP_CHANNEL_TYPE_STREAMED_MEDIA_INITIAL_VIDEO, NULL))
+            flags |= CAPS_FLAGS_VIDEO;
+        }
+
+      if (flags != 0)
+        {
+          g_hash_table_insert (self->client_caps, g_strdup (client_name),
+              GUINT_TO_POINTER (flags));
+        }
+    }
+
+  /* now we have an updated client_caps hash table, go through it and
+   * let libpurple know */
+  g_hash_table_iter_init (&iter, self->client_caps);
+  while (g_hash_table_iter_next (&iter, NULL, &value))
+    {
+      CapsFlags flags = GPOINTER_TO_UINT (value);
+
+      if (flags & CAPS_FLAGS_AUDIO)
+        caps |= PURPLE_MEDIA_CAPS_AUDIO;
+      if (flags & CAPS_FLAGS_VIDEO)
+        caps |= PURPLE_MEDIA_CAPS_VIDEO;
+    }
+
+  purple_media_manager_set_ui_caps (purple_media_manager_get(), caps);
+
+  _emit_capabilities_changed (self, base->self_handle, old_caps, caps);
+#endif
+
+  tp_svc_connection_interface_contact_capabilities_return_from_update_capabilities (
+      context);
 }
 
 static const gchar *assumed_caps[] =
@@ -589,7 +676,7 @@ haze_connection_contact_capabilities_iface_init (gpointer g_iface,
 #define IMPLEMENT(x) \
     tp_svc_connection_interface_contact_capabilities_implement_##x (\
     klass, haze_connection_##x)
-  /*IMPLEMENT(update_capabilities);*/
+  IMPLEMENT(update_capabilities);
   IMPLEMENT(get_contact_capabilities);
 #undef IMPLEMENT
 }
@@ -626,10 +713,23 @@ haze_connection_capabilities_class_init (GObjectClass *object_class)
 void
 haze_connection_capabilities_init (GObject *object)
 {
-  tp_contacts_mixin_add_contact_attributes_iface (G_OBJECT (object),
+  HazeConnection *self = HAZE_CONNECTION (object);
+
+  tp_contacts_mixin_add_contact_attributes_iface (object,
       TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES,
       conn_capabilities_fill_contact_attributes);
-  tp_contacts_mixin_add_contact_attributes_iface (G_OBJECT (object),
+  tp_contacts_mixin_add_contact_attributes_iface (object,
       TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
       conn_capabilities_fill_contact_attributes_contact_caps);
+
+  self->client_caps = g_hash_table_new_full (g_str_hash, g_str_equal,
+      (GDestroyNotify) g_free, NULL);
+}
+
+void
+haze_connection_capabilities_finalize (GObject *object)
+{
+  HazeConnection *self = HAZE_CONNECTION (object);
+
+  tp_clear_pointer (&self->client_caps, g_hash_table_unref);
 }

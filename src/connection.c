@@ -721,6 +721,8 @@ haze_connection_finalize (GObject *object)
     tp_contacts_mixin_finalize (object);
     tp_presence_mixin_finalize (object);
 
+    haze_connection_capabilities_finalize (object);
+
     g_strfreev (self->acceptable_avatar_mime_types);
     g_free (priv->username);
     g_free (priv->password);
