@@ -12,7 +12,7 @@ config.h
 config.h.in
 cscope.out
 stamp-h1
-data/org.freedesktop.Telepathy.ConnectionManager.haze.service
+data/im.telepathy1.ConnectionManager.haze.service
 depcomp
 /extensions/extensions.html
 install-sh
@@ -32,7 +32,7 @@ src/telepathy-haze
 src/telepathy-haze.8
 tags
 /tests/haze-testing.log
-/tests/org.freedesktop.Telepathy.ConnectionManager.haze.service
+/tests/im.telepathy1.ConnectionManager.haze.service
 /tests/tmp-session-bus.conf
 /tests/twisted/config.py
 /telepathy-haze*.tar.gz*

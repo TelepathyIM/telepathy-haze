@@ -33,7 +33,7 @@ def test(q, bus, conn, stream):
 
     # Exercise basic Channel Properties from spec 0.17.7
     channel_props = text_chan.GetAll(
-            'org.freedesktop.Telepathy.Channel',
+            'im.telepathy1.Channel',
             dbus_interface=dbus.PROPERTIES_IFACE)
     assert channel_props.get('TargetHandle') == event.args[3],\
             (channel_props.get('TargetHandle'), event.args[3])
@@ -90,7 +90,7 @@ def test(q, bus, conn, stream):
     message_id = header['pending-message-id']
 
     dbus.Interface(text_chan,
-        u'org.freedesktop.Telepathy.Channel.Type.Text'
+        u'im.telepathy1.Channel.Type.Text'
         ).AcknowledgePendingMessages([message_id])
 
     removed = q.expect('dbus-signal', signal='PendingMessagesRemoved')

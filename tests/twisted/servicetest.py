@@ -18,8 +18,8 @@ from twisted.internet import reactor
 
 import constants as cs
 
-tp_name_prefix = 'org.freedesktop.Telepathy'
-tp_path_prefix = '/org/freedesktop/Telepathy'
+tp_name_prefix = 'im.telepathy1'
+tp_path_prefix = '/im/telepathy1'
 
 class Event:
     def __init__(self, type, **kw):

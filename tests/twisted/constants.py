@@ -4,7 +4,9 @@ Some handy constants for other tests to share and enjoy.
 
 from dbus import PROPERTIES_IFACE
 
-CM = "org.freedesktop.Telepathy.ConnectionManager"
+PREFIX = "im.telepathy1"
+
+CM = PREFIX + ".ConnectionManager"
 
 HT_NONE = 0
 HT_CONTACT = 1
@@ -12,37 +14,35 @@ HT_ROOM = 2
 HT_LIST = 3
 HT_GROUP = 4
 
-CHANNEL = "org.freedesktop.Telepathy.Channel"
+CHANNEL = PREFIX + ".Channel"
 
-CHANNEL_IFACE_CALL_STATE = CHANNEL + ".Interface.CallState"
-CHANNEL_IFACE_CHAT_STATE = CHANNEL + '.Interface.ChatState'
-CHANNEL_IFACE_DESTROYABLE = CHANNEL + ".Interface.Destroyable"
-CHANNEL_IFACE_DTMF = CHANNEL + ".Interface.DTMF"
-CHANNEL_IFACE_GROUP = CHANNEL + ".Interface.Group"
-CHANNEL_IFACE_HOLD = CHANNEL + ".Interface.Hold"
+CHANNEL_IFACE_CALL_STATE = CHANNEL + ".Interface.CallState1"
+CHANNEL_IFACE_CHAT_STATE = CHANNEL + '.Interface.ChatState1'
+CHANNEL_IFACE_DESTROYABLE = CHANNEL + ".Interface.Destroyable1"
+CHANNEL_IFACE_DTMF = CHANNEL + ".Interface.DTMF1"
+CHANNEL_IFACE_GROUP = CHANNEL + ".Interface.Group1"
+CHANNEL_IFACE_HOLD = CHANNEL + ".Interface.Hold1"
 CHANNEL_IFACE_MEDIA_SIGNALLING = CHANNEL + ".Interface.MediaSignalling"
-CHANNEL_IFACE_MESSAGES = CHANNEL + ".Interface.Messages"
-CHANNEL_IFACE_PASSWORD = CHANNEL + ".Interface.Password"
-CHANNEL_IFACE_TUBE = CHANNEL + ".Interface.Tube"
-CHANNEL_IFACE_SASL_AUTH = CHANNEL + ".Interface.SaslAuthentication.DRAFT"
-CHANNEL_IFACE_CONFERENCE = CHANNEL + '.Interface.Conference'
+CHANNEL_IFACE_PASSWORD = CHANNEL + ".Interface.Password1"
+CHANNEL_IFACE_TUBE = CHANNEL + ".Interface.Tube1"
+CHANNEL_IFACE_SASL_AUTH = CHANNEL + ".Interface.SASLAuthentication1"
+CHANNEL_IFACE_CONFERENCE = CHANNEL + '.Interface.Conference1'
 
 CHANNEL_TYPE_CALL = CHANNEL + ".Type.Call.DRAFT"
-CHANNEL_TYPE_CONTACT_LIST = CHANNEL + ".Type.ContactList"
-CHANNEL_TYPE_CONTACT_SEARCH = CHANNEL + ".Type.ContactSearch"
+CHANNEL_TYPE_CONTACT_LIST = CHANNEL + ".Type.ContactList1"
+CHANNEL_TYPE_CONTACT_SEARCH = CHANNEL + ".Type.ContactSearch1"
 CHANNEL_TYPE_TEXT = CHANNEL + ".Type.Text"
 CHANNEL_TYPE_TUBES = CHANNEL + ".Type.Tubes"
-CHANNEL_TYPE_STREAM_TUBE = CHANNEL + ".Type.StreamTube"
-CHANNEL_TYPE_DBUS_TUBE = CHANNEL + ".Type.DBusTube"
+CHANNEL_TYPE_STREAM_TUBE = CHANNEL + ".Type.StreamTube1"
+CHANNEL_TYPE_DBUS_TUBE = CHANNEL + ".Type.DBusTube1"
 CHANNEL_TYPE_STREAMED_MEDIA = CHANNEL + ".Type.StreamedMedia"
-CHANNEL_TYPE_TEXT = CHANNEL + ".Type.Text"
-CHANNEL_TYPE_FILE_TRANSFER = CHANNEL + ".Type.FileTransfer"
+CHANNEL_TYPE_FILE_TRANSFER = CHANNEL + ".Type.FileTransfer1"
 CHANNEL_TYPE_SERVER_AUTHENTICATION = \
     CHANNEL + ".Type.ServerAuthentication.DRAFT"
 CHANNEL_TYPE_SERVER_TLS_CONNECTION = \
-    CHANNEL + ".Type.ServerTLSConnection"
+    CHANNEL + ".Type.ServerTLSConnection1"
 
-TP_AWKWARD_PROPERTIES = "org.freedesktop.Telepathy.Properties"
+TP_AWKWARD_PROPERTIES = PREFIX + ".Properties"
 PROPERTY_FLAG_READ = 1
 PROPERTY_FLAG_WRITE = 2
 PROPERTY_FLAGS_RW = PROPERTY_FLAG_READ | PROPERTY_FLAG_WRITE
@@ -64,18 +64,17 @@ CALL_INITIAL_AUDIO = CHANNEL_TYPE_CALL + '.InitialAudio'
 CALL_INITIAL_VIDEO = CHANNEL_TYPE_CALL + '.InitialVideo'
 CALL_MUTABLE_CONTENTS = CHANNEL_TYPE_CALL + '.MutableContents'
 
-CALL_CONTENT = 'org.freedesktop.Telepathy.Call.Content.DRAFT'
-CALL_CONTENT_IFACE_MEDIA = \
-    'org.freedesktop.Telepathy.Call.Content.Interface.Media.DRAFT'
+CALL_CONTENT = PREFIX + '.Call.Content.DRAFT'
+CALL_CONTENT_IFACE_MEDIA = PREFIX + '.Call.Content.Interface.Media.DRAFT'
 
 CALL_CONTENT_CODECOFFER = \
-    'org.freedesktop.Telepathy.Call.Content.CodecOffer.DRAFT'
+    PREFIX + '.Call.Content.CodecOffer.DRAFT'
 
-CALL_STREAM = 'org.freedesktop.Telepathy.Call.Stream.DRAFT'
+CALL_STREAM = PREFIX + '.Call.Stream.DRAFT'
 CALL_STREAM_IFACE_MEDIA = \
-    'org.freedesktop.Telepathy.Call.Stream.Interface.Media.DRAFT'
+    PREFIX + '.Call.Stream.Interface.Media.DRAFT'
 
-CALL_STREAM_ENDPOINT = 'org.freedesktop.Telepathy.Call.Stream.Endpoint.DRAFT'
+CALL_STREAM_ENDPOINT = PREFIX + '.Call.Stream.Endpoint.DRAFT'
 
 CALL_MEDIA_TYPE_AUDIO = 0
 CALL_MEDIA_TYPE_VIDEO = 1
@@ -112,29 +111,29 @@ CONTACT_LIST_STATE_WAITING = 1
 CONTACT_LIST_STATE_FAILURE = 2
 CONTACT_LIST_STATE_SUCCESS = 3
 
-CONN = "org.freedesktop.Telepathy.Connection"
-CONN_IFACE_AVATARS = CONN + '.Interface.Avatars'
-CONN_IFACE_ALIASING = CONN + '.Interface.Aliasing'
-CONN_IFACE_CAPS = CONN + '.Interface.Capabilities'
-CONN_IFACE_CONTACTS = CONN + '.Interface.Contacts'
-CONN_IFACE_CONTACT_CAPS = CONN + '.Interface.ContactCapabilities'
-CONN_IFACE_CONTACT_INFO = CONN + ".Interface.ContactInfo"
-CONN_IFACE_PRESENCE = CONN + '.Interface.Presence'
-CONN_IFACE_SIMPLE_PRESENCE = CONN + '.Interface.SimplePresence'
+CONN = PREFIX + ".Connection"
+CONN_IFACE_AVATARS = CONN + '.Interface.Avatars1'
+CONN_IFACE_ALIASING = CONN + '.Interface.Aliasing1'
+CONN_IFACE_CAPS = CONN + '.Interface.Capabilities1'
+CONN_IFACE_CONTACTS = CONN + '.Interface.Contacts1'
+CONN_IFACE_CONTACT_CAPS = CONN + '.Interface.ContactCapabilities1'
+CONN_IFACE_CONTACT_INFO = CONN + ".Interface.ContactInfo1"
+CONN_IFACE_PRESENCE = CONN + '.Interface.Presence1'
+CONN_IFACE_SIMPLE_PRESENCE = CONN + '.Interface.SimplePresence1'
 CONN_IFACE_REQUESTS = CONN + '.Interface.Requests'
-CONN_IFACE_LOCATION = CONN + '.Interface.Location'
+CONN_IFACE_LOCATION = CONN + '.Interface.Location1'
 CONN_IFACE_GABBLE_DECLOAK = CONN + '.Interface.Gabble.Decloak'
-CONN_IFACE_MAIL_NOTIFICATION = CONN + '.Interface.MailNotification'
-CONN_IFACE_CONTACT_LIST = CONN + '.Interface.ContactList'
-CONN_IFACE_CONTACT_GROUPS = CONN + '.Interface.ContactGroups'
-CONN_IFACE_CLIENT_TYPES = CONN + '.Interface.ClientTypes'
-CONN_IFACE_POWER_SAVING = CONN + '.Interface.PowerSaving'
+CONN_IFACE_MAIL_NOTIFICATION = CONN + '.Interface.MailNotification1'
+CONN_IFACE_CONTACT_LIST = CONN + '.Interface.ContactList1'
+CONN_IFACE_CONTACT_GROUPS = CONN + '.Interface.ContactGroups1'
+CONN_IFACE_CLIENT_TYPES = CONN + '.Interface.ClientTypes1'
+CONN_IFACE_POWER_SAVING = CONN + '.Interface.PowerSaving1'
 
 ATTR_CONTACT_CAPABILITIES = CONN_IFACE_CONTACT_CAPS + '/capabilities'
 
-STREAM_HANDLER = 'org.freedesktop.Telepathy.Media.StreamHandler'
+STREAM_HANDLER = PREFIX + '.Media.StreamHandler'
 
-ERROR = 'org.freedesktop.Telepathy.Error'
+ERROR = PREFIX + '.Error'
 INVALID_ARGUMENT = ERROR + '.InvalidArgument'
 NOT_IMPLEMENTED = ERROR + '.NotImplemented'
 NOT_AVAILABLE = ERROR + '.NotAvailable'
@@ -335,7 +334,7 @@ MEDIA_CAP_GTALKP2P = 8
 MEDIA_CAP_ICEUDP = 16
 MEDIA_CAP_IMMUTABLE_STREAMS = 32
 
-CLIENT = 'org.freedesktop.Telepathy.Client'
+CLIENT = PREFIX + '.Client'
 
 PRESENCE_OFFLINE = 1
 PRESENCE_AVAILABLE = 2
@@ -386,14 +385,14 @@ MT_NOTICE = 2
 MT_AUTO_REPLY = 3
 MT_DELIVERY_REPORT = 4
 
-PROTOCOL = 'org.freedesktop.Telepathy.Protocol'
+PROTOCOL = PREFIX + '.Protocol'
 PARAM_REQUIRED = 1
 PARAM_REGISTER = 2
 PARAM_HAS_DEFAULT = 4
 PARAM_SECRET = 8
 PARAM_DBUS_PROPERTY = 16
 
-AUTHENTICATION = 'org.freedesktop.Telepathy.Authentication'
+AUTHENTICATION = PREFIX + '.Authentication'
 AUTH_TLS_CERT = AUTHENTICATION + ".TLSCertificate"
 
 TLS_CERT_STATE_PENDING = 0
@@ -405,9 +404,9 @@ TLS_REJECT_REASON_UNTRUSTED = 1
 
 # Channel.Interface.Messages
 
-MESSAGE_PART_SUPPORT_FLAGS = CHANNEL_IFACE_MESSAGES + '.MessagePartSupportFlags'
-DELIVERY_REPORTING_SUPPORT = CHANNEL_IFACE_MESSAGES + '.DeliveryReportingSupport'
-SUPPORTED_CONTENT_TYPES = CHANNEL_IFACE_MESSAGES + '.SupportedContentTypes'
+MESSAGE_PART_SUPPORT_FLAGS = CHANNEL_TYPE_TEXT + '.MessagePartSupportFlags'
+DELIVERY_REPORTING_SUPPORT = CHANNEL_TYPE_TEXT + '.DeliveryReportingSupport'
+SUPPORTED_CONTENT_TYPES = CHANNEL_TYPE_TEXT + '.SupportedContentTypes'
 
 MSG_SENDING_FLAGS_REPORT_DELIVERY = 1
 MSG_SENDING_FLAGS_REPORT_READ = 2

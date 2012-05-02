@@ -22,7 +22,7 @@ def test(q, bus, conn, stream):
     foo_handle = event.value[0][0]
 
     call_async(q, conn, 'RequestChannel',
-        'org.freedesktop.Telepathy.Channel.Type.Text', 1, foo_handle, True)
+        'im.telepathy1.Channel.Type.Text', 1, foo_handle, True)
 
     ret, sig = q.expect_many(
         EventPattern('dbus-return', method='RequestChannel'),
@@ -33,7 +33,7 @@ def test(q, bus, conn, stream):
 
     assert sig.args[0] == ret.value[0], \
             (sig.args[0], ret.value[0])
-    assert sig.args[1] == u'org.freedesktop.Telepathy.Channel.Type.Text',\
+    assert sig.args[1] == u'im.telepathy1.Channel.Type.Text',\
             sig.args[1]
     # check that handle type == contact handle
     assert sig.args[2] == 1, sig.args[1]
@@ -42,16 +42,16 @@ def test(q, bus, conn, stream):
 
     # Exercise basic Channel Properties from spec 0.17.7
     channel_props = text_chan.GetAll(
-            'org.freedesktop.Telepathy.Channel',
+            'im.telepathy1.Channel',
             dbus_interface=dbus.PROPERTIES_IFACE)
     assert channel_props.get('TargetHandle') == foo_handle,\
             (channel_props.get('TargetHandle'), foo_handle)
     assert channel_props.get('TargetHandleType') == 1,\
             channel_props.get('TargetHandleType')
     assert channel_props.get('ChannelType') == \
-            'org.freedesktop.Telepathy.Channel.Type.Text',\
+            'im.telepathy1.Channel.Type.Text',\
             channel_props.get('ChannelType')
-    assert 'org.freedesktop.Telepathy.Channel.Interface.ChatState' in \
+    assert 'im.telepathy1.Channel.Interface.ChatState' in \
             channel_props.get('Interfaces', ()), \
             channel_props.get('Interfaces')
     assert channel_props['TargetID'] == jid,\
@@ -63,7 +63,7 @@ def test(q, bus, conn, stream):
             channel_props['InitiatorID']
 
     dbus.Interface(text_chan,
-        u'org.freedesktop.Telepathy.Channel.Type.Text').Send(0, 'hey')
+        u'im.telepathy1.Channel.Type.Text').Send(0, 'hey')
 
     event = q.expect('stream-message')
 

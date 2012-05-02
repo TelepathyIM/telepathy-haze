@@ -32,7 +32,7 @@ def test(q, bus, conn, stream):
 
     text_chan = bus.get_object(conn.bus_name, ret.value[0])
     chan_iface = dbus.Interface(text_chan,
-            'org.freedesktop.Telepathy.Channel')
+            'im.telepathy1.Channel')
     text_iface = dbus.Interface(text_chan,
             'org.freedesktop.Telepathy.Channel.Type.Text')
 
@@ -48,22 +48,22 @@ def test(q, bus, conn, stream):
     assert len(new_sig.args[0][0]) == 2     # two struct members
     assert new_sig.args[0][0][0] == ret.value[0]
     emitted_props = new_sig.args[0][0][1]
-    assert emitted_props['org.freedesktop.Telepathy.Channel.ChannelType'] ==\
-            'org.freedesktop.Telepathy.Channel.Type.Text'
-    assert emitted_props['org.freedesktop.Telepathy.Channel.'
+    assert emitted_props['im.telepathy1.Channel.ChannelType'] ==\
+            'im.telepathy1.Channel.Type.Text'
+    assert emitted_props['im.telepathy1.Channel.'
             'TargetHandleType'] == 1
-    assert emitted_props['org.freedesktop.Telepathy.Channel.TargetHandle'] ==\
+    assert emitted_props['im.telepathy1.Channel.TargetHandle'] ==\
             foo_handle
-    assert emitted_props['org.freedesktop.Telepathy.Channel.TargetID'] == jid
-    assert emitted_props['org.freedesktop.Telepathy.Channel.'
+    assert emitted_props['im.telepathy1.Channel.TargetID'] == jid
+    assert emitted_props['im.telepathy1.Channel.'
             'Requested'] == True
-    assert emitted_props['org.freedesktop.Telepathy.Channel.'
+    assert emitted_props['im.telepathy1.Channel.'
             'InitiatorHandle'] == self_handle
-    assert emitted_props['org.freedesktop.Telepathy.Channel.'
+    assert emitted_props['im.telepathy1.Channel.'
             'InitiatorID'] == 'test@localhost'
 
     channel_props = text_chan.GetAll(
-            'org.freedesktop.Telepathy.Channel',
+            'im.telepathy1.Channel',
             dbus_interface=dbus.PROPERTIES_IFACE)
     assert channel_props['TargetID'] == jid,\
             (channel_props['TargetID'], jid)
@@ -137,7 +137,7 @@ def test(q, bus, conn, stream):
     # it now behaves as if the message had initiated it
 
     channel_props = text_chan.GetAll(
-            'org.freedesktop.Telepathy.Channel',
+            'im.telepathy1.Channel',
             dbus_interface=dbus.PROPERTIES_IFACE)
     assert channel_props['TargetID'] == jid,\
             (channel_props['TargetID'], jid)
@@ -158,7 +158,7 @@ def test(q, bus, conn, stream):
     # acknowledge it
 
     text_chan.AcknowledgePendingMessages([hello_message_id],
-            dbus_interface='org.freedesktop.Telepathy.Channel.Type.Text')
+            dbus_interface='im.telepathy1.Channel.Type.Text')
 
     messages = text_chan.ListPendingMessages(False,
             dbus_interface='org.freedesktop.Telepathy.Channel.Type.Text')

@@ -193,7 +193,7 @@ channel_iface_init (gpointer g_iface, gpointer iface_data)
  * haze_im_channel_destroy
  *
  * Implements D-Bus method Destroy
- * on interface org.freedesktop.Telepathy.Channel.Interface.Destroyable
+ * on interface im.telepathy1.Channel.Interface.Destroyable
  */
 static void
 haze_im_channel_destroy (TpSvcChannelInterfaceDestroyable *iface,
