@@ -49,15 +49,5 @@ def test(q, bus, conn, stream):
     assert recw == 0, recw
     assert rech == 0, rech
 
-    # deprecated version
-    types, minw, minh, maxw, maxh, maxb = conn.Avatars.GetAvatarRequirements()
-    assert types[0] == 'image/png', types
-    assert minw == 32, minw
-    assert minh == 32, minh
-    assert maxw == 96, maxw
-    assert maxh == 96, maxh
-    # libpurple currently says there's no max size
-    #assert maxb == 8192, maxb
-
 if __name__ == '__main__':
     exec_test(test)

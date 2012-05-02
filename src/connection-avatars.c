@@ -153,30 +153,6 @@ haze_connection_avatars_properties_getter (GObject *object,
     }
 }
 
-static void
-haze_connection_get_avatar_requirements (TpSvcConnectionInterfaceAvatars *self,
-                                         DBusGMethodInvocation *context)
-{
-    HazeConnection *conn = HAZE_CONNECTION (self);
-    TpBaseConnection *base = TP_BASE_CONNECTION (conn);
-    PurplePluginProtocolInfo *prpl_info;
-    PurpleBuddyIconSpec *icon_spec;
-
-    TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
-
-    prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
-    icon_spec = &(prpl_info->icon_spec);
-
-    /* If the spec or the formats are null, this iface wasn't implemented. */
-    g_assert (icon_spec != NULL && icon_spec->format != NULL);
-
-    tp_svc_connection_interface_avatars_return_from_get_avatar_requirements (
-        context, (const gchar **) _get_acceptable_mime_types (conn),
-        icon_spec->min_width, icon_spec->min_height,
-        icon_spec->max_width, icon_spec->max_height,
-        icon_spec->max_filesize);
-}
-
 static GArray *
 get_avatar (HazeConnection *conn,
             TpHandle handle)
@@ -269,30 +245,6 @@ get_handle_token (HazeConnection *conn,
 }
 
 static void
-haze_connection_get_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
-                                   const GArray *contacts,
-                                   DBusGMethodInvocation *context)
-{
-    gchar **icons;
-    HazeConnection *conn = HAZE_CONNECTION (self);
-    TpBaseConnection *base = TP_BASE_CONNECTION (self);
-    guint i;
-
-    TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
-
-    icons = g_new0 (gchar *, contacts->len + 1);
-    for (i = 0; i < contacts->len; i++)
-    {
-        TpHandle handle = g_array_index (contacts, TpHandle, i);
-        icons[i] = get_handle_token (conn, handle);
-    }
-
-    tp_svc_connection_interface_avatars_return_from_get_avatar_tokens (
-        context, (const gchar **) icons);
-    g_strfreev (icons);
-}
-
-static void
 haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
                                          const GArray *contacts,
                                          DBusGMethodInvocation *context)
@@ -353,39 +305,6 @@ haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
         context, tokens);
 
     g_hash_table_unref (tokens);
-}
-
-static void
-haze_connection_request_avatar (TpSvcConnectionInterfaceAvatars *self,
-                                guint contact,
-                                DBusGMethodInvocation *context)
-{
-    HazeConnection *conn = HAZE_CONNECTION (self);
-    TpBaseConnection *base = TP_BASE_CONNECTION (conn);
-    GArray *avatar;
-    GError *error = NULL;
-
-    TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
-
-    avatar = get_avatar (conn, contact);
-    if (avatar)
-    {
-        DEBUG ("returning avatar for %u, length %u", contact, avatar->len);
-        tp_svc_connection_interface_avatars_return_from_request_avatar (
-            context, avatar, "" /* no way to get MIME type from purple */);
-        g_array_free (avatar, TRUE);
-    }
-    else
-    {
-        DEBUG ("handle %u has no avatar", contact);
-        g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
-                     "handle %u has no avatar", contact);
-
-
-        dbus_g_method_return_error (context, error);
-
-        g_error_free (error);
-    }
 }
 
 static void
@@ -519,10 +438,7 @@ haze_connection_avatars_iface_init (gpointer g_iface,
 
 #define IMPLEMENT(x) tp_svc_connection_interface_avatars_implement_##x (\
     klass, haze_connection_##x)
-    IMPLEMENT(get_avatar_requirements);
-    IMPLEMENT(get_avatar_tokens);
     IMPLEMENT(get_known_avatar_tokens);
-    IMPLEMENT(request_avatar);
     IMPLEMENT(request_avatars);
     IMPLEMENT(set_avatar);
     IMPLEMENT(clear_avatar);
