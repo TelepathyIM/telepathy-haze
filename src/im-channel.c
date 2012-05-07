@@ -757,8 +757,8 @@ _make_message (HazeIMChannel *self,
                PurpleMessageFlags flags,
                time_t mtime)
 {
-  TpMessage *message = tp_message_new ((TpBaseConnection *) self->priv->conn,
-      2, 2);
+  TpBaseConnection *base_conn = (TpBaseConnection *) self->priv->conn;
+  TpMessage *message = tp_cm_message_new (base_conn, 2);
   TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
   time_t now = time (NULL);
 
@@ -767,8 +767,7 @@ _make_message (HazeIMChannel *self,
   else if (purple_message_meify (text_plain, -1))
     type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
 
-  tp_message_set_handle (message, 0, "message-sender", TP_HANDLE_TYPE_CONTACT,
-      self->priv->handle);
+  tp_cm_message_set_sender (message, self->priv->handle);
   tp_message_set_uint32 (message, 0, "message-type", type);
 
   /* FIXME: the second half of this test shouldn't be necessary but prpl-jabber
@@ -790,11 +789,11 @@ static TpMessage *
 _make_delivery_report (HazeIMChannel *self,
                        char *text_plain)
 {
-  TpMessage *report = tp_message_new ((TpBaseConnection *) self->priv->conn, 2,
-      2);
+  TpBaseConnection *base_conn = (TpBaseConnection *) self->priv->conn;
+  TpMessage *report = tp_cm_message_new (base_conn, 2);
 
   /* "MUST be the intended recipient of the original message" */
-  tp_message_set_uint32 (report, 0, "message-sender", self->priv->handle);
+  tp_cm_message_set_sender (report, self->priv->handle);
   tp_message_set_uint32 (report, 0, "message-type",
       TP_CHANNEL_TEXT_MESSAGE_TYPE_DELIVERY_REPORT);
   /* FIXME: we don't know that the failure is temporary */
