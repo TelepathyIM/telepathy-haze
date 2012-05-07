@@ -374,7 +374,7 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
 
     if (max_filesize > 0 && icon_len > max_filesize)
     {
-        g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+        g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
                      "avatar is %" G_GSIZE_FORMAT "B, "
                      "but the limit is %" G_GSIZE_FORMAT "B",
                      icon_len, max_filesize);
@@ -403,7 +403,7 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
 
     if (!acceptable_mime_type)
     {
-        g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+        g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
             "'%s' is not a supported MIME type", mime_type);
 
         dbus_g_method_return_error (context, error);

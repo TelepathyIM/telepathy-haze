@@ -374,7 +374,7 @@ typedef struct _HandleContext {
     TpHandleRepoIface *contact_repo;
     TpHandleSet *add_handles;
 
-    /* Map from group names (const char *) to (TpIntSet *)s of handles */
+    /* Map from group names (const char *) to (TpIntset *)s of handles */
     GHashTable *group_handles;
 } HandleContext;
 
@@ -739,7 +739,7 @@ haze_contact_list_prep_remove_from_group (HazeContactList *self,
 
       if (default_group == group)
         {
-          g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
               "Contacts can't be removed from '%s' unless they are in "
               "another group", group->name);
           return FALSE;

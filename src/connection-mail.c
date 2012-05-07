@@ -69,7 +69,7 @@ haze_connection_mail_request_inbox_url (
         HazeSvcConnectionInterfaceMailNotification *iface,
         DBusGMethodInvocation *context)
 {
-    GError e = {TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+    GError e = {TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
         "LibPurple does not provide Inbox URL"};
     dbus_g_method_return_error (context, &e);
 }
@@ -86,7 +86,7 @@ haze_connection_mail_request_mail_url (
 
     if (!G_VALUE_HOLDS_STRING (in_url_data))
         {
-             GError e = {TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+             GError e = {TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
                  "Wrong type for url-data"};
              dbus_g_method_return_error (context, &e);
              return;

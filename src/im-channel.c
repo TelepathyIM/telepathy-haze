@@ -251,7 +251,7 @@ haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
     {
         case TP_CHANNEL_CHAT_STATE_GONE:
             DEBUG ("The Gone state may not be explicitly set");
-            g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+            g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
                 "The Gone state may not be explicitly set");
             break;
         case TP_CHANNEL_CHAT_STATE_INACTIVE:
@@ -266,7 +266,7 @@ haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
             break;
         default:
             DEBUG ("Invalid chat state: %u", state);
-            g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+            g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
                 "Invalid chat state: %u", state);
     }
 
@@ -324,7 +324,7 @@ haze_im_channel_send (GObject *obj,
 
   if (tp_message_count_parts (message) != 2)
     {
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "messages must have a single plain-text part");
       goto err;
     }
@@ -338,14 +338,14 @@ haze_im_channel_send (GObject *obj,
 
   if (tp_strdiff (content_type, "text/plain"))
     {
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "messages must have a single plain-text part");
       goto err;
     }
 
   if (text == NULL)
     {
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "message body must be a UTF-8 string");
       goto err;
     }
@@ -369,7 +369,7 @@ haze_im_channel_send (GObject *obj,
      * support TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE.
      */
     default:
-      error = g_error_new (TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+      error = g_error_new (TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "unsupported message type: %u", type);
       goto err;
     }
@@ -725,8 +725,8 @@ _make_message (HazeIMChannel *self,
                PurpleMessageFlags flags,
                time_t mtime)
 {
-  TpMessage *message = tp_cm_message_new (
-      (TpBaseConnection *) self->priv->conn, 2);
+  TpBaseConnection *base_conn = (TpBaseConnection *) self->priv->conn;
+  TpMessage *message = tp_cm_message_new (base_conn, 2);
   TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
   time_t now = time (NULL);
 
@@ -757,10 +757,11 @@ static TpMessage *
 _make_delivery_report (HazeIMChannel *self,
                        char *text_plain)
 {
-  TpMessage *report = tp_cm_message_new ((TpBaseConnection *) self->priv->conn, 2);
+  TpBaseConnection *base_conn = (TpBaseConnection *) self->priv->conn;
+  TpMessage *report = tp_cm_message_new (base_conn, 2);
 
   /* "MUST be the intended recipient of the original message" */
-  tp_message_set_uint32 (report, 0, "message-sender", self->priv->handle);
+  tp_cm_message_set_sender (report, self->priv->handle);
   tp_message_set_uint32 (report, 0, "message-type",
       TP_CHANNEL_TEXT_MESSAGE_TYPE_DELIVERY_REPORT);
   /* FIXME: we don't know that the failure is temporary */
