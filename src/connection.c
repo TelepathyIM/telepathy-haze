@@ -23,12 +23,8 @@
 
 #include <string.h>
 
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/dbus-properties-mixin.h>
-#include <telepathy-glib/errors.h>
-#include <telepathy-glib/handle-repo-dynamic.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/svc-generic.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include <libpurple/accountopt.h>
 #include <libpurple/version.h>
@@ -543,7 +539,7 @@ _contact_normalize (TpHandleRepoIface *repo,
 
 static void
 _haze_connection_create_handle_repos (TpBaseConnection *base,
-        TpHandleRepoIface *repos[NUM_TP_HANDLE_TYPES])
+        TpHandleRepoIface *repos[TP_NUM_HANDLE_TYPES])
 {
     repos[TP_HANDLE_TYPE_CONTACT] =
         tp_dynamic_handle_repo_new (TP_HANDLE_TYPE_CONTACT, _contact_normalize,

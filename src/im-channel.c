@@ -19,11 +19,8 @@
  *
  */
 
-#include <telepathy-glib/channel-iface.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/exportable-channel.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/svc-generic.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include "im-channel.h"
 #include "connection.h"

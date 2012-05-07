@@ -29,6 +29,7 @@
 #include <libpurple/accountopt.h>
 #include <libpurple/prpl.h>
 #include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include "connection.h"
 #include "debug.h"

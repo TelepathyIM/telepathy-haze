@@ -24,12 +24,8 @@
 
 #include <string.h>
 
-#include <telepathy-glib/base-connection.h>
-#include <telepathy-glib/channel-manager.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/gtypes.h>
-#include <telepathy-glib/handle-repo.h>
-#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include "debug.h"
 #include "im-channel.h"

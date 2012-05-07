@@ -20,10 +20,8 @@
  */
 #include "connection-aliasing.h"
 
-#include <telepathy-glib/contacts-mixin.h>
-#include <telepathy-glib/gtypes.h>
-#include <telepathy-glib/handle.h>
-#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include "connection.h"
 #include "debug.h"
