@@ -9,6 +9,8 @@ cd "${abs_top_builddir}/tests"
 
 export LC_ALL=C
 export HAZE_DEBUG=all
+G_MESSAGES_DEBUG=all
+export G_MESSAGES_DEBUG
 ulimit -c unlimited
 exec >> haze-testing.log 2>&1
 
