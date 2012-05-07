@@ -431,7 +431,7 @@ media_state_changed_cb (PurpleMedia *media,
           TpGroupMixin *mixin = TP_GROUP_MIXIN (chan);
           guint terminator;
           TpHandle peer;
-          TpIntSet *set;
+          TpIntset *set;
 
           priv->media_ended = TRUE;
 
@@ -483,7 +483,7 @@ media_stream_info_cb(PurpleMedia *media,
 
   if (type == PURPLE_MEDIA_INFO_ACCEPT)
     {
-      TpIntSet *set;
+      TpIntset *set;
       TpHandle actor;
 
       if (local == FALSE)
@@ -517,7 +517,7 @@ media_stream_info_cb(PurpleMedia *media,
     {
       TpGroupMixin *mixin = TP_GROUP_MIXIN (chan);
       guint terminator;
-      TpIntSet *set;
+      TpIntset *set;
 
       if (sid != NULL)
         return;
@@ -583,7 +583,7 @@ haze_media_channel_constructor (GType type, guint n_props,
   HazeMediaChannelPrivate *priv;
   TpBaseConnection *conn;
   TpDBusDaemon *bus;
-  TpIntSet *set;
+  TpIntset *set;
   TpHandleRepoIface *contact_handles;
 
   obj = G_OBJECT_CLASS (haze_media_channel_parent_class)->
@@ -1565,7 +1565,7 @@ haze_media_channel_add_member (GObject *obj,
   HazeMediaChannel *chan = HAZE_MEDIA_CHANNEL (obj);
   HazeMediaChannelPrivate *priv = chan->priv;
   TpGroupMixin *mixin = TP_GROUP_MIXIN (obj);
-  TpIntSet *set;
+  TpIntset *set;
 
   /* did we create this channel? */
   if (priv->creator == mixin->self_handle)

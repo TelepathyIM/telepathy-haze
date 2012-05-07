@@ -374,7 +374,7 @@ typedef struct _HandleContext {
     TpHandleRepoIface *contact_repo;
     TpHandleSet *add_handles;
 
-    /* Map from group names (const char *) to (TpIntSet *)s of handles */
+    /* Map from group names (const char *) to (TpIntset *)s of handles */
     GHashTable *group_handles;
 } HandleContext;
 
