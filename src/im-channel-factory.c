@@ -596,7 +596,7 @@ haze_im_channel_factory_request (HazeImChannelFactory *self,
         if (require_new)
         {
             tp_channel_manager_emit_request_failed (self, request_token,
-                TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "Channel already exists");
+                TP_ERROR, TP_ERROR_NOT_AVAILABLE, "Channel already exists");
         }
         else
         {

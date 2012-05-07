@@ -265,7 +265,7 @@ pending_stream_request_free (gpointer data)
 
   if (p->context != NULL)
     {
-      GError e = { TP_ERRORS, TP_ERROR_CANCELLED,
+      GError e = { TP_ERROR, TP_ERROR_CANCELLED,
           "The session terminated before the requested streams could be added"
       };
 
@@ -1179,7 +1179,7 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
       GError *e;
 
       g_object_get (base_conn, "protocol", &name, NULL);
-      g_set_error (&e, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+      g_set_error (&e, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "Streams can't be removed in Haze's \"%s\" protocol's calls", name);
       g_free (name);
 
@@ -1216,7 +1216,7 @@ haze_media_channel_remove_streams (TpSvcChannelTypeStreamedMedia *iface,
 
       if (j >= backend_streams->len)
         {
-          GError e = { TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+          GError e = { TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
               "Requested stream wasn't found" };
           DEBUG ("%s", e.message);
           dbus_g_method_return_error (context, &e);
@@ -1261,7 +1261,7 @@ haze_media_channel_request_stream_direction (TpSvcChannelTypeStreamedMedia *ifac
                                              DBusGMethodInvocation *context)
 {
   /* Libpurple doesn't have API for this yet */
-  GError e = { TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+  GError e = { TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
       "Stream direction can't be set Haze calls" };
   DEBUG ("%s", e.message);
   dbus_g_method_return_error (context, &e);
@@ -1327,7 +1327,7 @@ _haze_media_channel_request_contents (HazeMediaChannel *chan,
         }
       else
         {
-          g_set_error (error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+          g_set_error (error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
               "given media type %u is invalid", media_type);
           return FALSE;
         }
@@ -1348,7 +1348,7 @@ _haze_media_channel_request_contents (HazeMediaChannel *chan,
           gchar *name;
 
           g_object_get (base_conn, "protocol", &name, NULL);
-          g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
               "Streams can't be added in Haze's \"%s\" protocol's calls",
               name);
 
@@ -1360,7 +1360,7 @@ _haze_media_channel_request_contents (HazeMediaChannel *chan,
       if ((want_audio == FALSE || caps & PURPLE_MEDIA_CAPS_AUDIO) &&
           (want_video == FALSE || caps & PURPLE_MEDIA_CAPS_VIDEO))
         {
-          g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
               "Member does not have the desired audio/video capabilities");
           return FALSE;
         }
@@ -1442,7 +1442,7 @@ media_channel_request_streams (HazeMediaChannel *self,
 
       if (peer != contact_handle)
         {
-          g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
               "cannot add streams for %u: this channel's peer is %u",
               contact_handle, peer);
           goto error;
@@ -1581,7 +1581,7 @@ haze_media_channel_add_member (GObject *obj,
 
           if (peer != handle)
             {
-              g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+              g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
                   "handle %u cannot be added: this channel's peer is %u",
                   handle, peer);
               return FALSE;
@@ -1611,7 +1611,7 @@ haze_media_channel_add_member (GObject *obj,
           /* is the call on hold? */
           if (priv->hold_state != TP_LOCAL_HOLD_STATE_UNHELD)
             {
-              g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+              g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
                   "Can't answer a call while it's on hold");
               return FALSE;
             }
@@ -1630,7 +1630,7 @@ haze_media_channel_add_member (GObject *obj,
         }
     }
 
-  g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+  g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
       "handle %u cannot be added in the current state", handle);
   return FALSE;
 }

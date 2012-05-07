@@ -1345,7 +1345,7 @@ haze_media_stream_codecs_updated (TpSvcMediaStreamHandler *iface,
 
   if (self->priv->codecs == NULL)
     {
-      GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+      GError e = { TP_ERROR, TP_ERROR_NOT_AVAILABLE,
           "CodecsUpdated may only be called once an initial set of codecs "
           "has been set" };
 

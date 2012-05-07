@@ -390,7 +390,7 @@ set_option (
  * constructors can't fail.
  *
  * Returns: %TRUE if the account was successfully created and hooked up;
- *          %FALSE with @error set in the TP_ERRORS domain if the account
+ *          %FALSE with @error set in the TP_ERROR domain if the account
  *          already existed or another error occurred.
  */
 gboolean
@@ -406,7 +406,7 @@ haze_connection_create_account (HazeConnection *self,
 
     if (purple_accounts_find (priv->username, priv->prpl_id) != NULL)
       {
-        g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+        g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
             "a connection already exists to %s on %s", priv->username,
             priv->prpl_id);
         return FALSE;

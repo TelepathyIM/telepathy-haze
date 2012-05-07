@@ -739,7 +739,7 @@ haze_contact_list_prep_remove_from_group (HazeContactList *self,
 
       if (default_group == group)
         {
-          g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+          g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
               "Contacts can't be removed from '%s' unless they are in "
               "another group", group->name);
           return FALSE;
