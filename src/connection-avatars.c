@@ -547,7 +547,6 @@ buddy_icon_changed_cb (PurpleBuddy *buddy,
 
     tp_svc_connection_interface_avatars_emit_avatar_updated (conn, contact,
         token);
-    tp_handle_unref (contact_repo, contact);
     g_free (token);
 }
 

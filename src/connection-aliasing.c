@@ -355,7 +355,6 @@ blist_node_aliased_cb (PurpleBlistNode *node,
         aliases);
 
     g_ptr_array_free (aliases, TRUE);
-    tp_handle_unref (contact_handles, handle);
 }
 
 void

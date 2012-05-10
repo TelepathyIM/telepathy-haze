@@ -609,7 +609,6 @@ haze_media_channel_constructor (GType type, guint n_props,
   /* automatically add creator to channel, but also ref them again (because
    * priv->creator is the InitiatorHandle) */
   g_assert (priv->creator != 0);
-  tp_handle_ref (contact_handles, priv->creator);
 
   set = tp_intset_new_containing (priv->creator);
   tp_group_mixin_change_members (obj, "", set, NULL, NULL, NULL, 0,
@@ -787,15 +786,6 @@ haze_media_channel_set_property (GObject     *object,
       break;
     case PROP_INITIAL_PEER:
       priv->initial_peer = g_value_get_uint (value);
-
-      if (priv->initial_peer != 0)
-        {
-          TpBaseConnection *base_conn = (TpBaseConnection *) priv->conn;
-          TpHandleRepoIface *repo = tp_base_connection_get_handles (base_conn,
-              TP_HANDLE_TYPE_CONTACT);
-          tp_handle_ref (repo, priv->initial_peer);
-        }
-
       break;
     case PROP_MEDIA:
       g_assert (priv->media == NULL);
@@ -967,9 +957,6 @@ haze_media_channel_dispose (GObject *object)
 {
   HazeMediaChannel *self = HAZE_MEDIA_CHANNEL (object);
   HazeMediaChannelPrivate *priv = self->priv;
-  TpBaseConnection *conn = (TpBaseConnection *) priv->conn;
-  TpHandleRepoIface *contact_handles = tp_base_connection_get_handles (
-      conn, TP_HANDLE_TYPE_CONTACT);
 
   if (priv->dispose_has_run)
     return;
@@ -982,15 +969,6 @@ haze_media_channel_dispose (GObject *object)
     haze_media_channel_close (self);
 
   g_assert (priv->closed);
-
-  tp_handle_unref (contact_handles, priv->creator);
-  priv->creator = 0;
-
-  if (priv->initial_peer != 0)
-    {
-      tp_handle_unref (contact_handles, priv->initial_peer);
-      priv->initial_peer = 0;
-    }
 
   if (priv->media != NULL)
     g_object_unref (priv->media);

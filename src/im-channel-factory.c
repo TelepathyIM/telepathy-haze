@@ -457,14 +457,6 @@ haze_create_conversation (PurpleConversation *conv)
 static void
 haze_destroy_conversation (PurpleConversation *conv)
 {
-    PurpleAccount *account = purple_conversation_get_account (conv);
-
-    HazeImChannelFactory *im_factory =
-        ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
-    TpBaseConnection *base_conn = TP_BASE_CONNECTION (im_factory->priv->conn);
-    TpHandleRepoIface *contact_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
-
     HazeConversationUiData *ui_data;
 
     DEBUG ("(PurpleConversation *)%p destroyed", conv);
@@ -476,7 +468,6 @@ haze_destroy_conversation (PurpleConversation *conv)
 
     ui_data = PURPLE_CONV_GET_HAZE_UI_DATA (conv);
 
-    tp_handle_unref (contact_repo, ui_data->contact_handle);
     if (ui_data->resend_typing_timeout_id)
         g_source_remove (ui_data->resend_typing_timeout_id);
 

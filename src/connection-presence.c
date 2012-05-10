@@ -242,7 +242,6 @@ update_status (PurpleBuddy *buddy,
 
     tp_presence_mixin_emit_one_presence_update (G_OBJECT (conn), handle,
         tp_status);
-    tp_handle_unref (handle_repo, handle);
 }
 
 static void
