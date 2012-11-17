@@ -207,6 +207,7 @@ static const KnownProtocolInfo known_protocol_info[] = {
     { "zephyr", "prpl-zephyr", encoding_to_charset, "x-zephyr" /* ? */ },
     { "mxit", "prpl-loubserp-mxit", NULL, "x-mxit" /* ? */ },
     { "sip", "prpl-simple", NULL, "x-sip" },
+    { "skype", "prpl-bigbrownchunx-skype-dbus", NULL, "x-skype" },
     { NULL, NULL, NULL }
 };
 
