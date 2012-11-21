@@ -1,7 +1,17 @@
 telepathy-haze 0.7.0 (UNRELEASED)
 =================================
 
-...
+This is the start of a new unstable branch. Don't swing on it too hard.
+
+Enhancements:
+
+• Jonny implemented ContactCapabilities;
+• Simon got rid of some deprecated API;
+• So did Xavier;
+• Gabriele Giacone kindly mapped two of the extant Skype prpls to
+  "skype-x11" and "skype-dbus". Maybe you'd like to give them a whirl?
+  (fd.o#57201)
+
 
 telepathy-haze 0.6.0 (2012-04-04)
 =================================
