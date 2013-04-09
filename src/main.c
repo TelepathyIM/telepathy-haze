@@ -141,9 +141,7 @@ haze_ui_init (void)
     purple_accounts_set_ui_ops (haze_get_account_ui_ops ());
     purple_conversations_set_ui_ops (haze_get_conv_ui_ops ());
     purple_connections_set_ui_ops (haze_get_connection_ui_ops ());
-#ifdef ENABLE_LEAKY_REQUEST_STUBS
     purple_request_set_ui_ops (haze_request_get_ui_ops ());
-#endif
     purple_notify_set_ui_ops (haze_notify_get_ui_ops ());
     purple_privacy_set_ui_ops (haze_get_privacy_ui_ops ());
 }

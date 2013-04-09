@@ -18,6 +18,8 @@
  *
  */
 
+#include "config.h"
+
 #include <glib-object.h>
 
 #include <libpurple/account.h>
@@ -25,7 +27,9 @@
 
 #include "debug.h"
 #include "request.h"
+#include "connection.h"
 
+#ifdef ENABLE_LEAKY_REQUEST_STUBS
 static gpointer
 haze_request_input (const char *title,
                     const char *primary,
@@ -95,6 +99,30 @@ haze_request_action (const char *title,
 
     return NULL;
 }
+#endif
+
+struct password_data {
+    PurpleRequestFields *fields;
+    PurpleRequestField *password;
+    GCallback ok_cb;
+    GCallback cancel_cb;
+    void *user_data;
+};
+
+void haze_request_password_cb (gpointer user_data,
+                               const gchar *password)
+{
+    struct password_data *pd = user_data;
+
+    if (password) {
+        purple_request_field_string_set_value(pd->password, password);
+        ((PurpleRequestFieldsCb)pd->ok_cb)(pd->user_data, pd->fields);
+    } else {
+        ((PurpleRequestFieldsCb)pd->cancel_cb)(pd->user_data, pd->fields);
+    }
+
+    g_free(pd);
+}
 
 static gpointer
 haze_request_fields (const char *title,
@@ -110,14 +138,36 @@ haze_request_fields (const char *title,
                      PurpleConversation *conv,
                      void *user_data)
 {
-    DEBUG ("ignoring request:");
-    DEBUG ("    title: %s", (title ? title : "(null)"));
-    DEBUG ("    primary: %s", (primary ? primary : "(null)"));
-    DEBUG ("    secondary: %s", (secondary ? secondary : "(null)"));
+    /*
+     * We must support purple_account_request_password() which boils down
+     * to purple_request_fields() with certain parameters. I'm not sure
+     * if this the best way of doing this, but it works.
+     */
+    if (purple_request_fields_exists(fields, "password") &&
+        purple_request_fields_exists(fields, "remember")) {
+        struct password_data *pd = g_new0(struct password_data, 1);
+
+        DEBUG ("triggering password request");
+
+        pd->fields    = fields;
+        pd->password  = purple_request_fields_get_field(fields, "password");
+        pd->ok_cb     = ok_cb;
+        pd->cancel_cb = cancel_cb;
+        pd->user_data = user_data;
+
+        haze_connection_request_password(account, pd);
+
+    } else {
+        DEBUG ("ignoring request:");
+        DEBUG ("    title: %s", (title ? title : "(null)"));
+        DEBUG ("    primary: %s", (primary ? primary : "(null)"));
+        DEBUG ("    secondary: %s", (secondary ? secondary : "(null)"));
+    }
 
     return NULL;
 }
 
+#ifdef ENABLE_LEAKY_REQUEST_STUBS
 static gpointer
 haze_request_file (const char *title,
                    const char *filename,
@@ -152,7 +202,7 @@ haze_request_folder (const char *title,
 
     return NULL;
 }
-
+#endif
 
 /*
 	void (*close_request)(PurpleRequestType type, void *ui_handle);
@@ -160,12 +210,14 @@ haze_request_folder (const char *title,
 
 static PurpleRequestUiOps request_uiops =
 {
+#ifdef ENABLE_LEAKY_REQUEST_STUBS
     .request_input = haze_request_input,
     .request_choice = haze_request_choice,
     .request_action = haze_request_action,
-    .request_fields = haze_request_fields,
     .request_file = haze_request_file,
-    .request_folder = haze_request_folder
+    .request_folder = haze_request_folder,
+#endif
+    .request_fields = haze_request_fields
 };
 
 PurpleRequestUiOps *

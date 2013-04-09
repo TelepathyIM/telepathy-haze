@@ -111,6 +111,9 @@ const gchar *haze_get_fallback_group (void);
 const gchar **haze_connection_get_implemented_interfaces (void);
 const gchar **haze_connection_get_guaranteed_interfaces (void);
 
+void haze_connection_request_password (PurpleAccount *account,
+                                       gpointer user_data);
+
 G_END_DECLS
 
 #endif /* #ifndef __HAZE_CONNECTION_H__*/
