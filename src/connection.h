@@ -113,6 +113,7 @@ const gchar **haze_connection_get_guaranteed_interfaces (void);
 
 void haze_connection_request_password (PurpleAccount *account,
                                        gpointer user_data);
+void haze_connection_cancel_password_request (PurpleAccount *account);
 
 G_END_DECLS
 

@@ -452,7 +452,7 @@ _haze_connection_password_manager_prompt_cb (GObject *source,
 
       if (priv->password_request)
         {
-          haze_request_password_cb(priv->password_request, NULL);
+          haze_request_password_cb (priv->password_request, NULL);
         }
 
       if (base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
@@ -481,7 +481,8 @@ _haze_connection_password_manager_prompt_cb (GObject *source,
   if (priv->password_request)
     {
       haze_request_password_cb (priv->password_request, priv->password);
-    } else
+    }
+  else
     {
       purple_account_set_password (self->account, priv->password);
 
@@ -537,8 +538,9 @@ _haze_connection_start_connecting (TpBaseConnection *base,
     return TRUE;
 }
 
-void haze_connection_request_password (PurpleAccount *account,
-                                       void *user_data)
+void
+haze_connection_request_password (PurpleAccount *account,
+                                  void *user_data)
 {
     HazeConnection *self = ACCOUNT_GET_HAZE_CONNECTION (account);
     HazeConnectionPrivate *priv = self->priv;
@@ -549,6 +551,15 @@ void haze_connection_request_password (PurpleAccount *account,
     tp_simple_password_manager_prompt_async (self->password_manager,
                                              _haze_connection_password_manager_prompt_cb,
                                              self);
+}
+
+void
+haze_connection_cancel_password_request (PurpleAccount *account)
+{
+    HazeConnection *self = ACCOUNT_GET_HAZE_CONNECTION (account);
+    HazeConnectionPrivate *priv = self->priv;
+
+    priv->password_request = NULL;
 }
 
 static void
