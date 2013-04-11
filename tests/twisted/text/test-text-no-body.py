@@ -11,9 +11,6 @@ from hazetest import exec_test
 import ns
 
 def test(q, bus, conn, stream):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
-
     # message without body
     m = domish.Element((None, 'message'))
     m['from'] = 'alice@foo.com'

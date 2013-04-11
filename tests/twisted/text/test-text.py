@@ -11,9 +11,6 @@ from hazetest import exec_test
 from servicetest import EventPattern
 
 def test(q, bus, conn, stream):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
-
     # <message type="chat"><body>hello</body</message>
     m = domish.Element((None, 'message'))
     m['from'] = 'foo@bar.com/Pidgin'

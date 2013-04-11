@@ -11,9 +11,6 @@ from hazetest import exec_test
 from servicetest import call_async, EventPattern, assertEquals
 
 def test(q, bus, conn, stream):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
-
     self_handle = conn.GetSelfHandle()
 
     jid = 'foo@bar.com'

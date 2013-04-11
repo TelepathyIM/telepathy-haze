@@ -12,9 +12,6 @@ from twisted.words.protocols.jabber.client import IQ
 from hazetest import exec_test
 
 def test(q, bus, conn, stream):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
-
     amy_handle = conn.RequestHandles(1, ['amy@foo.com'])[0]
 
     # Divergence from Gabble: hazetest responds to all roster gets with an

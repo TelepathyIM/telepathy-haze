@@ -10,11 +10,6 @@ from servicetest import (assertLength, EventPattern, wrap_channel,
 import constants as cs
 import ns
 
-class RosterXmlStream(JabberXmlStream):
-    def add_roster_observer(self):
-        # don't wait for the roster IQ before continuing into the test
-        pass
-
 def test(q, bus, conn, stream):
     conn.Connect()
 
@@ -140,4 +135,4 @@ def test(q, bus, conn, stream):
     assertEquals(default_props, e.value[2])
 
 if __name__ == '__main__':
-    exec_test(test, protocol=RosterXmlStream)
+    exec_test(test, protocol=JabberXmlStream, do_connect=False)

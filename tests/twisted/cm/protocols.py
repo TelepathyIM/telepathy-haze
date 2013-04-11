@@ -181,11 +181,6 @@ def test(q, bus, conn, stream):
                         'login': r'WORKGROUP\Bill',
                         'password': 'letmein'}))
 
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[1, 1])
-    conn.Disconnect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])
-
 if __name__ == '__main__':
     exec_test(test)
 

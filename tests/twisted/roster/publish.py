@@ -14,10 +14,6 @@ import constants as cs
 import ns
 
 def test(q, bus, conn, stream):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged',
-            args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
-
     # Close all Group channels to get a clean slate, so we can rely on
     # the NewChannels signal for the default group later
     close_all_groups(q, bus, conn, stream)

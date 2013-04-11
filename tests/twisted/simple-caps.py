@@ -6,7 +6,7 @@ Make sure ContactCaps works well enough.
 from twisted.words.xish import domish
 
 from servicetest import assertEquals, assertContains, EventPattern
-from hazetest import exec_test, sync_stream
+from hazetest import exec_test, sync_stream, JabberXmlStream
 import constants as cs
 
 import config
@@ -34,10 +34,6 @@ def check_rccs(conn, handle):
 
 # do the self handle which will just be text
 def test_self_handle(q, bus, conn, stream):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged',
-             args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
-
     self_handle = conn.Properties.Get(cs.CONN, 'SelfHandle')
 
     check_rccs(conn, self_handle)
@@ -71,10 +67,6 @@ def test_someone_else(q, bus, conn, stream):
     check_rccs(conn, amy_handle)
 
 def test_media(q, bus, conn, stream):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged',
-            args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
-
     sync_stream(q, stream)
 
     conn.ContactCapabilities.UpdateCapabilities([(
@@ -98,7 +90,7 @@ def test_media(q, bus, conn, stream):
 
 if __name__ == '__main__':
     exec_test(test_self_handle)
-    exec_test(test_someone_else)
+    exec_test(test_someone_else, do_connect=False, protocol=JabberXmlStream)
 
     if config.MEDIA_ENABLED:
         exec_test(test_media)

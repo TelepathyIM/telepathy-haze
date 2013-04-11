@@ -24,5 +24,5 @@ def test(q, bus, conn, stream):
         args=[cs.CONN_STATUS_DISCONNECTED, cs.CSR_NETWORK_ERROR])
 
 if __name__ == '__main__':
-    exec_test(test, {'port': dbus.UInt32(14243)})
+    exec_test(test, {'port': dbus.UInt32(14243)}, do_connect=False)
 

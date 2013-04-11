@@ -13,10 +13,6 @@ import ns
 jid = 'marco@barisione.lit'
 
 def test(q, bus, conn, stream, remove, local):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged',
-            args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
-
     call_async(q, conn.Requests, 'EnsureChannel',{
         cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
         cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
