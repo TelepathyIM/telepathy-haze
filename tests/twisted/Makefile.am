@@ -11,6 +11,7 @@ TWISTED_TESTS = \
 	roster/publish.py \
 	roster/removed-from-rp-subscribe.py \
 	roster/subscribe.py \
+	sasl/telepathy-password.py \
 	text/destroy.py \
 	text/ensure.py \
 	text/initiate-requestotron.py \
@@ -40,6 +41,7 @@ EXTRA_DIST = \
 	$(TWISTED_TESTS) \
 	constants.py \
 	hazetest.py \
+	sasl/saslutil.py \
 	servicetest.py \
 	ns.py
 
