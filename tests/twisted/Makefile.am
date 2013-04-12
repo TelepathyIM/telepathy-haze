@@ -11,6 +11,7 @@ TWISTED_TESTS = \
 	roster/publish.py \
 	roster/removed-from-rp-subscribe.py \
 	roster/subscribe.py \
+	sasl/close.py \
 	sasl/telepathy-password.py \
 	text/destroy.py \
 	text/ensure.py \
