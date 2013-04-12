@@ -453,22 +453,19 @@ _haze_connection_password_manager_prompt_cb (GObject *source,
       if (priv->password_request)
         {
           haze_request_password_cb (priv->password_request, NULL);
+          /* no need to call purple_account_disconnect(): the prpl will take
+           * the account offline. If we're lucky it'll use an
+           * AUTHENTICATION_FAILED-type message.
+           */
         }
-
-      if (base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
+      else if (base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
         {
           tp_base_connection_disconnect_with_dbus_error (base_conn,
               tp_error_get_dbus_name (error->code), NULL,
               TP_CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED);
-        }
-
-      /* no need to call purple_account_disconnect because _connect
-       * was never called ...
-       * ... unless we had a dynamic password request */
-      if (priv->password_request)
-        {
-          priv->disconnecting = TRUE;
-          purple_account_disconnect (self->account);
+          /* no need to call purple_account_disconnect because _connect
+           * was never called ...
+           */
         }
 
       g_error_free (error);
