@@ -193,7 +193,10 @@ haze_contact_list_dup_contacts (TpBaseContactList *cl)
           purple_buddy_get_name (sl_iter->data), NULL, NULL);
 
       if (G_LIKELY (handle != 0))
-        tp_handle_set_add (handles, handle);
+        {
+          tp_handle_set_add (handles, handle);
+          tp_handle_unref (contact_repo, handle);
+        }
     }
 
   g_slist_free (buddies);
@@ -308,6 +311,8 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
     group_name = purple_group_get_name (purple_buddy_get_group (buddy));
     tp_base_contact_list_one_contact_groups_changed (
         (TpBaseContactList *) contact_list, handle, &group_name, 1, NULL, 0);
+
+    tp_handle_unref (contact_repo, handle);
 }
 
 static void
@@ -357,6 +362,8 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
         tp_base_contact_list_one_contact_removed (
             (TpBaseContactList *) contact_list, handle);
     }
+
+    tp_handle_unref (contact_repo, handle);
 }
 
 
@@ -378,11 +385,18 @@ static void
 remove_pending_publish_request (HazeContactList *self,
                                 TpHandle handle)
 {
+    HazeConnection *conn = self->priv->conn;
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
+    TpHandleRepoIface *handle_repo =
+        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+
     gpointer h = GUINT_TO_POINTER (handle);
     gboolean removed;
 
     removed = g_hash_table_remove (self->priv->pending_publish_requests, h);
     g_assert (removed);
+
+    tp_handle_unref (handle_repo, handle);
 }
 
 void
@@ -725,7 +739,7 @@ haze_contact_list_prep_remove_from_group (HazeContactList *self,
 
       if (default_group == group)
         {
-          g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
+          g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
               "Contacts can't be removed from '%s' unless they are in "
               "another group", group->name);
           return FALSE;
