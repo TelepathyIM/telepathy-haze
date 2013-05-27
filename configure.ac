@@ -61,8 +61,7 @@ TP_COMPILER_WARNINGS([ERROR_CFLAGS], [test x$release = xno],
    format-security \
    init-self],
   [missing-field-initializers \
-   unused-parameter \
-   deprecated-declarations])
+   unused-parameter])
 AC_SUBST(ERROR_CFLAGS)
 
 AC_CHECK_HEADERS_ONCE([libintl.h])
