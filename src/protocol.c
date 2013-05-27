@@ -287,7 +287,7 @@ _param_filter_no_blanks (const TpCMParamSpec *paramspec,
 
     if (*str == '\0')
     {
-        g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+        g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
             "Account parameter '%s' must not be empty",
             paramspec->name);
         return FALSE;
@@ -295,7 +295,7 @@ _param_filter_no_blanks (const TpCMParamSpec *paramspec,
 
     if (strstr (str, " ") != NULL)
     {
-        g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+        g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
             "Account parameter '%s' may not contain spaces",
             paramspec->name);
         return FALSE;
@@ -320,7 +320,7 @@ _param_filter_string_list (const TpCMParamSpec *paramspec,
       != NULL)
     return TRUE;
 
-  g_set_error (error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+  g_set_error (error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
       "'%s' is not a valid value for parameter '%s'", str, paramspec->name);
   return FALSE;
 }

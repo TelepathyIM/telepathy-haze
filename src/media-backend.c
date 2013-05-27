@@ -553,7 +553,7 @@ haze_media_backend_error (TpSvcMediaSessionHandler *iface,
        * error message describes the only legitimate situation in which this
        * could arise.
        */
-      GError e = { TP_ERRORS, TP_ERROR_NOT_AVAILABLE, "call has already ended" };
+      GError e = { TP_ERROR, TP_ERROR_NOT_AVAILABLE, "call has already ended" };
 
       DEBUG ("no session, returning an error.");
       dbus_g_method_return_error (context, &e);

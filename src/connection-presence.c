@@ -184,7 +184,7 @@ _get_contact_statuses (GObject *obj,
             {
                 DEBUG ("[%s] %s isn't on the blist, ergo no status!",
                          conn->account->username, bname);
-                g_set_error (error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+                g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
                     "Presence for %u unknown; subscribe to them first", handle);
                 g_hash_table_destroy (status_table);
                 status_table = NULL;
@@ -242,7 +242,6 @@ update_status (PurpleBuddy *buddy,
 
     tp_presence_mixin_emit_one_presence_update (G_OBJECT (conn), handle,
         tp_status);
-    tp_handle_unref (handle_repo, handle);
 }
 
 static void

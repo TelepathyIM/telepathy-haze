@@ -247,7 +247,7 @@ set_aliases_foreach (gpointer key,
         {
             DEBUG ("can't set alias for %s to \"%s\": not on contact list",
                 bname, new_alias);
-            g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+            g_set_error (&error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
                 "can't set alias for %s to \"%s\": not on contact list",
                 bname, new_alias);
         }
@@ -288,7 +288,7 @@ haze_connection_set_aliases (TpSvcConnectionInterfaceAliasing *self,
 
     if (!can_alias (conn))
     {
-        g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_AVAILABLE,
+        g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
             "You can't set aliases on this protocol");
         dbus_g_method_return_error (context, error);
         g_error_free (error);
@@ -355,7 +355,6 @@ blist_node_aliased_cb (PurpleBlistNode *node,
         aliases);
 
     g_ptr_array_free (aliases, TRUE);
-    tp_handle_unref (contact_handles, handle);
 }
 
 void
