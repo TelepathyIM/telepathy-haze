@@ -76,6 +76,10 @@ PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.15.1])
 PKG_CHECK_MODULES(GLIB,[glib-2.0 >= 2.22, gobject-2.0, gio-2.0])
 PKG_CHECK_MODULES(DBUS_GLIB,[dbus-glib-1 >= 0.73])
 
+dnl MIN_REQUIRED must stay to 2.30 because of GValueArray
+AC_DEFINE([GLIB_VERSION_MIN_REQUIRED], [GLIB_VERSION_2_30], [Ignore post 2.30 deprecations])
+AC_DEFINE([GLIB_VERSION_MAX_ALLOWED], [GLIB_VERSION_2_30], [Prevent post 2.30 APIs])
+
 GLIB_GENMARSHAL=`$PKG_CONFIG --variable=glib_genmarshal glib-2.0`
 AC_SUBST(GLIB_GENMARSHAL)
 

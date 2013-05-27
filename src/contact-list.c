@@ -193,9 +193,7 @@ haze_contact_list_dup_contacts (TpBaseContactList *cl)
           purple_buddy_get_name (sl_iter->data), NULL, NULL);
 
       if (G_LIKELY (handle != 0))
-        {
-          tp_handle_set_add (handles, handle);
-        }
+        tp_handle_set_add (handles, handle);
     }
 
   g_slist_free (buddies);
