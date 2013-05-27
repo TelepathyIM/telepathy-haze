@@ -478,7 +478,7 @@ haze_media_manager_requestotron (TpChannelManager *manager,
       /* already checked by TpBaseConnection */
       g_assert (handle == 0);
 
-      g_set_error (&error, TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+      g_set_error (&error, TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "A valid Contact handle must be provided when requesting a media "
           "channel");
 

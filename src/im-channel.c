@@ -98,15 +98,10 @@ haze_im_channel_close (TpSvcChannel *iface,
     {
         if (priv->initiator != priv->handle)
         {
-            TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-                (TpBaseConnection *) priv->conn, TP_HANDLE_TYPE_CONTACT);
-
             g_assert (priv->initiator != 0);
             g_assert (priv->handle != 0);
 
-            tp_handle_unref (contact_repo, priv->initiator);
             priv->initiator = priv->handle;
-            tp_handle_ref (contact_repo, priv->initiator);
         }
 
         tp_message_mixin_set_rescued ((GObject *) self);
@@ -283,7 +278,7 @@ haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
     {
         case TP_CHANNEL_CHAT_STATE_GONE:
             DEBUG ("The Gone state may not be explicitly set");
-            g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+            g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
                 "The Gone state may not be explicitly set");
             break;
         case TP_CHANNEL_CHAT_STATE_INACTIVE:
@@ -298,7 +293,7 @@ haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
             break;
         default:
             DEBUG ("Invalid chat state: %u", state);
-            g_set_error (&error, TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+            g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
                 "Invalid chat state: %u", state);
     }
 
@@ -356,7 +351,7 @@ haze_im_channel_send (GObject *obj,
 
   if (tp_message_count_parts (message) != 2)
     {
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "messages must have a single plain-text part");
       goto err;
     }
@@ -370,14 +365,14 @@ haze_im_channel_send (GObject *obj,
 
   if (tp_strdiff (content_type, "text/plain"))
     {
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "messages must have a single plain-text part");
       goto err;
     }
 
   if (text == NULL)
     {
-      error = g_error_new (TP_ERRORS, TP_ERROR_INVALID_ARGUMENT,
+      error = g_error_new (TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
           "message body must be a UTF-8 string");
       goto err;
     }
@@ -401,7 +396,7 @@ haze_im_channel_send (GObject *obj,
      * support TP_CHANNEL_TEXT_MESSAGE_TYPE_NOTICE.
      */
     default:
-      error = g_error_new (TP_ERRORS, TP_ERROR_NOT_IMPLEMENTED,
+      error = g_error_new (TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
           "unsupported message type: %u", type);
       goto err;
     }
@@ -569,7 +564,6 @@ haze_im_channel_constructor (GType type, guint n_props,
     GObject *obj;
     HazeIMChannel *chan;
     HazeIMChannelPrivate *priv;
-    TpHandleRepoIface *contact_handles;
     TpBaseConnection *conn;
     TpDBusDaemon *bus;
 
@@ -579,11 +573,7 @@ haze_im_channel_constructor (GType type, guint n_props,
     priv = chan->priv;
     conn = (TpBaseConnection *) (priv->conn);
 
-    contact_handles = tp_base_connection_get_handles (conn,
-        TP_HANDLE_TYPE_CONTACT);
-    tp_handle_ref (contact_handles, priv->handle);
     g_assert (priv->initiator != 0);
-    tp_handle_ref (contact_handles, priv->initiator);
 
     tp_message_mixin_init (obj, G_STRUCT_OFFSET (HazeIMChannel, messages),
         conn);
@@ -604,19 +594,10 @@ haze_im_channel_dispose (GObject *obj)
 {
     HazeIMChannel *chan = HAZE_IM_CHANNEL (obj);
     HazeIMChannelPrivate *priv = chan->priv;
-    TpBaseConnection *conn = (TpBaseConnection *) priv->conn;
-    TpHandleRepoIface *contact_handles = tp_base_connection_get_handles (conn,
-        TP_HANDLE_TYPE_CONTACT);
 
     if (priv->dispose_has_run)
         return;
     priv->dispose_has_run = TRUE;
-
-    if (priv->handle != 0)
-        tp_handle_unref (contact_handles, priv->handle);
-
-    if (priv->initiator != 0)
-        tp_handle_unref (contact_handles, priv->initiator);
 
     if (!priv->closed)
     {
@@ -757,8 +738,8 @@ _make_message (HazeIMChannel *self,
                PurpleMessageFlags flags,
                time_t mtime)
 {
-  TpMessage *message = tp_message_new ((TpBaseConnection *) self->priv->conn,
-      2, 2);
+  TpMessage *message = tp_cm_message_new ((TpBaseConnection *) self->priv->conn,
+      2);
   TpChannelTextMessageType type = TP_CHANNEL_TEXT_MESSAGE_TYPE_NORMAL;
   time_t now = time (NULL);
 
@@ -767,8 +748,7 @@ _make_message (HazeIMChannel *self,
   else if (purple_message_meify (text_plain, -1))
     type = TP_CHANNEL_TEXT_MESSAGE_TYPE_ACTION;
 
-  tp_message_set_handle (message, 0, "message-sender", TP_HANDLE_TYPE_CONTACT,
-      self->priv->handle);
+  tp_cm_message_set_sender (message, self->priv->handle);
   tp_message_set_uint32 (message, 0, "message-type", type);
 
   /* FIXME: the second half of this test shouldn't be necessary but prpl-jabber
@@ -790,7 +770,7 @@ static TpMessage *
 _make_delivery_report (HazeIMChannel *self,
                        char *text_plain)
 {
-  TpMessage *report = tp_message_new ((TpBaseConnection *) self->priv->conn, 2,
+  TpMessage *report = tp_cm_message_new ((TpBaseConnection *) self->priv->conn,
       2);
 
   /* "MUST be the intended recipient of the original message" */
