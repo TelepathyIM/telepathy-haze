@@ -14,6 +14,15 @@ export G_MESSAGES_DEBUG
 ulimit -c unlimited
 exec >> haze-testing.log 2>&1
 
+# Avoid using a non-trivial GSettings backend
+GSETTINGS_BACKEND=memory
+export GSETTINGS_BACKEND
+# Avoid libpurple doing "clever" things
+unset KDE_FULL_SESSION
+unset KDEDIR
+unset KDEDIRS
+unset GNOME_DESKTOP_SESSION_ID
+
 if test -n "$HAZE_TEST_VALGRIND"; then
         export G_DEBUG=${G_DEBUG:+"${G_DEBUG},"}gc-friendly
         export G_SLICE=always-malloc
