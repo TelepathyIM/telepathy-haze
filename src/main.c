@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <signal.h>
 
+#include <dbus/dbus.h>
 #include <glib.h>
 
 #include <libpurple/account.h>
@@ -251,6 +252,10 @@ main(int argc,
      char **argv)
 {
     int ret = 0;
+
+    if (!dbus_threads_init_default ())
+        g_error ("Unable to initialize libdbus for thread-safety "
+            "(out of memory?)");
 
     g_set_prgname(UI_ID);
 
