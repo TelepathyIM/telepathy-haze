@@ -88,6 +88,11 @@ static const HazeParameterMapping irc_mappings[] = {
     { NULL, NULL }
 };
 
+static const HazeParameterMapping sametime_mappings[] = {
+    { "usersplit1", "server" },
+    { NULL, NULL }
+};
+
 static const HazeParameterMapping jabber_mappings[] = {
     { "connect_server", "server" },
     /* usersplit1 => domain is deliberately not in this map, because
@@ -200,7 +205,7 @@ static const KnownProtocolInfo known_protocol_info[] = {
     { "local-xmpp", "prpl-bonjour", bonjour_mappings, "" /* ? */ },
     { "msn", "prpl-msn", NULL, "x-msn" },
     { "qq", "prpl-qq", NULL, "x-qq" /* ? */ },
-    { "sametime", "prpl-meanwhile", NULL, "x-sametime" /* ? */ },
+    { "sametime", "prpl-meanwhile", sametime_mappings, "x-sametime" /* ? */ },
     { "sipe", "prpl-sipe", sipe_mappings, "" /* ? */ },
     { "yahoo", "prpl-yahoo", yahoo_mappings, "x-yahoo" },
     { "yahoojp", "prpl-yahoojp", yahoo_mappings, "x-yahoo" /* ? */ },
