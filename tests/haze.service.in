@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=org.freedesktop.Telepathy.ConnectionManager.haze
-Exec=@abs_top_srcdir@/tests/exec-with-log.sh @abs_top_srcdir@ @abs_top_builddir@

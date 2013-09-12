@@ -1,3 +1,5 @@
+SUBDIRS = tools
+
 TWISTED_TESTS = \
 	avatar-requirements.py \
 	simple-caps.py \
@@ -32,8 +34,8 @@ check-local: check-twisted
 
 check-twisted:
 	rm -f ../haze-testing.log
-	sh $(top_srcdir)/tools/with-session-bus.sh \
-		--config-file=$(top_builddir)/tests/tmp-session-bus.conf \
+	sh $(top_srcdir)/tests/twisted/tools/with-session-bus.sh \
+		--config-file=$(top_builddir)/tests/twisted/tools/tmp-session-bus.conf \
 		-- $(MAKE) check-TESTS \
 			TESTS="$(TWISTED_TESTS)" \
 			TESTS_ENVIRONMENT="$(TESTS_ENVIRONMENT) $(TEST_PYTHON)"

@@ -32,8 +32,8 @@ src/telepathy-haze
 src/telepathy-haze.8
 tags
 /tests/haze-testing.log
-/tests/org.freedesktop.Telepathy.ConnectionManager.haze.service
-/tests/tmp-session-bus.conf
+/tests/twisted/tools/org.freedesktop.Telepathy.ConnectionManager.haze.service
+/tests/twisted/tools/tmp-session-bus.conf
 /tests/twisted/config.py
 /telepathy-haze*.tar.gz*
 /telepathy-haze*/

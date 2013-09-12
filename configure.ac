@@ -32,6 +32,7 @@ AC_CONFIG_FILES([Makefile
 		 m4/Makefile
 		 tests/Makefile
 		 tests/twisted/Makefile
+		 tests/twisted/tools/Makefile
 		 tools/Makefile
 		 extensions/Makefile
 		 ])
