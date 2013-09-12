@@ -42,6 +42,7 @@ EXTRA_DIST = \
 	$(TWISTED_TESTS) \
 	constants.py \
 	hazetest.py \
+	run-test.sh.in \
 	sasl/saslutil.py \
 	servicetest.py \
 	ns.py
