@@ -193,7 +193,8 @@ haze_connection_advertise_capabilities (TpSvcConnectionInterfaceCapabilities *if
 
   purple_media_manager_set_ui_caps (purple_media_manager_get(), caps);
 
-  _emit_capabilities_changed (self, base->self_handle, old_caps, caps);
+  _emit_capabilities_changed (self, tp_base_connection_get_self_handle (base),
+      old_caps, caps);
 #endif
 
   ret = g_ptr_array_new ();
@@ -284,7 +285,8 @@ haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities
 
   purple_media_manager_set_ui_caps (purple_media_manager_get(), caps);
 
-  _emit_capabilities_changed (self, base->self_handle, old_caps, caps);
+  _emit_capabilities_changed (self, tp_base_connection_get_self_handle (base),
+      old_caps, caps);
 #endif
 
   tp_svc_connection_interface_contact_capabilities_return_from_update_capabilities (
@@ -327,7 +329,7 @@ haze_connection_get_handle_capabilities (HazeConnection *self,
   /* TODO: Check for presence */
 
 #ifdef ENABLE_MEDIA
-  if (handle == conn->self_handle)
+  if (handle == tp_base_connection_get_self_handle (conn))
     caps = purple_media_manager_get_ui_caps (purple_media_manager_get ());
   else
     {
@@ -413,7 +415,7 @@ haze_connection_get_handle_contact_capabilities (HazeConnection *self,
   /* TODO: Check for presence */
 
 #ifdef ENABLE_MEDIA
-  if (handle == conn->self_handle)
+  if (handle == tp_base_connection_get_self_handle (conn))
     caps = purple_media_manager_get_ui_caps (purple_media_manager_get ());
   else
     {

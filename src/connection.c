@@ -119,10 +119,20 @@ haze_connection_get_implemented_interfaces (void)
   return implemented_interfaces;
 }
 
-const gchar **
-haze_connection_get_guaranteed_interfaces (void)
+static GPtrArray *
+haze_connection_get_interfaces_always_present (TpBaseConnection *base)
 {
-  return implemented_interfaces + HAZE_NUM_CONDITIONAL_INTERFACES;
+  GPtrArray *interfaces;
+  const gchar **iter;
+
+  interfaces = TP_BASE_CONNECTION_CLASS (
+      haze_connection_parent_class)->get_interfaces_always_present (base);
+
+  for (iter = implemented_interfaces + HAZE_NUM_CONDITIONAL_INTERFACES;
+      *iter != NULL; iter++)
+    g_ptr_array_add (interfaces, (gchar *) *iter);
+
+  return interfaces;
 }
 
 struct _HazeConnectionPrivate
@@ -298,7 +308,8 @@ haze_report_disconnect_reason (PurpleConnection *gc,
   priv->disconnecting = TRUE;
 
   map_purple_error_to_tp (reason,
-      (base_conn->status == TP_CONNECTION_STATUS_CONNECTING),
+      (tp_base_connection_get_status (base_conn) ==
+         TP_CONNECTION_STATUS_CONNECTING),
       &tp_reason, &tp_error_name);
   details = tp_asv_new ("debug-message", G_TYPE_STRING, text, NULL);
   tp_base_connection_disconnect_with_dbus_error (base_conn, tp_error_name,
@@ -323,7 +334,8 @@ disconnected_cb (PurpleConnection *pc)
 
     priv->disconnecting = TRUE;
 
-    if(base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
+    if (tp_base_connection_get_status (base_conn) !=
+        TP_CONNECTION_STATUS_DISCONNECTED)
     {
         /* Because we have report_disconnect_reason, if status is not already
          * DISCONNECTED, we know that it was requested. */
@@ -453,7 +465,8 @@ _haze_connection_password_manager_prompt_cb (GObject *source,
            * AUTHENTICATION_FAILED-type message.
            */
         }
-      else if (base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
+      else if (tp_base_connection_get_status (base_conn) !=
+          TP_CONNECTION_STATUS_DISCONNECTED)
         {
           tp_base_connection_disconnect_with_dbus_error (base_conn,
               tp_error_get_dbus_name (error->code), NULL,
@@ -493,13 +506,16 @@ _haze_connection_start_connecting (TpBaseConnection *base,
     TpHandleRepoIface *contact_handles =
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
     const gchar *password;
+    TpHandle self_handle;
 
     g_return_val_if_fail (self->account != NULL, FALSE);
 
-    base->self_handle = tp_handle_ensure (contact_handles,
+    self_handle = tp_handle_ensure (contact_handles,
         purple_account_get_username (self->account), NULL, error);
-    if (!base->self_handle)
-        return FALSE;
+    if (self_handle == 0)
+      return FALSE;
+
+    tp_base_connection_set_self_handle (base, self_handle);
 
     tp_base_connection_change_status(base, TP_CONNECTION_STATUS_CONNECTING,
                                      TP_CONNECTION_STATUS_REASON_REQUESTED);
@@ -816,8 +832,8 @@ haze_connection_class_init (HazeConnectionClass *klass)
         haze_connection_get_unique_connection_name;
     base_class->start_connecting = _haze_connection_start_connecting;
     base_class->shut_down = _haze_connection_shut_down;
-    base_class->interfaces_always_present =
-      haze_connection_get_guaranteed_interfaces();
+    base_class->get_interfaces_always_present =
+      haze_connection_get_interfaces_always_present;
 
     param_spec = g_param_spec_boxed ("parameters", "gchar * => GValue",
         "Connection parameters (password, etc.)",

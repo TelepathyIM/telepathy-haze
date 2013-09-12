@@ -276,7 +276,8 @@ new_im_channel (HazeImChannelFactory *self,
     g_assert (!g_hash_table_lookup (self->priv->channels,
           GINT_TO_POINTER (handle)));
 
-    object_path = g_strdup_printf ("%s/ImChannel%u", conn->object_path, handle);
+    object_path = g_strdup_printf ("%s/ImChannel%u",
+        tp_base_connection_get_object_path (conn), handle);
 
     chan = g_object_new (HAZE_TYPE_IM_CHANNEL,
                          "connection", self->priv->conn,
@@ -573,8 +574,9 @@ haze_im_channel_factory_request (HazeImChannelFactory *self,
         goto error;
     }
 
-    chan = get_im_channel (self, handle, base_conn->self_handle,
-        request_token, &created);
+    chan = get_im_channel (self, handle,
+        tp_base_connection_get_self_handle (base_conn), request_token,
+        &created);
     g_assert (chan != NULL);
 
     if (!created)

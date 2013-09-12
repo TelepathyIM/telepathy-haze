@@ -198,7 +198,7 @@ new_media_channel (HazeMediaManager *self,
   conn = (TpBaseConnection *) priv->conn;
 
   object_path = g_strdup_printf ("%s/MediaChannel%u",
-      conn->object_path, priv->channel_index);
+      tp_base_connection_get_object_path (conn), priv->channel_index);
   priv->channel_index += 1;
 
   chan = g_object_new (HAZE_TYPE_MEDIA_CHANNEL,

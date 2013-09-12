@@ -483,7 +483,7 @@ media_stream_info_cb(PurpleMedia *media,
       if (local == FALSE)
           actor = priv->initial_peer;
       else
-          actor = conn->self_handle;
+          actor = tp_base_connection_get_self_handle (conn);
 
       set = tp_intset_new_containing (actor);
 
@@ -517,7 +517,7 @@ media_stream_info_cb(PurpleMedia *media,
         return;
 
       if (local == TRUE)
-        terminator = conn->self_handle;
+        terminator = tp_base_connection_get_self_handle (conn);
       else
         /* This will need to get the handle from name for multi-user calls */
         terminator = priv->initial_peer;
@@ -579,6 +579,7 @@ haze_media_channel_constructor (GType type, guint n_props,
   TpDBusDaemon *bus;
   TpIntset *set;
   TpHandleRepoIface *contact_handles;
+  TpHandle self_handle;
 
   obj = G_OBJECT_CLASS (haze_media_channel_parent_class)->
       constructor (type, n_props, props);
@@ -587,18 +588,19 @@ haze_media_channel_constructor (GType type, guint n_props,
   conn = (TpBaseConnection *) priv->conn;
   contact_handles = tp_base_connection_get_handles (conn,
       TP_HANDLE_TYPE_CONTACT);
+  self_handle = tp_base_connection_get_self_handle (conn);
 
   /* register object on the bus */
   bus = tp_base_connection_get_dbus_daemon (conn);
   tp_dbus_daemon_register_object (bus, priv->object_path, obj);
 
   tp_group_mixin_init (obj, G_STRUCT_OFFSET (HazeMediaChannel, group),
-      contact_handles, conn->self_handle);
+      contact_handles, self_handle);
 
   if (priv->media != NULL)
       priv->creator = priv->initial_peer;
   else
-      priv->creator = conn->self_handle;
+      priv->creator = self_handle;
 
   /* automatically add creator to channel, but also ref them again (because
    * priv->creator is the InitiatorHandle) */
@@ -626,7 +628,7 @@ haze_media_channel_constructor (GType type, guint n_props,
        * group flags (all we can do is add or remove ourselves, which is always
        * valid per the spec)
        */
-      set = tp_intset_new_containing (conn->self_handle);
+      set = tp_intset_new_containing (self_handle);
       tp_group_mixin_change_members (obj, "", NULL, NULL, set, NULL,
           priv->initial_peer, TP_CHANNEL_GROUP_CHANGE_REASON_INVITED);
       tp_intset_destroy (set);
@@ -714,7 +716,8 @@ haze_media_channel_get_property (GObject    *object,
         }
       break;
     case PROP_REQUESTED:
-      g_value_set_boolean (value, (priv->creator == base_conn->self_handle));
+      g_value_set_boolean (value, (priv->creator ==
+            tp_base_connection_get_self_handle (base_conn)));
       break;
     case PROP_INTERFACES:
       g_value_set_boxed (value, haze_media_channel_interfaces);
@@ -1508,7 +1511,8 @@ haze_media_channel_request_initial_streams (HazeMediaChannel *chan,
   guint media_type;
 
   /* This has to be an outgoing call... */
-  g_assert (priv->creator == priv->conn->parent.self_handle);
+  g_assert (priv->creator == tp_base_connection_get_self_handle (
+        TP_BASE_CONNECTION (priv->conn)));
 
   if (priv->initial_audio)
     {

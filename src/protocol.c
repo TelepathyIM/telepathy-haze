@@ -882,10 +882,15 @@ haze_protocol_identify_account (TpBaseProtocol *base,
   return ret;
 }
 
-static GStrv
-haze_protocol_get_interfaces (TpBaseProtocol *base)
+static GPtrArray *
+haze_protocol_get_interfaces_array (TpBaseProtocol *base)
 {
-  return g_new0 (gchar *, 1);
+  GPtrArray *interfaces;
+
+  interfaces = TP_BASE_PROTOCOL_CLASS (
+      haze_protocol_parent_class)->get_interfaces_array (base);
+
+  return interfaces;
 }
 
 static void
@@ -971,7 +976,7 @@ haze_protocol_class_init (HazeProtocolClass *cls)
   base_class->new_connection = haze_protocol_new_connection;
   base_class->normalize_contact = haze_protocol_normalize_contact;
   base_class->identify_account = haze_protocol_identify_account;
-  base_class->get_interfaces = haze_protocol_get_interfaces;
+  base_class->get_interfaces_array = haze_protocol_get_interfaces_array;
   base_class->get_connection_details = haze_protocol_get_connection_details;
   base_class->dup_authentication_types =
     haze_protocol_dup_authentication_types;
