@@ -73,9 +73,12 @@ AC_ARG_ENABLE(leaky-request-stubs,
 AC_SUBST(ENABLE_LEAKY_REQUEST_STUBS)
 
 PKG_CHECK_MODULES(PURPLE,[purple >= 2.7])
-PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.15.1])
 PKG_CHECK_MODULES(GLIB,[glib-2.0 >= 2.22, gobject-2.0, gio-2.0])
 PKG_CHECK_MODULES(DBUS_GLIB,[dbus-glib-1 >= 0.73])
+
+AC_DEFINE([TP_VERSION_MIN_REQUIRED], [TP_VERSION_0_22], [Ignore post 0.22 deprecations])
+AC_DEFINE([TP_VERSION_MAX_ALLOWED], [TP_VERSION_0_22], [Prevent post 0.22 APIs])
+PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.21])
 
 dnl MIN_REQUIRED must stay to 2.30 because of GValueArray
 AC_DEFINE([GLIB_VERSION_MIN_REQUIRED], [GLIB_VERSION_2_30], [Ignore post 2.30 deprecations])
