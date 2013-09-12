@@ -35,6 +35,8 @@ tags
 /tests/twisted/tools/org.freedesktop.Telepathy.ConnectionManager.haze.service
 /tests/twisted/tools/tmp-session-bus.conf
 /tests/twisted/config.py
+/tests/twisted/haze-twisted-tests.list
+/tests/twisted/run-test.sh
 /telepathy-haze*.tar.gz*
 /telepathy-haze*/
 
