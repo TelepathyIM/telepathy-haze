@@ -22,9 +22,8 @@
 #include "media-backend.h"
 
 #include <libpurple/media/backend-iface.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/errors.h>
-#include <telepathy-glib/svc-media-interfaces.h>
+#include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include <string.h>
 

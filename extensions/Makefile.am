@@ -52,7 +52,7 @@ _gen/svc.c _gen/svc.h: _gen/all.xml $(tools_dir)/glib-ginterface-gen.py \
 	Makefile.am
 	$(AM_V_GEN)$(PYTHON) $(tools_dir)/glib-ginterface-gen.py \
 		--filename=_gen/svc --signal-marshal-prefix=_haze_ext \
-		--include='<telepathy-glib/dbus.h>' \
+		--include='<telepathy-glib/telepathy-glib.h>' \
 		--include='"_gen/signals-marshal.h"' \
 		--allow-unstable \
 		--not-implemented-func='tp_dbus_g_method_return_not_implemented' \

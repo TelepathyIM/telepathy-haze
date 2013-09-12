@@ -23,10 +23,7 @@
 #include "media-manager.h"
 
 #include <libpurple/mediamanager.h>
-#include <telepathy-glib/channel-manager.h>
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/gtypes.h>
-#include <telepathy-glib/interfaces.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "connection.h"
 #include "debug.h"

@@ -47,7 +47,7 @@
 #include <libpurple/dbus-server.h>
 #endif
 
-#include <telepathy-glib/run.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "defines.h"
 #include "debug.h"

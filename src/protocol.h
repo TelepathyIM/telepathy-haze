@@ -23,7 +23,7 @@
 #ifndef __HAZE_PROTOCOL_H__
 #define __HAZE_PROTOCOL_H__
 
-#include <telepathy-glib/base-protocol.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include <libpurple/prpl.h>
 

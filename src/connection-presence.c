@@ -22,7 +22,7 @@
 #include "connection-presence.h"
 #include "debug.h"
 
-#include <telepathy-glib/dbus.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 static const TpPresenceStatusOptionalArgumentSpec arg_specs[] = {
     { "message", "s" },

@@ -22,10 +22,7 @@
  */
 
 #include <glib-object.h>
-#include <telepathy-glib/base-connection.h>
-#include <telepathy-glib/contacts-mixin.h>
-#include <telepathy-glib/presence-mixin.h>
-#include <telepathy-glib/simple-password-manager.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include <libpurple/account.h>
 #include <libpurple/prpl.h>

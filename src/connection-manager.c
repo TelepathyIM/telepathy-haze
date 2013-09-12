@@ -27,7 +27,7 @@
 #include <libpurple/prpl.h>
 #include <libpurple/accountopt.h>
 
-#include <telepathy-glib/debug-sender.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "connection-manager.h"
 #include "debug.h"

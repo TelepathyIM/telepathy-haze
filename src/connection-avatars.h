@@ -23,7 +23,7 @@
 
 
 #include <glib-object.h>
-#include <telepathy-glib/dbus-properties-mixin.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 void haze_connection_avatars_iface_init (gpointer g_iface, gpointer iface_data);
 void haze_connection_avatars_class_init (GObjectClass *object_class);

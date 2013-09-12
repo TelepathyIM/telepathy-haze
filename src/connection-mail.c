@@ -21,9 +21,7 @@
 
 #include "extensions/extensions.h"
 
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/svc-connection.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "connection.h"
 #include "connection-mail.h"

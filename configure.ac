@@ -76,6 +76,7 @@ PKG_CHECK_MODULES(PURPLE,[purple >= 2.7])
 PKG_CHECK_MODULES(GLIB,[glib-2.0 >= 2.22, gobject-2.0, gio-2.0])
 PKG_CHECK_MODULES(DBUS_GLIB,[dbus-glib-1 >= 0.73])
 
+AC_DEFINE([TP_DISABLE_SINGLE_INCLUDE], [], [Disable single header include])
 AC_DEFINE([TP_VERSION_MIN_REQUIRED], [TP_VERSION_0_22], [Ignore post 0.22 deprecations])
 AC_DEFINE([TP_VERSION_MAX_ALLOWED], [TP_VERSION_0_22], [Prevent post 0.22 APIs])
 PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib >= 0.21])
