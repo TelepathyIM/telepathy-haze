@@ -25,20 +25,22 @@ TWISTED_TESTS = \
 	text/test-text.py
 
 
-TESTS =
-
-TESTS_ENVIRONMENT = \
-	PYTHONPATH=@abs_top_srcdir@/tests/twisted:@abs_top_builddir@/tests/twisted
-
 check-local: check-twisted
 
-check-twisted:
-	rm -f ../haze-testing.log
-	sh $(top_srcdir)/tests/twisted/tools/with-session-bus.sh \
-		--config-file=$(top_builddir)/tests/twisted/tools/tmp-session-bus.conf \
-		-- $(MAKE) check-TESTS \
-			TESTS="$(TWISTED_TESTS)" \
-			TESTS_ENVIRONMENT="$(TESTS_ENVIRONMENT) $(TEST_PYTHON)"
+CHECK_TWISTED_SLEEP=0
+
+check-twisted: $(BUILT_SOURCES)
+	$(MAKE) -C tools
+	if test "x$(CHECK_TWISTED_SLEEP)" = x0; then \
+		haze_test_sleep= ; \
+	else \
+		haze_test_sleep=--sleep=$(CHECK_TWISTED_SLEEP); \
+	fi; \
+	HAZE_TEST_UNINSTALLED=1 \
+	  HAZE_ABS_TOP_SRCDIR=@abs_top_srcdir@ \
+	  HAZE_ABS_TOP_BUILDDIR=@abs_top_builddir@ \
+	  HAZE_TEST_SLEEP=$$haze_test_sleep \
+	  ./run-test.sh "$(TWISTED_TESTS)"
 
 EXTRA_DIST = \
 	$(TWISTED_TESTS) \
@@ -60,6 +62,29 @@ config.py: Makefile
 		echo "MEDIA_ENABLED = $(MEDIA_ENABLED_PYBOOL)"; \
 	} > $@
 
-BUILT_SOURCES = config.py
+haze-twisted-tests.list: Makefile
+	$(AM_V_GEN)echo $(TWISTED_TESTS) > $@
 
-CLEANFILES = *.pyc */*.pyc config.py
+BUILT_SOURCES = \
+       config.py \
+       haze-twisted-tests.list \
+       run-test.sh \
+       $(NULL)
+
+# We don't really use hazetestsdir yet - we only support uninstalled testing
+# so far - but I'm substituting it to keep the script more similar to Gabble's.
+# ${pkglibexecdir}/tests is what GNOME's InstalledTests goal recommends.
+run-test.sh: run-test.sh.in Makefile
+	$(AM_V_GEN)sed \
+			-e 's![@]hazetestsdir[@]!${pkglibexecdir}/tests!' \
+			-e 's![@]TEST_PYTHON[@]!$(TEST_PYTHON)!' \
+			< $< > $@.tmp && \
+		chmod +x $@.tmp && \
+		mv $@.tmp $@
+
+CLEANFILES = \
+	$(BUILT_SOURCES) \
+	haze-[1-9]*.log \
+	*.pyc \
+	*/*.pyc \
+	$(NULL)

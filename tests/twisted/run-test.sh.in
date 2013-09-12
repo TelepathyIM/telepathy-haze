@@ -1,53 +1,53 @@
 #!/bin/sh
 
-if test "x$GABBLE_TEST_UNINSTALLED" = x; then
-  script_fullname=`readlink -e "@gabbletestsdir@/twisted/run-test.sh"`
+if test "x$HAZE_TEST_UNINSTALLED" = x; then
+  script_fullname=`readlink -e "@hazetestsdir@/twisted/run-test.sh"`
   if [ `readlink -e "$0"` != "$script_fullname" ] ; then
     echo "This script is meant to be installed at $script_fullname" >&2
     exit 1
   fi
 
-  test_src="@gabbletestsdir@"
-  test_build="@gabbletestsdir@"
-  config_file="@gabbletestsdir@/twisted/tools/servicedir/tmp-session-bus.conf"
+  test_src="@hazetestsdir@"
+  test_build="@hazetestsdir@"
+  config_file="@hazetestsdir@/twisted/tools/servicedir/tmp-session-bus.conf"
 
-  PYTHONPATH="@gabbletestsdir@/twisted"
+  PYTHONPATH="@hazetestsdir@/twisted"
   export PYTHONPATH
 
-  GABBLE_TWISTED_PATH="@gabbletestsdir@/twisted"
-  export GABBLE_TWISTED_PATH
+  HAZE_TWISTED_PATH="@hazetestsdir@/twisted"
+  export HAZE_TWISTED_PATH
 else
-  if test -z "$GABBLE_ABS_TOP_SRCDIR"; then
-    echo "GABBLE_ABS_TOP_SRCDIR must be set" >&2
+  if test -z "$HAZE_ABS_TOP_SRCDIR"; then
+    echo "HAZE_ABS_TOP_SRCDIR must be set" >&2
     exit 1
   fi
-  if test -z "$GABBLE_ABS_TOP_BUILDDIR"; then
-    echo "GABBLE_ABS_TOP_BUILDDIR must be set" >&2
+  if test -z "$HAZE_ABS_TOP_BUILDDIR"; then
+    echo "HAZE_ABS_TOP_BUILDDIR must be set" >&2
     exit 1
   fi
 
-  test_src="${GABBLE_ABS_TOP_SRCDIR}/tests"
-  test_build="${GABBLE_ABS_TOP_BUILDDIR}/tests"
-  config_file="${test_build}/twisted/tools/servicedir-uninstalled/tmp-session-bus.conf"
+  test_src="${HAZE_ABS_TOP_SRCDIR}/tests"
+  test_build="${HAZE_ABS_TOP_BUILDDIR}/tests"
+  config_file="${test_build}/twisted/tools/tmp-session-bus.conf"
 
   PYTHONPATH="${test_src}/twisted:${test_build}/twisted"
   export PYTHONPATH
 
-  GABBLE_TWISTED_PATH="${test_src}/twisted"
-  export GABBLE_TWISTED_PATH
+  HAZE_TWISTED_PATH="${test_src}/twisted"
+  export HAZE_TWISTED_PATH
 fi
 
 if [ -n "$1" ] ; then
   list="$1"
 else
-  list=$(cat "${test_build}"/twisted/gabble-twisted-tests.list)
+  list=$(cat "${test_build}"/twisted/haze-twisted-tests.list)
 fi
 
 any_failed=0
 for i in $list ; do
   echo "Testing $i ..."
   sh "${test_src}/twisted/tools/with-session-bus.sh" \
-    ${GABBLE_TEST_SLEEP} \
+    ${HAZE_TEST_SLEEP} \
     --config-file="${config_file}" \
     -- \
     @TEST_PYTHON@ -u "${test_src}/twisted/$i"
