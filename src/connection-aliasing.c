@@ -67,7 +67,7 @@ get_alias (HazeConnection *self,
     const gchar *bname = tp_handle_inspect (contact_handles, handle);
     const gchar *alias;
 
-    if (handle == base->self_handle)
+    if (handle == tp_base_connection_get_self_handle (base))
     {
         alias = purple_connection_get_display_name (self->account->gc);
 
@@ -189,7 +189,7 @@ set_alias_success_cb (PurpleAccount *account,
         dbus_g_type_specialized_construct (TP_STRUCT_TYPE_ALIAS_PAIR));
 
     dbus_g_type_struct_set (&entry,
-        0, base_conn->self_handle,
+        0, tp_base_connection_get_self_handle (base_conn),
         1, new_alias,
         G_MAXUINT);
 
@@ -227,7 +227,8 @@ set_aliases_foreach (gpointer key,
     {
         /* stop already */
     }
-    else if (handle == TP_BASE_CONNECTION (data->conn)->self_handle)
+    else if (handle == tp_base_connection_get_self_handle (
+          TP_BASE_CONNECTION (data->conn)))
     {
         DEBUG ("setting alias for myself to \"%s\"", new_alias);
         purple_account_set_public_alias (data->conn->account,

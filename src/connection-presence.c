@@ -166,7 +166,7 @@ _get_contact_statuses (GObject *obj,
 
         g_assert (tp_handle_is_valid (handle_repo, handle, NULL));
 
-        if (handle == base_conn->self_handle)
+        if (handle == tp_base_connection_get_self_handle (base_conn))
         {
             p_status = purple_account_get_active_status (conn->account);
         }
@@ -217,7 +217,7 @@ haze_connection_presence_account_status_changed (PurpleAccount *account,
         tp_status = _get_tp_status (status);
 
         tp_presence_mixin_emit_one_presence_update (G_OBJECT (base_conn),
-            base_conn->self_handle, tp_status);
+            tp_base_connection_get_self_handle (base_conn), tp_status);
     }
 }
 

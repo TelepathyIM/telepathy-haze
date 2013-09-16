@@ -95,7 +95,7 @@ haze_connection_avatars_properties_getter (GObject *object,
     PurplePluginProtocolInfo *prpl_info;
     PurpleBuddyIconSpec *icon_spec;
 
-    if (base->status != TP_CONNECTION_STATUS_CONNECTED)
+    if (tp_base_connection_get_status (base) != TP_CONNECTION_STATUS_CONNECTED)
     {
         /* not CONNECTED yet, so our connection doesn't have the prpl info
          * yet - return dummy values */
@@ -185,7 +185,8 @@ get_avatar (HazeConnection *conn,
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
     gconstpointer icon_data = NULL;
     size_t icon_size = 0;
-    if (handle == base->self_handle)
+
+    if (handle == tp_base_connection_get_self_handle (base))
     {
         PurpleStoredImage *image =
             purple_buddy_icons_find_account_icon (conn->account);
@@ -329,7 +330,7 @@ haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
          * avatar you last used.  So we special-case self_handle here.
          */
 
-        if (handle == base_conn->self_handle)
+        if (handle == tp_base_connection_get_self_handle (base_conn))
         {
             GArray *avatar = get_avatar (conn, handle);
             if (avatar != NULL)
@@ -426,7 +427,7 @@ haze_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *self,
 
     tp_svc_connection_interface_avatars_return_from_clear_avatar (context);
     tp_svc_connection_interface_avatars_emit_avatar_updated (conn,
-        base_conn->self_handle, "");
+        tp_base_connection_get_self_handle (base_conn), "");
 }
 
 static void
@@ -504,7 +505,7 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
 
     tp_svc_connection_interface_avatars_return_from_set_avatar (context, token);
     tp_svc_connection_interface_avatars_emit_avatar_updated (conn,
-        base_conn->self_handle, token);
+        tp_base_connection_get_self_handle (base_conn), token);
     g_free (token);
 }
 

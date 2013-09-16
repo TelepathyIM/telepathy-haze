@@ -322,7 +322,8 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
     /* Every buddy gets removed after disconnection, because the PurpleAccount
      * gets deleted.  So let's ignore removals when we're offline.
      */
-    if (base_conn->status == TP_CONNECTION_STATUS_DISCONNECTED)
+    if (tp_base_connection_get_status (base_conn) ==
+        TP_CONNECTION_STATUS_DISCONNECTED)
         return;
 
     contact_list = conn->contact_list;
