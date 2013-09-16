@@ -20,13 +20,13 @@
  */
 
 #include <config.h>
+#include "contact-list.h"
 
 #include <string.h>
 
 #include <telepathy-glib/telepathy-glib.h>
 
 #include "connection.h"
-#include "contact-list.h"
 #include "debug.h"
 
 typedef struct _PublishRequestData PublishRequestData;

@@ -20,6 +20,7 @@
  */
 
 #include <config.h>
+#include "connection-manager.h"
 
 #include <string.h>
 
@@ -31,7 +32,6 @@
 
 #include <telepathy-glib/telepathy-glib.h>
 
-#include "connection-manager.h"
 #include "debug.h"
 
 G_DEFINE_TYPE(HazeConnectionManager,
