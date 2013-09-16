@@ -18,6 +18,7 @@
  *
  */
 
+#include <config.h>
 #include "debug.h"
 
 #include <string.h>

@@ -19,7 +19,9 @@
  *
  */
 
+#include <config.h>
 #include "connection-presence.h"
+
 #include "debug.h"
 
 #include <telepathy-glib/telepathy-glib.h>

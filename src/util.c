@@ -7,6 +7,7 @@
  * notice and this notice are preserved.
  */
 
+#include <config.h>
 #include "util.h"
 
 #include <glib/gstdio.h>

@@ -19,6 +19,7 @@
  *
  */
 
+#include <config.h>
 #include "connection-avatars.h"
 
 #include <string.h>
