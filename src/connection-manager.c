@@ -95,9 +95,7 @@ haze_connection_manager_class_init (HazeConnectionManagerClass *klass)
     object_class->constructed = _haze_cm_constructed;
     object_class->finalize = _haze_cm_finalize;
 
-    base_class->new_connection = NULL;
     base_class->cm_dbus_name = "haze";
-    base_class->protocol_params = NULL;
 
     g_type_class_add_private (klass, sizeof (HazeConnectionManagerPrivate));
 }
