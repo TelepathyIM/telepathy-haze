@@ -1,7 +1,26 @@
-telepathy-haze 0.7.1 (UNRELEASED)
+telepathy-haze 0.7.1 (2013-09-17)
 =================================
 
-…
+This is a release candidate for telepathy-haze 0.8, recommended for
+use with GNOME 3.10.
+
+Deprecations:
+
+• This will be the last branch with StreamedMedia support. Anyone
+  relying on Haze for audio/video calling is invited to port it to Call1.
+
+Enhancements:
+
+• Support interactive password prompting for protocols like SIPE that
+  have an optional password (fd.o #63326; Stefan Becker, Will Thompson)
+
+Fixes:
+
+• Adapt to Sametime accounts getting a "usersplit" in libpurple 2.10.1
+  (fd.o #44631, Simon McVittie)
+
+• Regression test improvements (fd.o #69269, #65290, #65296, #63119;
+  Will Thompson, Guillaume Desmottes, Simon McVittie)
 
 telepathy-haze 0.7.0 (2012-11-21)
 =================================
