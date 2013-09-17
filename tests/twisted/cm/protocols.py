@@ -28,6 +28,13 @@ def test(q, bus, conn, stream):
         protocol_props = dbus.Interface(protocol, cs.PROPERTIES_IFACE)
         flat_props = protocol_props.GetAll(cs.PROTOCOL)
 
+        # Protocol is supposed to implement Interface.Avatars iff the
+        # connection implements Avatars as well.
+        if cs.CONN_IFACE_AVATARS in flat_props['ConnectionInterfaces']:
+            assertContains(cs.PROTOCOL_IFACE_AVATARS, props[cs.PROTOCOL + '.Interfaces'])
+        else:
+            assertDoesNotContain(cs.PROTOCOL_IFACE_AVATARS, props[cs.PROTOCOL + '.Interfaces'])
+
         parameters = cm_iface.GetParameters(name)
         assertEquals(parameters, props[cs.PROTOCOL + '.Parameters'])
         assertEquals(parameters, flat_props['Parameters'])

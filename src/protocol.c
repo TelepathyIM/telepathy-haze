@@ -885,10 +885,27 @@ haze_protocol_identify_account (TpBaseProtocol *base,
 static GPtrArray *
 haze_protocol_get_interfaces_array (TpBaseProtocol *base)
 {
+  HazeProtocol *self = HAZE_PROTOCOL (base);
   GPtrArray *interfaces;
+  GPtrArray *tmp;
+  guint i;
 
   interfaces = TP_BASE_PROTOCOL_CLASS (
       haze_protocol_parent_class)->get_interfaces_array (base);
+
+  /* Claim to implement Avatars only if we support avatars for this
+   * protocol. */
+  tmp = haze_connection_dup_implemented_interfaces (self->priv->prpl_info);
+  for (i = 0; i < tmp->len; i++)
+    {
+      if (!tp_strdiff (g_ptr_array_index (tmp, i),
+            TP_IFACE_CONNECTION_INTERFACE_AVATARS))
+        {
+          g_ptr_array_add (interfaces, TP_IFACE_PROTOCOL_INTERFACE_AVATARS);
+          break;
+        }
+    }
+  g_ptr_array_unref (tmp);
 
   return interfaces;
 }
