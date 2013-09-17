@@ -45,6 +45,7 @@ check-twisted: $(BUILT_SOURCES)
 EXTRA_DIST = \
 	$(TWISTED_TESTS) \
 	constants.py \
+	gabbletest.py \
 	hazetest.py \
 	run-test.sh.in \
 	sasl/saslutil.py \
