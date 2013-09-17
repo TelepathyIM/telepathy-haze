@@ -24,3 +24,8 @@ EXTRA_DIST = \
 	exec-with-log.sh \
 	with-session-bus.sh \
 	$(NULL)
+
+CLEANFILES = \
+    $(BUILT_SOURCES) \
+    haze-testing.log \
+    $(NULL)
