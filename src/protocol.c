@@ -905,8 +905,23 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
 
   if (connection_interfaces != NULL)
     {
-      *connection_interfaces = g_strdupv (
-        (gchar **) haze_connection_get_implemented_interfaces ());
+      GPtrArray *tmp, *ifaces;
+      guint i;
+
+      tmp = haze_connection_dup_implemented_interfaces (
+          self->priv->prpl_info);
+
+      /* @connection_interfaces takes a NULL terminated (transfer full)
+       * gchar ** so we have to dup each string and append NULL. */
+      ifaces = g_ptr_array_new ();
+
+      for (i = 0; i < tmp->len; i++)
+        g_ptr_array_add (ifaces, g_strdup (g_ptr_array_index (tmp, i)));
+
+      g_ptr_array_add (ifaces, NULL);
+
+      *connection_interfaces = (gchar **) g_ptr_array_free (ifaces, FALSE);
+      g_ptr_array_unref (tmp);
     }
 
   if (channel_manager_types != NULL)

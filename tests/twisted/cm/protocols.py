@@ -94,6 +94,10 @@ def test(q, bus, conn, stream):
                     protocol_iface.IdentifyAccount({
                         'account': 'smcv',
                         'server': 'irc.debian.org'}))
+
+            assertDoesNotContain(cs.CONN_IFACE_AVATARS, flat_props['ConnectionInterfaces'])
+            assertDoesNotContain(cs.CONN_IFACE_CONTACT_BLOCKING, flat_props['ConnectionInterfaces'])
+            assertDoesNotContain(cs.CONN_IFACE_MAIL_NOTIFICATION + '.DRAFT', flat_props['ConnectionInterfaces'])
         elif name == 'myspace':
             assertEquals('x-myspace', flat_props['VCardField'])
             assertEquals('im-myspace', flat_props['Icon'])
@@ -139,6 +143,10 @@ def test(q, bus, conn, stream):
                         'embrace-and-extend': r'WORKGROUP\Bill',
                         'password': 'letmein'})
             q.expect('dbus-error', name=cs.INVALID_ARGUMENT)
+
+            assertContains(cs.CONN_IFACE_AVATARS, flat_props['ConnectionInterfaces'])
+            assertContains(cs.CONN_IFACE_CONTACT_BLOCKING, flat_props['ConnectionInterfaces'])
+            assertContains(cs.CONN_IFACE_MAIL_NOTIFICATION + '.DRAFT', flat_props['ConnectionInterfaces'])
         elif name == 'qq':
             assertEquals('x-qq', flat_props['VCardField'])
             assertEquals('im-qq', flat_props['Icon'])

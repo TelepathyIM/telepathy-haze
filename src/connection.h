@@ -98,7 +98,9 @@ GType haze_connection_get_type (void);
 
 const gchar *haze_get_fallback_group (void);
 
-const gchar **haze_connection_get_implemented_interfaces (void);
+GPtrArray * haze_connection_dup_implemented_interfaces (
+        PurplePluginProtocolInfo *prpl_info);
+
 const gchar **haze_connection_get_guaranteed_interfaces (void);
 
 void haze_connection_request_password (PurpleAccount *account,

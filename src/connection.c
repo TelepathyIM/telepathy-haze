@@ -107,12 +107,6 @@ static const gchar * implemented_interfaces[] = {
     NULL
 };
 
-const gchar **
-haze_connection_get_implemented_interfaces (void)
-{
-  return implemented_interfaces;
-}
-
 static void
 add_always_present_connection_interfaces (GPtrArray *interfaces)
 {
@@ -134,6 +128,23 @@ haze_connection_get_interfaces_always_present (TpBaseConnection *base)
   add_always_present_connection_interfaces (interfaces);
 
   return interfaces;
+}
+
+static void add_optional_connection_interfaces (GPtrArray *ifaces,
+        PurplePluginProtocolInfo *prpl_info);
+
+/* Returns a (transfer container) not NULL terminated of (const gchar *)
+ * interface names. */
+GPtrArray *
+haze_connection_dup_implemented_interfaces (PurplePluginProtocolInfo *prpl_info)
+{
+    GPtrArray *ifaces;
+
+    ifaces = g_ptr_array_new ();
+    add_always_present_connection_interfaces (ifaces);
+    add_optional_connection_interfaces (ifaces, prpl_info);
+
+    return ifaces;
 }
 
 struct _HazeConnectionPrivate
