@@ -1,3 +1,23 @@
+telepathy-haze 0.9.0 (UNRELEASED)
+=================================
+
+Dependencies:
+
+• telepathy-glib ≥ 0.21.0 is required
+
+Features removed:
+
+• StreamedMedia channels are no longer supported. We'd potentially
+  accept patches to bring back audio/video support, but only via the
+  newer Call1 channels. (fd.o #69318, Simon)
+
+Internal changes:
+
+• fix various deprecation warnings (fd.o #69272; Guillaume, Simon)
+
+• remove deprecated Capabilities and Presence interfaces (fd.o #69318;
+  Guillaume, Simon)
+
 telepathy-haze 0.7.1 (2013-09-17)
 =================================
 
