@@ -18,12 +18,8 @@ def check_text_only(rccs):
                 cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT
                 }, [cs.TARGET_HANDLE])], rccs)
 
-# assert GetContactCaps and GetContactAttributes returns just text caps
+# assert just text caps
 def check_rccs(conn, handle):
-    rccs = conn.ContactCapabilities.GetContactCapabilities([handle])
-    assertEquals(1, len(rccs))
-    check_text_only(rccs[handle])
-
     attrs = conn.Contacts.GetContactAttributes([handle],
                                                [cs.CONN_IFACE_CONTACT_CAPS],
                                                False)
