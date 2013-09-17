@@ -466,7 +466,8 @@ haze_im_channel_get_property (GObject    *object,
         }
         case PROP_REQUESTED:
             g_value_set_boolean (value,
-                (priv->initiator == base_conn->self_handle));
+                (priv->initiator ==
+                 tp_base_connection_get_self_handle (base_conn)));
             break;
         case PROP_CONNECTION:
             g_value_set_object (value, priv->conn);
