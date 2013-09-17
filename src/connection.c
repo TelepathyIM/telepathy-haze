@@ -155,6 +155,18 @@ struct _HazeConnectionPrivate
 #define PC_GET_BASE_CONN(pc) \
     (ACCOUNT_GET_TP_BASE_CONNECTION (purple_connection_get_account (pc)))
 
+static gboolean
+protocol_info_supports_avatar (PurplePluginProtocolInfo *prpl_info)
+{
+    return (prpl_info->icon_spec.format != NULL);
+}
+
+static gboolean
+protocol_info_supports_blocking (PurplePluginProtocolInfo *prpl_info)
+{
+    return (prpl_info->add_deny != NULL);
+}
+
 static void
 connected_cb (PurpleConnection *pc)
 {
@@ -162,7 +174,7 @@ connected_cb (PurpleConnection *pc)
     HazeConnection *conn = HAZE_CONNECTION (base_conn);
     PurplePluginProtocolInfo *prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
 
-    if (prpl_info->icon_spec.format != NULL)
+    if (protocol_info_supports_avatar (prpl_info))
     {
         static const gchar *avatar_ifaces[] = {
             TP_IFACE_CONNECTION_INTERFACE_AVATARS,
@@ -170,7 +182,7 @@ connected_cb (PurpleConnection *pc)
         tp_base_connection_add_interfaces (base_conn, avatar_ifaces);
     }
 
-    if (prpl_info->add_deny != NULL)
+    if (protocol_info_supports_blocking (prpl_info))
     {
         static const gchar *blocking_ifaces[] = {
             TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING,
