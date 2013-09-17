@@ -113,18 +113,25 @@ haze_connection_get_implemented_interfaces (void)
   return implemented_interfaces;
 }
 
-static GPtrArray *
-haze_connection_get_interfaces_always_present (TpBaseConnection *base)
+static void
+add_always_present_connection_interfaces (GPtrArray *interfaces)
 {
-  GPtrArray *interfaces;
   const gchar **iter;
-
-  interfaces = TP_BASE_CONNECTION_CLASS (
-      haze_connection_parent_class)->get_interfaces_always_present (base);
 
   for (iter = implemented_interfaces + HAZE_NUM_CONDITIONAL_INTERFACES;
       *iter != NULL; iter++)
     g_ptr_array_add (interfaces, (gchar *) *iter);
+}
+
+static GPtrArray *
+haze_connection_get_interfaces_always_present (TpBaseConnection *base)
+{
+  GPtrArray *interfaces;
+
+  interfaces = TP_BASE_CONNECTION_CLASS (
+      haze_connection_parent_class)->get_interfaces_always_present (base);
+
+  add_always_present_connection_interfaces (interfaces);
 
   return interfaces;
 }
