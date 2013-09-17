@@ -174,35 +174,37 @@ protocol_info_supports_mail_notification (PurplePluginProtocolInfo *prpl_info)
 }
 
 static void
+add_optional_connection_interfaces (GPtrArray *ifaces,
+        PurplePluginProtocolInfo *prpl_info)
+{
+    if (protocol_info_supports_avatar (prpl_info))
+        g_ptr_array_add (ifaces,
+                TP_IFACE_CONNECTION_INTERFACE_AVATARS);
+
+    if (protocol_info_supports_blocking (prpl_info))
+        g_ptr_array_add (ifaces,
+                TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING);
+
+    if (protocol_info_supports_mail_notification (prpl_info))
+        g_ptr_array_add (ifaces,
+                HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION);
+}
+
+static void
 connected_cb (PurpleConnection *pc)
 {
     TpBaseConnection *base_conn = PC_GET_BASE_CONN (pc);
     HazeConnection *conn = HAZE_CONNECTION (base_conn);
     PurplePluginProtocolInfo *prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
+    GPtrArray *ifaces;
 
-    if (protocol_info_supports_avatar (prpl_info))
-    {
-        static const gchar *avatar_ifaces[] = {
-            TP_IFACE_CONNECTION_INTERFACE_AVATARS,
-            NULL };
-        tp_base_connection_add_interfaces (base_conn, avatar_ifaces);
-    }
+    ifaces = g_ptr_array_new ();
+    add_optional_connection_interfaces (ifaces, prpl_info);
+    g_ptr_array_add (ifaces, NULL);
 
-    if (protocol_info_supports_blocking (prpl_info))
-    {
-        static const gchar *blocking_ifaces[] = {
-            TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING,
-            NULL };
-        tp_base_connection_add_interfaces (base_conn, blocking_ifaces);
-    }
-
-    if (protocol_info_supports_mail_notification (prpl_info))
-    {
-        static const gchar *mail_ifaces[] = {
-            HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
-            NULL };
-        tp_base_connection_add_interfaces (base_conn, mail_ifaces);
-    }
+    tp_base_connection_add_interfaces (base_conn,
+            (const gchar **) ifaces->pdata);
+    g_ptr_array_unref (ifaces);
 
     tp_base_contact_list_set_list_received (
         (TpBaseContactList *) conn->contact_list);
