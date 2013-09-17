@@ -913,9 +913,6 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
     {
       GType types[] = { HAZE_TYPE_IM_CHANNEL_FACTORY,
           HAZE_TYPE_CONTACT_LIST,
-#ifdef ENABLE_MEDIA
-          HAZE_TYPE_MEDIA_MANAGER,
-#endif
           G_TYPE_INVALID };
 
       *channel_manager_types = g_memdup (types, sizeof (types));

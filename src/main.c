@@ -39,10 +39,6 @@
 #include <libpurple/prefs.h>
 #include <libpurple/util.h>
 
-#ifdef ENABLE_MEDIA
-#include <libpurple/mediamanager.h>
-#endif
-
 #ifdef HAVE_PURPLE_DBUS_UNINIT
 #include <libpurple/dbus-server.h>
 #endif
@@ -55,10 +51,6 @@
 #include "notify.h"
 #include "request.h"
 #include "util.h"
-
-#ifdef ENABLE_MEDIA
-#include "media-backend.h"
-#endif
 
 /* Copied verbatim from nullclient, modulo changing whitespace. */
 #define PURPLE_GLIB_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
@@ -212,11 +204,6 @@ init_libpurple (void)
         PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, PURPLE_MICRO_VERSION);
 
     set_libpurple_preferences ();
-
-#ifdef ENABLE_MEDIA
-    purple_media_manager_set_backend_type (purple_media_manager_get (),
-        HAZE_TYPE_MEDIA_BACKEND);
-#endif
 }
 
 static TpBaseConnectionManager *

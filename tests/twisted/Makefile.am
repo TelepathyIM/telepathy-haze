@@ -52,22 +52,10 @@ EXTRA_DIST = \
 	servicetest.py \
 	ns.py
 
-if MEDIA_ENABLED
-MEDIA_ENABLED_PYBOOL = True
-else
-MEDIA_ENABLED_PYBOOL = False
-endif
-
-config.py: Makefile
-	$(AM_V_GEN) { \
-		echo "MEDIA_ENABLED = $(MEDIA_ENABLED_PYBOOL)"; \
-	} > $@
-
 haze-twisted-tests.list: Makefile
 	$(AM_V_GEN)echo $(TWISTED_TESTS) > $@
 
 BUILT_SOURCES = \
-       config.py \
        haze-twisted-tests.list \
        run-test.sh \
        $(NULL)

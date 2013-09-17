@@ -9,8 +9,6 @@ from servicetest import assertEquals, assertContains, EventPattern
 from hazetest import exec_test, sync_stream, JabberXmlStream
 import constants as cs
 
-import config
-
 import ns
 
 # assert this list of RCCs is only text
@@ -66,32 +64,6 @@ def test_someone_else(q, bus, conn, stream):
     amy_handle = conn.RequestHandles(cs.HT_CONTACT, ['amy@foo.com'])[0]
     check_rccs(conn, amy_handle)
 
-def test_media(q, bus, conn, stream):
-    sync_stream(q, stream)
-
-    conn.ContactCapabilities.UpdateCapabilities([(
-                'im.telepathy1.Client.Foobar',
-                [{ cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_STREAMED_MEDIA,
-                   cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
-                   cs.INITIAL_AUDIO: True },
-                 { cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_STREAMED_MEDIA,
-                   cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
-                   cs.INITIAL_VIDEO: True }],
-                [],
-                )])
-
-    q.expect('stream-presence') # can't be bothered checking this
-
-    conn.ContactCapabilities.UpdateCapabilities([(
-                'im.telepathy1.Client.Foobar',
-                [], [])])
-
-    q.expect('stream-presence') # can't be bothered checking this
-
 if __name__ == '__main__':
     exec_test(test_self_handle)
     exec_test(test_someone_else, do_connect=False, protocol=JabberXmlStream)
-
-    if config.MEDIA_ENABLED:
-        exec_test(test_media)
-

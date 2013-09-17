@@ -25,8 +25,6 @@
 
 void haze_connection_contact_capabilities_iface_init (gpointer g_iface,
                                                       gpointer iface_data);
-void haze_connection_capabilities_class_init (GObjectClass *object_class);
 void haze_connection_capabilities_init (GObject *object);
-void haze_connection_capabilities_finalize (GObject *object);
 
 #endif

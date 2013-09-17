@@ -114,16 +114,6 @@ AC_MSG_RESULT([$TEST_PYTHON])
 AC_SUBST(TEST_PYTHON)
 AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
 
-AC_ARG_ENABLE(media,
-  AC_HELP_STRING([--disable-media],[disable audio/video calls]),
-  [
-    AM_CONDITIONAL([MEDIA_ENABLED], false)
-  ],[
-    AC_DEFINE(ENABLE_MEDIA, [], [Enable audio/video calls])
-    AM_CONDITIONAL([MEDIA_ENABLED], true)
-  ])
-AC_SUBST(ENABLE_MEDIA)
-
 #AS_AC_EXPAND(DATADIR, $datadir)
 #DBUS_SERVICES_DIR="$DATADIR/dbus-1/services"
 #AC_SUBST(DBUS_SERVICES_DIR)

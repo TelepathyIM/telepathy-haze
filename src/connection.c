@@ -615,16 +615,6 @@ _haze_connection_create_channel_managers (TpBaseConnection *base)
         g_object_new (HAZE_TYPE_IM_CHANNEL_FACTORY, "connection", self, NULL));
     g_ptr_array_add (channel_managers, self->im_factory);
 
-#ifdef ENABLE_MEDIA
-    /* Instantiate the media manager only if the protocol support calls */
-    if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC (self->priv->prpl_info, initiate_media))
-      {
-        self->media_manager = HAZE_MEDIA_MANAGER (
-            g_object_new (HAZE_TYPE_MEDIA_MANAGER, "connection", self, NULL));
-        g_ptr_array_add (channel_managers, self->media_manager);
-      }
-#endif
-
     self->contact_list = HAZE_CONTACT_LIST (
         g_object_new (HAZE_TYPE_CONTACT_LIST, "connection", self, NULL));
     g_ptr_array_add (channel_managers, self->contact_list);
@@ -769,8 +759,6 @@ haze_connection_finalize (GObject *object)
     tp_contacts_mixin_finalize (object);
     tp_presence_mixin_finalize (object);
 
-    haze_connection_capabilities_finalize (object);
-
     g_strfreev (self->acceptable_avatar_mime_types);
     g_free (priv->username);
     g_free (priv->password);
@@ -867,7 +855,6 @@ haze_connection_class_init (HazeConnectionClass *klass)
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);
     haze_connection_avatars_class_init (object_class);
-    haze_connection_capabilities_class_init (object_class);
 }
 
 static void
