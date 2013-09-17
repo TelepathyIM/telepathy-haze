@@ -167,6 +167,12 @@ protocol_info_supports_blocking (PurplePluginProtocolInfo *prpl_info)
     return (prpl_info->add_deny != NULL);
 }
 
+static gboolean
+protocol_info_supports_mail_notification (PurplePluginProtocolInfo *prpl_info)
+{
+    return ((prpl_info->options & OPT_PROTO_MAIL_CHECK) != 0);
+}
+
 static void
 connected_cb (PurpleConnection *pc)
 {
@@ -188,6 +194,14 @@ connected_cb (PurpleConnection *pc)
             TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING,
             NULL };
         tp_base_connection_add_interfaces (base_conn, blocking_ifaces);
+    }
+
+    if (protocol_info_supports_mail_notification (prpl_info))
+    {
+        static const gchar *mail_ifaces[] = {
+            HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
+            NULL };
+        tp_base_connection_add_interfaces (base_conn, mail_ifaces);
     }
 
     tp_base_contact_list_set_list_received (
