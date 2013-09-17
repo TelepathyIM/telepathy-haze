@@ -1,7 +1,5 @@
 """
 A simple smoke-test for C.I.SimplePresence
-
-FIXME: test C.I.Presence too
 """
 
 import dbus
@@ -9,7 +7,9 @@ import dbus
 from twisted.words.xish import domish, xpath
 from twisted.words.protocols.jabber.client import IQ
 
+from servicetest import assertEquals
 from hazetest import exec_test
+import constants as cs
 
 def test(q, bus, conn, stream):
     amy_handle = conn.RequestHandles(1, ['amy@foo.com'])[0]
@@ -47,6 +47,15 @@ def test(q, bus, conn, stream):
     # FIXME: 'chat' gets lost somewhere between the XMPP stream and what Haze
     # produces.
     assert event.args[0] == { amy_handle: (2, 'available', 'I may have been drinking') }
+
+    amy_handle, asv = conn.Contacts.GetContactByID('amy@foo.com',
+            [cs.CONN_IFACE_SIMPLE_PRESENCE])
+    assertEquals(event.args[0][amy_handle], asv.get(cs.ATTR_PRESENCE))
+
+    bob_handle, asv = conn.Contacts.GetContactByID('bob@foo.com',
+            [cs.CONN_IFACE_SIMPLE_PRESENCE])
+    assertEquals((cs.PRESENCE_UNKNOWN, 'unknown', ''),
+            asv.get(cs.ATTR_PRESENCE))
 
     conn.Disconnect()
     q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])
