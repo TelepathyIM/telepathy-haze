@@ -32,6 +32,25 @@
 #include "debug.h"
 
 static gchar **
+dup_mime_types (PurpleBuddyIconSpec *icon_spec)
+{
+    gchar **mime_types, **i;
+    gchar *format;
+
+    mime_types = g_strsplit (icon_spec->format, ",", 0);
+
+    for (i = mime_types; *i != NULL; i++)
+    {
+        format = *i;
+        /* FIXME: image/ico is not the correct mime type. */
+        *i = g_strconcat ("image/", format, NULL);
+        g_free (format);
+    }
+
+    return mime_types;
+}
+
+static gchar **
 _get_acceptable_mime_types (HazeConnection *self)
 {
     PurplePluginProtocolInfo *prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (self);
@@ -40,20 +59,8 @@ _get_acceptable_mime_types (HazeConnection *self)
 
     if (self->acceptable_avatar_mime_types == NULL)
     {
-        gchar **mime_types, **i;
-        gchar *format;
-
-        mime_types = g_strsplit (prpl_info->icon_spec.format, ",", 0);
-
-        for (i = mime_types; *i != NULL; i++)
-        {
-            format = *i;
-            /* FIXME: image/ico is not the correct mime type. */
-            *i = g_strconcat ("image/", format, NULL);
-            g_free (format);
-        }
-
-        self->acceptable_avatar_mime_types = mime_types;
+        self->acceptable_avatar_mime_types = dup_mime_types (
+            &prpl_info->icon_spec);
     }
 
     return self->acceptable_avatar_mime_types;
