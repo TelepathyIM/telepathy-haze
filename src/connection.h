@@ -59,6 +59,7 @@ struct _HazeConnection {
 
     gchar **acceptable_avatar_mime_types;
 
+    /* Telepathy client's bus name => PurpleMediaCaps */
     GHashTable *client_caps;
 
     /* Part of the hack for Jabber media caps */

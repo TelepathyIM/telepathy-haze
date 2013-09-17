@@ -39,65 +39,16 @@ free_rcc_list (GPtrArray *rccs)
 }
 
 #ifdef ENABLE_MEDIA
-static guint
-purple_caps_to_tp_flags (PurpleMediaCaps caps)
-{
-  guint flags = 0;
-  if (caps & PURPLE_MEDIA_CAPS_AUDIO)
-    flags |= TP_CHANNEL_MEDIA_CAPABILITY_AUDIO;
-  if (caps & PURPLE_MEDIA_CAPS_VIDEO)
-    flags |= TP_CHANNEL_MEDIA_CAPABILITY_VIDEO;
-  return flags;
-}
-
 static GPtrArray * haze_connection_get_handle_contact_capabilities (
     HazeConnection *self, TpHandle handle);
 
 static void
 _emit_capabilities_changed (HazeConnection *conn,
                             TpHandle handle,
-                            const guint old_specific,
-                            const guint new_specific)
+                            PurpleMediaCaps old_caps,
+                            PurpleMediaCaps new_caps)
 {
-  GPtrArray *caps_arr;
-  guint i;
-
-  /* o.f.T.C.Capabilities */
-
-  caps_arr = g_ptr_array_new ();
-
-  if (old_specific != 0 || new_specific != 0)
-    {
-      GValue caps_monster_struct = {0, };
-      guint old_generic = old_specific ?
-          TP_CONNECTION_CAPABILITY_FLAG_CREATE |
-          TP_CONNECTION_CAPABILITY_FLAG_INVITE : 0;
-      guint new_generic = new_specific ?
-          TP_CONNECTION_CAPABILITY_FLAG_CREATE |
-          TP_CONNECTION_CAPABILITY_FLAG_INVITE : 0;
-
-      if (0 != (old_specific ^ new_specific))
-        {
-          g_value_init (&caps_monster_struct,
-              TP_STRUCT_TYPE_CAPABILITY_CHANGE);
-          g_value_take_boxed (&caps_monster_struct,
-              dbus_g_type_specialized_construct
-              (TP_STRUCT_TYPE_CAPABILITY_CHANGE));
-
-          dbus_g_type_struct_set (&caps_monster_struct,
-              0, handle,
-              1, TP_IFACE_CHANNEL_TYPE_STREAMED_MEDIA,
-              2, old_generic,
-              3, new_generic,
-              4, old_specific,
-              5, new_specific,
-              G_MAXUINT);
-
-          g_ptr_array_add (caps_arr, g_value_get_boxed (&caps_monster_struct));
-        }
-    }
-
-  if (caps_arr->len > 0)
+  if (old_caps != new_caps)
     {
       GHashTable *ret = g_hash_table_new_full (g_direct_hash, g_direct_equal,
           NULL, (GDestroyNotify) free_rcc_list);
@@ -111,21 +62,8 @@ _emit_capabilities_changed (HazeConnection *conn,
 
       g_hash_table_unref (ret);
     }
-
-  for (i = 0; i < caps_arr->len; i++)
-    {
-      g_boxed_free (TP_STRUCT_TYPE_CAPABILITY_CHANGE,
-          g_ptr_array_index (caps_arr, i));
-    }
-
-  g_ptr_array_free (caps_arr, TRUE);
 }
 #endif
-
-typedef enum {
-  CAPS_FLAGS_AUDIO = 1 << 0,
-  CAPS_FLAGS_VIDEO = 1 << 1,
-} CapsFlags;
 
 static void
 haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities *iface,
@@ -158,7 +96,7 @@ haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities
       const gchar *client_name = g_value_get_string (va->values + 0);
       const GPtrArray *rccs = g_value_get_boxed (va->values + 1);
       guint j;
-      CapsFlags flags = 0;
+      PurpleMediaCaps flags = 0;
 
       g_hash_table_remove (self->client_caps, client_name);
 
@@ -172,11 +110,11 @@ haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities
 
           if (tp_asv_get_boolean (class,
                   TP_PROP_CHANNEL_TYPE_STREAMED_MEDIA_INITIAL_AUDIO, NULL))
-            flags |= CAPS_FLAGS_AUDIO;
+            flags |= PURPLE_MEDIA_CAPS_AUDIO;
 
           if (tp_asv_get_boolean (class,
                   TP_PROP_CHANNEL_TYPE_STREAMED_MEDIA_INITIAL_VIDEO, NULL))
-            flags |= CAPS_FLAGS_VIDEO;
+            flags |= PURPLE_MEDIA_CAPS_VIDEO;
         }
 
       if (flags != 0)
@@ -191,12 +129,7 @@ haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities
   g_hash_table_iter_init (&iter, self->client_caps);
   while (g_hash_table_iter_next (&iter, NULL, &value))
     {
-      CapsFlags flags = GPOINTER_TO_UINT (value);
-
-      if (flags & CAPS_FLAGS_AUDIO)
-        caps |= PURPLE_MEDIA_CAPS_AUDIO;
-      if (flags & CAPS_FLAGS_VIDEO)
-        caps |= PURPLE_MEDIA_CAPS_VIDEO;
+      caps |= GPOINTER_TO_UINT (value);
     }
 
   purple_media_manager_set_ui_caps (purple_media_manager_get(), caps);
@@ -207,91 +140,6 @@ haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities
 
   tp_svc_connection_interface_contact_capabilities_return_from_update_capabilities (
       context);
-}
-
-static const gchar *assumed_caps[] =
-{
-  TP_IFACE_CHANNEL_TYPE_TEXT,
-  NULL
-};
-
-/**
- * haze_connection_get_handle_capabilities
- *
- * Add capabilities of handle to the given GPtrArray
- */
-static void
-haze_connection_get_handle_capabilities (HazeConnection *self,
-                                         TpHandle handle,
-                                         GPtrArray *arr)
-{
-#ifdef ENABLE_MEDIA
-  TpBaseConnection *conn = TP_BASE_CONNECTION (self);
-  PurpleAccount *account = self->account;
-  TpHandleRepoIface *contact_handles =
-      tp_base_connection_get_handles (conn, TP_HANDLE_TYPE_CONTACT);
-  const gchar *bname;
-  guint typeflags = 0;
-  PurpleMediaCaps caps;
-#endif
-  const gchar **assumed;
-
-  if (0 == handle)
-    {
-      /* obsolete request for the connection's capabilities, do nothing */
-      return;
-    }
-
-  /* TODO: Check for presence */
-
-#ifdef ENABLE_MEDIA
-  if (handle == tp_base_connection_get_self_handle (conn))
-    caps = purple_media_manager_get_ui_caps (purple_media_manager_get ());
-  else
-    {
-      bname = tp_handle_inspect (contact_handles, handle);
-      caps = purple_prpl_get_media_caps (account, bname);
-    }
-
-  typeflags = purple_caps_to_tp_flags(caps);
-
-  if (typeflags != 0)
-    {
-      GValue monster = {0, };
-      g_value_init (&monster, TP_STRUCT_TYPE_CONTACT_CAPABILITY);
-      g_value_take_boxed (&monster,
-          dbus_g_type_specialized_construct (
-          TP_STRUCT_TYPE_CONTACT_CAPABILITY));
-      dbus_g_type_struct_set (&monster,
-          0, handle,
-          1, TP_IFACE_CHANNEL_TYPE_STREAMED_MEDIA,
-          2, TP_CONNECTION_CAPABILITY_FLAG_CREATE |
-             TP_CONNECTION_CAPABILITY_FLAG_INVITE,
-          3, typeflags,
-          G_MAXUINT);
-
-      g_ptr_array_add (arr, g_value_get_boxed (&monster));
-    }
-#endif
-
-  for (assumed = assumed_caps; NULL != *assumed; assumed++)
-    {
-      GValue monster = {0, };
-      g_value_init (&monster, TP_STRUCT_TYPE_CONTACT_CAPABILITY);
-      g_value_take_boxed (&monster,
-          dbus_g_type_specialized_construct (
-          TP_STRUCT_TYPE_CONTACT_CAPABILITY));
-
-      dbus_g_type_struct_set (&monster,
-          0, handle,
-          1, *assumed,
-          2, TP_CONNECTION_CAPABILITY_FLAG_CREATE |
-             TP_CONNECTION_CAPABILITY_FLAG_INVITE,
-          3, 0,
-          G_MAXUINT);
-
-      g_ptr_array_add (arr, g_value_get_boxed (&monster));
-    }
 }
 
 static GPtrArray *
@@ -306,7 +154,6 @@ haze_connection_get_handle_contact_capabilities (HazeConnection *self,
   const gchar *bname;
   PurpleMediaCaps caps;
   GValue media_monster = {0, };
-  guint typeflags = 0;
   const gchar * const sm_allowed_audio[] = {
     TP_PROP_CHANNEL_TYPE_STREAMED_MEDIA_INITIAL_AUDIO, NULL };
   const gchar * const sm_allowed_video[] = {
@@ -339,9 +186,8 @@ haze_connection_get_handle_contact_capabilities (HazeConnection *self,
       caps = purple_prpl_get_media_caps (account, bname);
     }
 
-  typeflags = purple_caps_to_tp_flags(caps);
-
-  if (typeflags != 0)
+  /* we assume that VIDEO won't be present without AUDIO */
+  if ((caps & PURPLE_MEDIA_CAPS_AUDIO) != 0)
     {
       const gchar * const *allowed;
 
@@ -365,7 +211,7 @@ haze_connection_get_handle_contact_capabilities (HazeConnection *self,
       g_hash_table_insert (fixed_properties, TP_PROP_CHANNEL_TARGET_HANDLE_TYPE,
           target_handle_type_value);
 
-      if (typeflags & TP_CHANNEL_MEDIA_CAPABILITY_VIDEO)
+      if (caps & PURPLE_MEDIA_CAPS_VIDEO)
         allowed = sm_allowed_video;
       else
         allowed = sm_allowed_audio;
@@ -409,42 +255,6 @@ haze_connection_get_handle_contact_capabilities (HazeConnection *self,
   g_ptr_array_add (arr, g_value_get_boxed (&monster));
 
   return arr;
-}
-
-static void
-conn_capabilities_fill_contact_attributes (GObject *obj,
-                                           const GArray *contacts,
-                                           GHashTable *attributes_hash)
-{
-  HazeConnection *self = HAZE_CONNECTION (obj);
-  guint i;
-  GPtrArray *array = NULL;
-
-  for (i = 0; i < contacts->len; i++)
-    {
-      TpHandle handle = g_array_index (contacts, TpHandle, i);
-
-      if (array == NULL)
-        array = g_ptr_array_new ();
-
-      haze_connection_get_handle_capabilities (self, handle, array);
-
-      if (array->len > 0)
-        {
-          GValue *val =  tp_g_value_slice_new (
-              TP_ARRAY_TYPE_CONTACT_CAPABILITY_LIST);
-
-          g_value_take_boxed (val, array);
-          tp_contacts_mixin_set_contact_attribute (attributes_hash,
-              handle, TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES"/caps",
-              val);
-
-          array = NULL;
-        }
-    }
-
-    if (array != NULL)
-      g_ptr_array_free (array, TRUE);
 }
 
 static void
@@ -547,9 +357,7 @@ caps_changed_cb (PurpleBuddy *buddy,
   const gchar *bname = purple_buddy_get_name(buddy);
   TpHandle contact = tp_handle_ensure (contact_repo, bname, NULL, NULL);
 
-  _emit_capabilities_changed (conn, contact,
-      purple_caps_to_tp_flags(oldcaps),
-      purple_caps_to_tp_flags(caps));
+  _emit_capabilities_changed (conn, contact, oldcaps, caps);
 }
 #endif
 
@@ -567,9 +375,6 @@ haze_connection_capabilities_init (GObject *object)
 {
   HazeConnection *self = HAZE_CONNECTION (object);
 
-  tp_contacts_mixin_add_contact_attributes_iface (object,
-      TP_IFACE_CONNECTION_INTERFACE_CAPABILITIES,
-      conn_capabilities_fill_contact_attributes);
   tp_contacts_mixin_add_contact_attributes_iface (object,
       TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
       conn_capabilities_fill_contact_attributes_contact_caps);
