@@ -36,10 +36,12 @@ typedef enum {
     HAZE_STATUS_EXT_AWAY,
     HAZE_STATUS_INVISIBLE,
     HAZE_STATUS_OFFLINE,
+    HAZE_STATUS_UNKNOWN,
 
     HAZE_NUM_STATUSES
 } HazeStatusIndex;
 
+/* Indexed by HazeStatusIndex */
 static const TpPresenceStatusSpec statuses[] = {
     { "available", TP_CONNECTION_PRESENCE_TYPE_AVAILABLE, TRUE,
         arg_specs, NULL, NULL },
@@ -51,6 +53,7 @@ static const TpPresenceStatusSpec statuses[] = {
         arg_specs, NULL, NULL },
     { "hidden", TP_CONNECTION_PRESENCE_TYPE_HIDDEN, TRUE, NULL, NULL, NULL },
     { "offline", TP_CONNECTION_PRESENCE_TYPE_OFFLINE, FALSE, NULL, NULL, NULL },
+    { "unknown", TP_CONNECTION_PRESENCE_TYPE_UNKNOWN, FALSE, NULL, NULL, NULL },
     { NULL, TP_CONNECTION_PRESENCE_TYPE_UNSET, FALSE, NULL, NULL, NULL }
 };
 
@@ -61,7 +64,7 @@ static const PurpleStatusPrimitive primitives[] = {
     PURPLE_STATUS_AWAY,
     PURPLE_STATUS_EXTENDED_AWAY,
     PURPLE_STATUS_INVISIBLE,
-    PURPLE_STATUS_OFFLINE
+    PURPLE_STATUS_UNSET,
 };
 
 /* Indexed by PurpleStatusPrimitive */
@@ -87,22 +90,36 @@ _get_tp_status (PurpleStatus *p_status)
     gchar *message;
     TpPresenceStatus *tp_status;
 
-    g_assert (p_status != NULL);
-
-    type = purple_status_get_type (p_status);
-    prim = purple_status_type_get_primitive (type);
-    status_ix = status_indices[prim];
-
-    xhtml_message = purple_status_get_attr_string (p_status, "message");
-    if (xhtml_message)
+    if (p_status == NULL)
     {
-        GValue *message_v = g_slice_new0 (GValue);
+        status_ix = HAZE_STATUS_UNKNOWN;
+    }
+    else
+    {
+        type = purple_status_get_type (p_status);
+        prim = purple_status_type_get_primitive (type);
 
-        message = purple_markup_strip_html (xhtml_message);
-        g_value_init (message_v, G_TYPE_STRING);
-        g_value_set_string (message_v, message);
-        g_hash_table_insert (arguments, "message", message_v);
-        g_free (message);
+        if (prim <= 0 || prim >= G_N_ELEMENTS (status_indices))
+        {
+            /* guess wildly rather than crashing */
+            status_ix = HAZE_STATUS_AVAILABLE;
+        }
+        else
+        {
+            status_ix = status_indices[prim];
+        }
+
+        xhtml_message = purple_status_get_attr_string (p_status, "message");
+        if (xhtml_message)
+        {
+            GValue *message_v = g_slice_new0 (GValue);
+
+            message = purple_markup_strip_html (xhtml_message);
+            g_value_init (message_v, G_TYPE_STRING);
+            g_value_set_string (message_v, message);
+            g_hash_table_insert (arguments, "message", message_v);
+            g_free (message);
+        }
     }
 
     tp_status = tp_presence_status_new (status_ix, arguments);
@@ -178,22 +195,18 @@ _get_contact_statuses (GObject *obj,
             if (buddy)
             {
                 PurplePresence *presence = purple_buddy_get_presence (buddy);
+
                 p_status = purple_presence_get_active_status (presence);
             }
             else
             {
                 DEBUG ("[%s] %s isn't on the blist, ergo no status!",
                          conn->account->username, bname);
-                g_set_error (error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
-                    "Presence for %u unknown; subscribe to them first", handle);
-                g_hash_table_destroy (status_table);
-                status_table = NULL;
-                break;
+                p_status = NULL;
             }
         }
 
         tp_status = _get_tp_status (p_status);
-
         g_hash_table_insert (status_table, GINT_TO_POINTER (handle), tp_status);
     }
 
