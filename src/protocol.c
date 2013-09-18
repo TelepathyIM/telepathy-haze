@@ -31,6 +31,7 @@
 #include <telepathy-glib/telepathy-glib.h>
 
 #include "connection.h"
+#include "connection-avatars.h"
 #include "debug.h"
 
 G_DEFINE_TYPE (HazeProtocol, haze_protocol, TP_TYPE_BASE_PROTOCOL)
@@ -995,6 +996,41 @@ haze_protocol_dup_authentication_types (TpBaseProtocol *base)
 }
 
 static void
+haze_protocol_get_avatar_details (TpBaseProtocol *base,
+    GStrv *supported_mime_types,
+    guint *min_height,
+    guint *min_width,
+    guint *rec_height,
+    guint *rec_width,
+    guint *max_height,
+    guint *max_width,
+    guint *max_bytes)
+{
+  HazeProtocol *self = HAZE_PROTOCOL (base);
+  PurpleBuddyIconSpec *icon_spec;
+
+  icon_spec = &(self->priv->prpl_info->icon_spec);
+
+  if (icon_spec->format == NULL)
+    {
+      /* We don't support avatar for this protocol */
+      *supported_mime_types = NULL;
+      *min_height = 0;
+      *min_width = 0;
+      *rec_height = 0;
+      *rec_width = 0;
+      *max_height = 0;
+      *max_width = 0;
+      *max_bytes = 0;
+      return;
+    }
+
+  haze_connection_get_icon_spec_requirements (icon_spec, supported_mime_types,
+      min_height, min_width, rec_height, rec_width, max_height, max_width,
+      max_bytes);
+}
+
+static void
 haze_protocol_class_init (HazeProtocolClass *cls)
 {
   GObjectClass *object_class = (GObjectClass *) cls;
@@ -1009,6 +1045,7 @@ haze_protocol_class_init (HazeProtocolClass *cls)
   base_class->get_connection_details = haze_protocol_get_connection_details;
   base_class->dup_authentication_types =
     haze_protocol_dup_authentication_types;
+  base_class->get_avatar_details = haze_protocol_get_avatar_details;
 
   g_type_class_add_private (cls, sizeof (HazeProtocolPrivate));
   object_class->get_property = haze_protocol_get_property;
