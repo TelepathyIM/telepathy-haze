@@ -159,6 +159,36 @@ haze_connection_avatars_properties_getter (GObject *object,
     }
 }
 
+void
+haze_connection_get_icon_spec_requirements (PurpleBuddyIconSpec *icon_spec,
+    GStrv *mime_types,
+    guint *min_height,
+    guint *min_width,
+    guint *rec_height,
+    guint *rec_width,
+    guint *max_height,
+    guint *max_width,
+    guint *max_bytes)
+{
+  if (mime_types != NULL)
+    *mime_types = dup_mime_types (icon_spec);
+  if (min_height != NULL)
+      *min_height = icon_spec->min_height;
+  if (min_width != NULL)
+      *min_width = icon_spec->min_width;
+  /* libpurple has no recommendation */
+  if (rec_height != NULL)
+      *rec_height = 0;
+  if (rec_width != NULL)
+      *rec_width = 0;
+  if (max_height != NULL)
+      *max_height = icon_spec->max_height;
+  if (max_width != NULL)
+      *max_width = icon_spec->max_width;
+  if (max_bytes != NULL)
+      *max_bytes = icon_spec->max_filesize;
+}
+
 static void
 haze_connection_get_avatar_requirements (TpSvcConnectionInterfaceAvatars *self,
                                          DBusGMethodInvocation *context)
@@ -167,6 +197,7 @@ haze_connection_get_avatar_requirements (TpSvcConnectionInterfaceAvatars *self,
     TpBaseConnection *base = TP_BASE_CONNECTION (conn);
     PurplePluginProtocolInfo *prpl_info;
     PurpleBuddyIconSpec *icon_spec;
+    guint min_height, min_width, max_height, max_width, max_bytes;
 
     TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
@@ -176,11 +207,12 @@ haze_connection_get_avatar_requirements (TpSvcConnectionInterfaceAvatars *self,
     /* If the spec or the formats are null, this iface wasn't implemented. */
     g_assert (icon_spec != NULL && icon_spec->format != NULL);
 
+    haze_connection_get_icon_spec_requirements (icon_spec, NULL, &min_height,
+        &min_width, NULL, NULL, &max_height, &max_width, &max_bytes);
+
     tp_svc_connection_interface_avatars_return_from_get_avatar_requirements (
         context, (const gchar **) _get_acceptable_mime_types (conn),
-        icon_spec->min_width, icon_spec->min_height,
-        icon_spec->max_width, icon_spec->max_height,
-        icon_spec->max_filesize);
+        min_width, min_height, max_width, max_height, max_bytes);
 }
 
 static GArray *
