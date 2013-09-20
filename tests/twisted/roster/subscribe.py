@@ -13,7 +13,7 @@ import constants as cs
 import ns
 
 def test(q, bus, conn, stream):
-    self_handle = conn.GetSelfHandle()
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
 
     # Close all Group channels to get a clean slate, so we can rely on
     # the NewChannels signal for the default group later

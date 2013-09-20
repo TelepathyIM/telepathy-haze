@@ -14,7 +14,7 @@ import pprint
 import constants as cs
 
 def test(q, bus, conn, stream):
-    self_handle = conn.GetSelfHandle()
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
 
     jids = ['foo@bar.com', 'truc@cafe.fr']
     call_async(q, conn, 'RequestHandles', 1, jids)

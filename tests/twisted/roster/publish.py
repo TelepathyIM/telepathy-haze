@@ -74,7 +74,7 @@ def test(q, bus, conn, stream):
                 args=['', [alice], [], [], [], 0, cs.GC_REASON_NONE]),
             )
 
-    self_handle = conn.GetSelfHandle()
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
 
     # accept
     call_async(q, publish.Group, 'AddMembers', [alice], '')
