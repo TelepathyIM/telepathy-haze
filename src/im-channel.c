@@ -19,9 +19,11 @@
  *
  */
 
+#include <config.h>
+#include "im-channel.h"
+
 #include <telepathy-glib/telepathy-glib.h>
 
-#include "im-channel.h"
 #include "connection.h"
 #include "debug.h"
 
