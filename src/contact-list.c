@@ -1023,7 +1023,7 @@ haze_contact_list_set_contact_groups_async (TpBaseContactList *cl,
 
       for (i = 0; i < n_names; i++)
         {
-          if (tp_strdiff (group_name, names[i]))
+          if (!tp_strdiff (group_name, names[i]))
             {
               desired = TRUE;
               break;
