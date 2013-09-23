@@ -4,7 +4,9 @@ Some handy constants for other tests to share and enjoy.
 
 from dbus import PROPERTIES_IFACE
 
-CM = "org.freedesktop.Telepathy.ConnectionManager"
+PREFIX = "org.freedesktop.Telepathy"
+
+CM = PREFIX + ".ConnectionManager"
 
 HT_NONE = 0
 HT_CONTACT = 1
@@ -12,7 +14,7 @@ HT_ROOM = 2
 HT_LIST = 3
 HT_GROUP = 4
 
-CHANNEL = "org.freedesktop.Telepathy.Channel"
+CHANNEL = PREFIX + ".Channel"
 
 CHANNEL_IFACE_CALL_STATE = CHANNEL + ".Interface.CallState"
 CHANNEL_IFACE_CHAT_STATE = CHANNEL + '.Interface.ChatState'
@@ -38,15 +40,15 @@ CHANNEL_TYPE_TEXT = CHANNEL + ".Type.Text"
 CHANNEL_TYPE_TUBES = CHANNEL + ".Type.Tubes"
 CHANNEL_TYPE_STREAM_TUBE = CHANNEL + ".Type.StreamTube"
 CHANNEL_TYPE_DBUS_TUBE = CHANNEL + ".Type.DBusTube"
-CHANNEL_TYPE_STREAMED_MEDIA = CHANNEL + ".Type.StreamedMedia"
 CHANNEL_TYPE_TEXT = CHANNEL + ".Type.Text"
 CHANNEL_TYPE_FILE_TRANSFER = CHANNEL + ".Type.FileTransfer"
+CHANNEL_TYPE_ROOM_LIST = CHANNEL + ".Type.RoomList"
 CHANNEL_TYPE_SERVER_AUTHENTICATION = \
     CHANNEL + ".Type.ServerAuthentication"
 CHANNEL_TYPE_SERVER_TLS_CONNECTION = \
     CHANNEL + ".Type.ServerTLSConnection"
 
-TP_AWKWARD_PROPERTIES = "org.freedesktop.Telepathy.Properties"
+TP_AWKWARD_PROPERTIES = PREFIX + ".Properties"
 PROPERTY_FLAG_READ = 1
 PROPERTY_FLAG_WRITE = 2
 PROPERTY_FLAGS_RW = PROPERTY_FLAG_READ | PROPERTY_FLAG_WRITE
@@ -60,30 +62,22 @@ INITIATOR_HANDLE = CHANNEL + '.InitiatorHandle'
 INITIATOR_ID = CHANNEL + '.InitiatorID'
 INTERFACES = CHANNEL + '.Interfaces'
 
-INITIAL_AUDIO = CHANNEL_TYPE_STREAMED_MEDIA + '.InitialAudio'
-INITIAL_VIDEO = CHANNEL_TYPE_STREAMED_MEDIA + '.InitialVideo'
-IMMUTABLE_STREAMS = CHANNEL_TYPE_STREAMED_MEDIA + '.ImmutableStreams'
-
 CALL_INITIAL_AUDIO = CHANNEL_TYPE_CALL + '.InitialAudio'
 CALL_INITIAL_AUDIO_NAME = CHANNEL_TYPE_CALL + '.InitialAudioName'
 CALL_INITIAL_VIDEO = CHANNEL_TYPE_CALL + '.InitialVideo'
 CALL_INITIAL_VIDEO_NAME = CHANNEL_TYPE_CALL + '.InitialVideoName'
 CALL_MUTABLE_CONTENTS = CHANNEL_TYPE_CALL + '.MutableContents'
 
-CALL_CONTENT = 'org.freedesktop.Telepathy.Call1.Content'
-CALL_CONTENT_IFACE_MEDIA = \
-    'org.freedesktop.Telepathy.Call1.Content.Interface.Media'
-CALL_CONTENT_IFACE_DTMF = \
-    'org.freedesktop.Telepathy.Call1.Content.Interface.DTMF'
+CALL_CONTENT = PREFIX + '.Call1.Content'
+CALL_CONTENT_IFACE_MEDIA = CALL_CONTENT + '.Interface.Media'
+CALL_CONTENT_IFACE_DTMF = CALL_CONTENT + '.Interface.DTMF'
 
-CALL_CONTENT_MEDIADESCRIPTION = \
-    'org.freedesktop.Telepathy.Call1.Content.MediaDescription'
+CALL_CONTENT_MEDIADESCRIPTION = CALL_CONTENT + '.MediaDescription'
 
-CALL_STREAM = 'org.freedesktop.Telepathy.Call1.Stream'
-CALL_STREAM_IFACE_MEDIA = \
-    'org.freedesktop.Telepathy.Call1.Stream.Interface.Media'
+CALL_STREAM = PREFIX + '.Call1.Stream'
+CALL_STREAM_IFACE_MEDIA = CALL_STREAM + '.Interface.Media'
 
-CALL_STREAM_ENDPOINT = 'org.freedesktop.Telepathy.Call1.Stream.Endpoint'
+CALL_STREAM_ENDPOINT = CALL_STREAM + '.Endpoint'
 
 CALL_MEDIA_TYPE_AUDIO = 0
 CALL_MEDIA_TYPE_VIDEO = 1
@@ -100,11 +94,7 @@ CALL_STREAM_TRANSPORT_WLM_2009 = 4
 CALL_STREAM_TRANSPORT_SHM = 5
 CALL_STREAM_TRANSPORT_MULTICAST = 6
 
-#for streamed media
-CALL_STATE_RINGING = 1
-CALL_STATE_HELD = 4
-
-CALL_STATE_UNKNOWN = 0,
+CALL_STATE_UNKNOWN = 0
 CALL_STATE_PENDING_INITIATOR = 1
 CALL_STATE_INITIALISING = 2
 CALL_STATE_INITIALISED = 3
@@ -174,7 +164,7 @@ CONTACT_LIST_STATE_WAITING = 1
 CONTACT_LIST_STATE_FAILURE = 2
 CONTACT_LIST_STATE_SUCCESS = 3
 
-CONN = "org.freedesktop.Telepathy.Connection"
+CONN = PREFIX + ".Connection"
 CONN_IFACE_AVATARS = CONN + '.Interface.Avatars'
 CONN_IFACE_ALIASING = CONN + '.Interface.Aliasing'
 CONN_IFACE_CAPS = CONN + '.Interface.Capabilities'
@@ -194,12 +184,13 @@ CONN_IFACE_POWER_SAVING = CONN + '.Interface.PowerSaving'
 CONN_IFACE_CONTACT_BLOCKING = CONN + '.Interface.ContactBlocking'
 CONN_IFACE_ADDRESSING = CONN + '.Interface.Addressing1'
 
+ATTR_CONTACT_ID = CONN + '/contact-id'
 ATTR_CONTACT_CAPABILITIES = CONN_IFACE_CONTACT_CAPS + '/capabilities'
 ATTR_PRESENCE = CONN_IFACE_SIMPLE_PRESENCE + '/presence'
 
-STREAM_HANDLER = 'org.freedesktop.Telepathy.Media.StreamHandler'
+STREAM_HANDLER = PREFIX + '.Media.StreamHandler'
 
-ERROR = 'org.freedesktop.Telepathy.Error'
+ERROR = PREFIX + '.Error'
 INVALID_ARGUMENT = ERROR + '.InvalidArgument'
 NOT_IMPLEMENTED = ERROR + '.NotImplemented'
 NOT_AVAILABLE = ERROR + '.NotAvailable'
@@ -408,7 +399,7 @@ MEDIA_CAP_GTALKP2P = 8
 MEDIA_CAP_ICEUDP = 16
 MEDIA_CAP_IMMUTABLE_STREAMS = 32
 
-CLIENT = 'org.freedesktop.Telepathy.Client'
+CLIENT = PREFIX + '.Client'
 
 PRESENCE_OFFLINE = 1
 PRESENCE_AVAILABLE = 2
@@ -478,7 +469,7 @@ class SendError(object):
     TOO_LONG = 4
     NOT_IMPLEMENTED = 5
 
-PROTOCOL = 'org.freedesktop.Telepathy.Protocol'
+PROTOCOL = PREFIX + '.Protocol'
 PROTOCOL_IFACE_PRESENCES = PROTOCOL + '.Interface.Presence'
 PROTOCOL_IFACE_ADDRESSING = PROTOCOL + '.Interface.Addressing'
 PROTOCOL_IFACE_AVATARS = PROTOCOL + '.Interface.Avatars'
@@ -489,7 +480,7 @@ PARAM_HAS_DEFAULT = 4
 PARAM_SECRET = 8
 PARAM_DBUS_PROPERTY = 16
 
-AUTHENTICATION = 'org.freedesktop.Telepathy.Authentication'
+AUTHENTICATION = PREFIX + '.Authentication'
 AUTH_TLS_CERT = AUTHENTICATION + ".TLSCertificate"
 
 TLS_CERT_STATE_PENDING = 0
@@ -541,3 +532,6 @@ ROOM_SERVER = CHANNEL_IFACE_ROOM + '.Server'
 SUBJECT = CHANNEL_IFACE_ROOM + '.Subject'
 SUBJECT_PRESENT = 1
 SUBJECT_CAN_SET = 2
+
+DEBUG_IFACE = PREFIX + '.Debug'
+DEBUG_PATH = '/' + PREFIX.replace('.', '/') + '/debug'
