@@ -13,14 +13,16 @@ import os
 import pprint
 import unittest
 
-import dbus.glib
+import dbus
+from dbus.mainloop.glib import DBusGMainLoop
+DBusGMainLoop(set_as_default=True)
 
 from twisted.internet import reactor
 
 import constants as cs
 
-tp_name_prefix = 'org.freedesktop.Telepathy'
-tp_path_prefix = '/org/freedesktop/Telepathy'
+tp_name_prefix = cs.PREFIX
+tp_path_prefix = '/' + cs.PREFIX.replace('.', '/')
 
 class DictionarySupersetOf (object):
     """Utility class for expecting "a dictionary with at least these keys"."""
@@ -433,7 +435,7 @@ def sync_dbus(bus, q, conn):
     assert conn.object.bus_name.startswith(':')
     root_object = bus.get_object(conn.object.bus_name, '/', introspect=False)
     call_async(q,
-        dbus.Interface(root_object, 'org.freedesktop.Telepathy.Tests'),
+        dbus.Interface(root_object, cs.PREFIX + '.Tests'),
         'DummySyncDBus')
     q.expect('dbus-error', method='DummySyncDBus')
 
@@ -457,8 +459,25 @@ class ProxyWrapper:
 
         return getattr(self.default_interface, name)
 
+class ConnWrapper(ProxyWrapper):
+    def inspect_contact_sync(self, handle):
+        return self.inspect_contacts_sync([handle])[0]
+
+    def inspect_contacts_sync(self, handles):
+        h2asv = self.Contacts.GetContactAttributes(handles, [], True)
+        ret = []
+        for h in handles:
+            ret.append(h2asv[h][cs.ATTR_CONTACT_ID])
+        return ret
+
+    def get_contact_handle_sync(self, identifier):
+        return self.Contacts.GetContactByID(identifier, [])[0]
+
+    def get_contact_handles_sync(self, ids):
+        return [self.get_contact_handle_sync(i) for i in ids]
+
 def wrap_connection(conn):
-    return ProxyWrapper(conn, tp_name_prefix + '.Connection',
+    return ConnWrapper(conn, tp_name_prefix + '.Connection',
         dict([
             (name, tp_name_prefix + '.Connection.Interface.' + name)
             for name in ['Aliasing', 'Avatars', 'Capabilities', 'Contacts',
