@@ -20,8 +20,7 @@ def test(q, bus, conn, stream):
     jid = 'foo@bar.com'
     foo_handle = conn.get_contact_handle_sync(jid)
 
-    properties = conn.GetAll(
-            'org.freedesktop.Telepathy.Connection.Interface.Requests',
+    properties = conn.GetAll(cs.CONN_IFACE_REQUESTS,
             dbus_interface=dbus.PROPERTIES_IFACE)
     # Difference from Gabble: Haze's roster channels spring to life even if you
     # haven't received the XMPP roster.
@@ -29,22 +28,18 @@ def test(q, bus, conn, stream):
                 if c[1][cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT
                ]
     assert text_channels == [], text_channels
-    assert ({'org.freedesktop.Telepathy.Channel.ChannelType':
-                'org.freedesktop.Telepathy.Channel.Type.Text',
-             'org.freedesktop.Telepathy.Channel.TargetHandleType': 1,
+    assert ({cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_TEXT,
+             cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
              },
-             ['org.freedesktop.Telepathy.Channel.TargetHandle',
-              'org.freedesktop.Telepathy.Channel.TargetID'
-             ],
+             [cs.TARGET_HANDLE, cs.TARGET_ID],
              ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
 
     call_async(q, conn.Requests, 'CreateChannel',
-            { 'org.freedesktop.Telepathy.Channel.ChannelType':
-                'org.freedesktop.Telepathy.Channel.Type.Text',
-              'org.freedesktop.Telepathy.Channel.TargetHandleType': 1,
-              'org.freedesktop.Telepathy.Channel.TargetHandle': foo_handle,
-              })
+            { cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_TEXT,
+              cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
+              cs.TARGET_HANDLE: foo_handle,
+            })
 
     ret, sig = q.expect_many(
         EventPattern('dbus-return', method='CreateChannel'),
@@ -53,19 +48,13 @@ def test(q, bus, conn, stream):
 
     assert len(ret.value) == 2
     emitted_props = ret.value[1]
-    assert emitted_props['org.freedesktop.Telepathy.Channel.ChannelType'] ==\
-            'org.freedesktop.Telepathy.Channel.Type.Text'
-    assert emitted_props['org.freedesktop.Telepathy.Channel.'
-            'TargetHandleType'] == 1
-    assert emitted_props['org.freedesktop.Telepathy.Channel.TargetHandle'] ==\
-            foo_handle
-    assert emitted_props['org.freedesktop.Telepathy.Channel.TargetID'] == jid
-    assert emitted_props['org.freedesktop.Telepathy.Channel.'
-            'Requested'] == True
-    assert emitted_props['org.freedesktop.Telepathy.Channel.'
-            'InitiatorHandle'] == self_handle
-    assert emitted_props['org.freedesktop.Telepathy.Channel.'
-            'InitiatorID'] == 'test@localhost'
+    assertEquals(cs.CHANNEL_TYPE_TEXT, emitted_props[cs.CHANNEL_TYPE])
+    assertEquals(cs.HT_CONTACT, emitted_props[cs.TARGET_HANDLE_TYPE])
+    assertEquals(foo_handle, emitted_props[cs.TARGET_HANDLE])
+    assertEquals(jid, emitted_props[cs.TARGET_ID])
+    assertEquals(True, emitted_props[cs.REQUESTED])
+    assertEquals(self_handle, emitted_props[cs.INITIATOR_HANDLE])
+    assertEquals('test@localhost', emitted_props[cs.INITIATOR_ID])
 
     assertLength(1, sig.args)
     assertLength(1, sig.args[0])        # one channel
@@ -73,8 +62,7 @@ def test(q, bus, conn, stream):
     assertEquals(ret.value[0], sig.args[0][0][0])
     assertEquals(ret.value[1], sig.args[0][0][1])
 
-    properties = conn.GetAll(
-            'org.freedesktop.Telepathy.Connection.Interface.Requests',
+    properties = conn.GetAll(cs.CONN_IFACE_REQUESTS,
             dbus_interface=dbus.PROPERTIES_IFACE)
 
     assertContains(sig.args[0][0], properties['Channels'])

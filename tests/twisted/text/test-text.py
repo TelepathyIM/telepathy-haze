@@ -8,7 +8,7 @@ import dbus
 from twisted.words.xish import domish
 
 from hazetest import exec_test
-from servicetest import EventPattern, assertEquals
+from servicetest import EventPattern, assertEquals, assertContains
 import constants as cs
 
 def test(q, bus, conn, stream):
@@ -30,21 +30,16 @@ def test(q, bus, conn, stream):
     text_chan = bus.get_object(conn.bus_name, event.args[0][0][0])
 
     # Exercise basic Channel Properties from spec 0.17.7
-    channel_props = text_chan.GetAll(
-            'org.freedesktop.Telepathy.Channel',
+    channel_props = text_chan.GetAll(cs.CHANNEL,
             dbus_interface=dbus.PROPERTIES_IFACE)
     assertEquals(foo_at_bar_dot_com_handle, channel_props.get('TargetHandle'))
     assert channel_props.get('TargetHandleType') == 1,\
             channel_props.get('TargetHandleType')
-    assert channel_props.get('ChannelType') == \
-            'org.freedesktop.Telepathy.Channel.Type.Text',\
-            channel_props.get('ChannelType')
-    assert 'org.freedesktop.Telepathy.Channel.Interface.ChatState' in \
-            channel_props.get('Interfaces', ()), \
-            channel_props.get('Interfaces')
-    assert 'org.freedesktop.Telepathy.Channel.Interface.Messages' in \
-            channel_props.get('Interfaces', ()), \
-            channel_props.get('Interfaces')
+    assertEquals(cs.CHANNEL_TYPE_TEXT, channel_props.get('ChannelType'))
+    assertContains(cs.CHANNEL_IFACE_CHAT_STATE,
+            channel_props.get('Interfaces', ()))
+    assertContains(cs.CHANNEL_IFACE_MESSAGES,
+            channel_props.get('Interfaces', ()))
     assert channel_props['TargetID'] == jid,\
             (channel_props['TargetID'], jid)
     assert channel_props['Requested'] == False
@@ -85,8 +80,7 @@ def test(q, bus, conn, stream):
     # PendingMessagesRemoved fires.
     message_id = header['pending-message-id']
 
-    dbus.Interface(text_chan,
-        u'org.freedesktop.Telepathy.Channel.Type.Text'
+    dbus.Interface(text_chan, cs.CHANNEL_TYPE_TEXT
         ).AcknowledgePendingMessages([message_id])
 
     removed = q.expect('dbus-signal', signal='PendingMessagesRemoved')
@@ -105,8 +99,7 @@ def test(q, bus, conn, stream):
         }
     ]
 
-    dbus.Interface(text_chan,
-        u'org.freedesktop.Telepathy.Channel.Interface.Messages'
+    dbus.Interface(text_chan, cs.CHANNEL_IFACE_MESSAGES
         ).SendMessage(greeting, dbus.UInt32(0))
 
     stream_message, sent, message_sent = q.expect_many(
@@ -140,8 +133,7 @@ def test(q, bus, conn, stream):
 
 
     # Send a message using Channel.Type.Text API
-    dbus.Interface(text_chan,
-        u'org.freedesktop.Telepathy.Channel.Type.Text').Send(0, 'goodbye')
+    dbus.Interface(text_chan, cs.CHANNEL_TYPE_TEXT).Send(0, 'goodbye')
 
     stream_message, sent, message_sent = q.expect_many(
         EventPattern('stream-message'),

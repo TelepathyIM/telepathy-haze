@@ -20,8 +20,7 @@ def test(q, bus, conn, stream):
     jids = ['foo@bar.com', 'truc@cafe.fr']
     handles = conn.get_contact_handles_sync(jids)
 
-    properties = conn.GetAll(
-            'org.freedesktop.Telepathy.Connection.Interface.Requests',
+    properties = conn.GetAll(cs.CONN_IFACE_REQUESTS,
             dbus_interface=dbus.PROPERTIES_IFACE)
     # Difference from Gabble: Haze's roster channels spring to life even if you
     # haven't received the XMPP roster.
@@ -29,13 +28,10 @@ def test(q, bus, conn, stream):
                 if c[1][cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT
                ]
     assert text_channels == [], text_channels
-    assert ({'org.freedesktop.Telepathy.Channel.ChannelType':
-                'org.freedesktop.Telepathy.Channel.Type.Text',
-             'org.freedesktop.Telepathy.Channel.TargetHandleType': 1,
+    assert ({cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_TEXT,
+             cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
              },
-             ['org.freedesktop.Telepathy.Channel.TargetHandle',
-              'org.freedesktop.Telepathy.Channel.TargetID'
-             ],
+             [cs.TARGET_HANDLE, cs.TARGET_ID],
              ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
 
@@ -75,8 +71,7 @@ def test_ensure_ensure(q, conn, self_handle, jid, handle):
     assertEquals(path, sig.args[0][0][0])
     assertEquals(emitted_props, sig.args[0][0][1])
 
-    properties = conn.GetAll(
-            'org.freedesktop.Telepathy.Connection.Interface.Requests',
+    properties = conn.GetAll(cs.CONN_IFACE_REQUESTS,
             dbus_interface=dbus.PROPERTIES_IFACE)
 
     assertContains(sig.args[0][0], properties['Channels'])
@@ -119,8 +114,7 @@ def test_request_ensure(q, conn, self_handle, jid, handle):
     assertEquals(path, sig.args[0][0][0])
     assertEquals(emitted_props, sig.args[0][0][1])
 
-    properties = conn.GetAll(
-            'org.freedesktop.Telepathy.Connection.Interface.Requests',
+    properties = conn.GetAll(cs.CONN_IFACE_REQUESTS,
             dbus_interface=dbus.PROPERTIES_IFACE)
 
     assertContains(sig.args[0][0], properties['Channels'])
@@ -140,26 +134,19 @@ def test_request_ensure(q, conn, self_handle, jid, handle):
 
 
 def check_props(props, self_handle, handle, jid):
-    assert props['org.freedesktop.Telepathy.Channel.ChannelType'] ==\
-            'org.freedesktop.Telepathy.Channel.Type.Text'
-    assert props['org.freedesktop.Telepathy.Channel.'
-            'TargetHandleType'] == 1
-    assert props['org.freedesktop.Telepathy.Channel.TargetHandle'] ==\
-            handle
-    assert props['org.freedesktop.Telepathy.Channel.TargetID'] == jid
-    assert props['org.freedesktop.Telepathy.Channel.'
-            'Requested'] == True
-    assert props['org.freedesktop.Telepathy.Channel.'
-            'InitiatorHandle'] == self_handle
-    assert props['org.freedesktop.Telepathy.Channel.'
-            'InitiatorID'] == 'test@localhost'
+    assertEquals(cs.CHANNEL_TYPE_TEXT, props[cs.CHANNEL_TYPE])
+    assertEquals(cs.HT_CONTACT, props[cs.TARGET_HANDLE_TYPE])
+    assertEquals(handle, props[cs.TARGET_HANDLE])
+    assertEquals(jid, props[cs.TARGET_ID])
+    assertEquals(True, props[cs.REQUESTED])
+    assertEquals(self_handle, props[cs.INITIATOR_HANDLE])
+    assertEquals('test@localhost', props[cs.INITIATOR_ID])
 
 
 def request_props(handle):
-    return { 'org.freedesktop.Telepathy.Channel.ChannelType':
-                'org.freedesktop.Telepathy.Channel.Type.Text',
-             'org.freedesktop.Telepathy.Channel.TargetHandleType': 1,
-             'org.freedesktop.Telepathy.Channel.TargetHandle': handle,
+    return { cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_TEXT,
+             cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
+             cs.TARGET_HANDLE: handle,
            }
 
 
