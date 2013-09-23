@@ -609,6 +609,8 @@ haze_im_channel_dispose (GObject *obj)
 
     g_free (priv->object_path);
     tp_message_mixin_finalize (obj);
+
+    G_OBJECT_CLASS (haze_im_channel_parent_class)->dispose (obj);
 }
 
 static void
