@@ -33,7 +33,7 @@ def test(q, bus, conn, stream):
     assertLength(0, subscribe.Group.GetMembers())
 
     # request subscription
-    handle = conn.RequestHandles(cs.HT_CONTACT, ['suggs@night.boat.cairo'])[0]
+    handle = conn.get_contact_handle_sync('suggs@night.boat.cairo')
     call_async(q, subscribe.Group, 'AddMembers', [handle], '')
 
     # libpurple puts him on our blist as soon as we've asked; there doesn't
@@ -75,7 +75,7 @@ def test(q, bus, conn, stream):
 
     # put a contact into the *group* explicitly: this shouldn't ask for
     # subscription, but it does
-    handle = conn.RequestHandles(cs.HT_CONTACT, ['ayria@revenge.world'])[0]
+    handle = conn.get_contact_handle_sync('ayria@revenge.world')
     call_async(q, def_group.Group, 'AddMembers', [handle], '')
 
     # libpurple puts her on our blist as soon as we've asked; there doesn't
