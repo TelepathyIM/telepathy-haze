@@ -74,14 +74,3 @@ def exec_test(fun, params=None, protocol=EmptyRosterXmppXmlStream, timeout=None,
         exec_test_deferred, fun, params, protocol, timeout, authenticator, num_instances,
         do_connect, make_haze_connection, expect_kinda_connected)
     reactor.run()
-
-def close_all_groups(q, bus, conn, stream):
-    channels = conn.Properties.Get(cs.CONN_IFACE_REQUESTS, 'Channels')
-    for path, props in channels:
-        if props.get(cs.CHANNEL_TYPE) != cs.CHANNEL_TYPE_CONTACT_LIST:
-            continue
-        if props.get(cs.TARGET_HANDLE_TYPE) != cs.HT_GROUP:
-            continue
-        wrap_channel(bus.get_object(conn.bus_name, path),
-                cs.CHANNEL_TYPE_CONTACT_LIST).Close()
-

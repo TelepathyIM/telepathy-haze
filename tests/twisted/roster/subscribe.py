@@ -8,7 +8,7 @@ from twisted.words.xish import domish
 
 from servicetest import (EventPattern, wrap_channel, assertLength,
         assertEquals, call_async, sync_dbus)
-from hazetest import acknowledge_iq, exec_test, sync_stream, close_all_groups
+from hazetest import acknowledge_iq, exec_test, sync_stream
 import constants as cs
 import ns
 
