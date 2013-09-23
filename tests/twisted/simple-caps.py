@@ -53,11 +53,11 @@ def test_someone_else(q, bus, conn, stream):
     q.expect('dbus-signal', signal='StatusChanged',
             args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
 
-    bob_handle = conn.RequestHandles(cs.HT_CONTACT, ['bob@foo.com'])[0]
+    bob_handle = conn.get_contact_handle_sync('bob@foo.com')
     check_rccs(conn, bob_handle)
 
     # now a randomer who isn't even in our contact list
-    amy_handle = conn.RequestHandles(cs.HT_CONTACT, ['amy@foo.com'])[0]
+    amy_handle = conn.get_contact_handle_sync('amy@foo.com')
     check_rccs(conn, amy_handle)
 
 if __name__ == '__main__':

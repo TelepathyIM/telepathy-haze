@@ -52,7 +52,7 @@ def test(q, bus, conn, stream):
     assertEquals(set(), jids)
 
     # receive a subscription request
-    alice = conn.RequestHandles(cs.HT_CONTACT, ['alice@wonderland.lit'])[0]
+    alice = conn.get_contact_handle_sync('alice@wonderland.lit')
 
     presence = domish.Element(('jabber:client', 'presence'))
     presence['from'] = 'alice@wonderland.lit'
@@ -124,8 +124,7 @@ def test(q, bus, conn, stream):
     assertEquals(set([alice]), set(def_group.Group.GetMembers()))
 
     # receive another subscription request
-    queen = conn.RequestHandles(cs.HT_CONTACT,
-            ['queen.of.hearts@wonderland.lit'])[0]
+    queen = conn.get_contact_handle_sync('queen.of.hearts@wonderland.lit')
 
     presence = domish.Element(('jabber:client', 'presence'))
     presence['from'] = 'queen.of.hearts@wonderland.lit'

@@ -12,7 +12,7 @@ from hazetest import exec_test
 import constants as cs
 
 def test(q, bus, conn, stream):
-    amy_handle = conn.RequestHandles(1, ['amy@foo.com'])[0]
+    amy_handle = conn.get_contact_handle_sync('amy@foo.com')
 
     # Divergence from Gabble: hazetest responds to all roster gets with an
     # empty roster, so we need to push the roster.

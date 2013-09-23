@@ -40,7 +40,7 @@ def test(q, bus, conn, stream, remove, local):
     publish = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
             cs.CHANNEL_TYPE_CONTACT_LIST)
 
-    h = conn.RequestHandles(cs.HT_CONTACT, [jid])[0]
+    h = conn.get_contact_handle_sync(jid)
 
     # Another client logged into our account (Gajim, say) wants to subscribe to
     # Marco's presence. First, per RFC 3921 it 'SHOULD perform a "roster set"

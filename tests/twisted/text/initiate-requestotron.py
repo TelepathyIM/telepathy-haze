@@ -15,10 +15,7 @@ def test(q, bus, conn, stream):
     self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
 
     jid = 'foo@bar.com'
-    call_async(q, conn, 'RequestHandles', 1, [jid])
-
-    event = q.expect('dbus-return', method='RequestHandles')
-    foo_handle = event.value[0][0]
+    foo_handle = conn.get_contact_handle_sync(jid)
 
     properties = conn.GetAll(
             'org.freedesktop.Telepathy.Connection.Interface.Requests',

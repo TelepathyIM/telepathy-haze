@@ -29,7 +29,7 @@ def test(q, bus, conn, stream):
     subscribe = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
             cs.CHANNEL_TYPE_CONTACT_LIST)
 
-    romeo, juliet, duncan = conn.RequestHandles(cs.HT_CONTACT,
+    romeo, juliet, duncan = conn.get_contact_handles_sync(
             ['romeo@montague.lit', 'juliet@capulet.lit',
                 'duncan@scotland.lit'])
 
