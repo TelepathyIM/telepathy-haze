@@ -38,6 +38,8 @@ elif test -n "$HAZE_TEST_REFDBG"; then
         if test -z "$HAZE_WRAPPER" ; then
                 HAZE_WRAPPER="refdbg"
         fi
+elif test -n "$HAZE_TEST_BACKTRACE"; then
+        HAZE_WRAPPER="gdb -x ${abs_top_srcdir}/tools/run_and_bt.gdb"
 fi
 
 # not suitable for haze:
