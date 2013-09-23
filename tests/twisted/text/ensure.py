@@ -7,7 +7,8 @@ import dbus
 from twisted.words.xish import domish
 
 from hazetest import exec_test
-from servicetest import call_async, EventPattern, unwrap
+from servicetest import (call_async, EventPattern, unwrap, assertEquals,
+        assertLength, assertContains)
 
 import pprint
 
@@ -54,9 +55,8 @@ def test_ensure_ensure(q, conn, self_handle, jid, handle):
     # Check that Ensuring a channel that doesn't exist succeeds
     call_async(q, conn.Requests, 'EnsureChannel', request_props (handle))
 
-    ret, old_sig, new_sig = q.expect_many(
+    ret, sig = q.expect_many(
         EventPattern('dbus-return', method='EnsureChannel'),
-        EventPattern('dbus-signal', signal='NewChannel'),
         EventPattern('dbus-signal', signal='NewChannels'),
         )
 
@@ -69,29 +69,17 @@ def test_ensure_ensure(q, conn, self_handle, jid, handle):
 
     check_props(emitted_props, self_handle, handle, jid)
 
-    assert len(old_sig.args) == 5
-    old_path, old_ct, old_ht, old_h, old_sh = old_sig.args
-
-    assert old_path == path
-    assert old_ct == u'org.freedesktop.Telepathy.Channel.Type.Text'
-    # check that handle type == contact handle
-    assert old_ht == 1
-    assert old_h == handle
-    assert old_sh == True      # suppress handler
-
-    assert len(new_sig.args) == 1
-    assert len(new_sig.args[0]) == 1        # one channel
-    assert len(new_sig.args[0][0]) == 2     # two struct members
-    assert new_sig.args[0][0][0] == path
-    assert new_sig.args[0][0][1] == emitted_props
+    assertLength(1, sig.args)
+    assertLength(1, sig.args[0])        # one channel
+    assertLength(2, sig.args[0][0])     # two struct members
+    assertEquals(path, sig.args[0][0][0])
+    assertEquals(emitted_props, sig.args[0][0][1])
 
     properties = conn.GetAll(
             'org.freedesktop.Telepathy.Connection.Interface.Requests',
             dbus_interface=dbus.PROPERTIES_IFACE)
 
-    assert new_sig.args[0][0] in properties['Channels'], \
-            (new_sig.args[0][0], properties['Channels'])
-
+    assertContains(sig.args[0][0], properties['Channels'])
 
     # Now try Ensuring a channel which already exists
     call_async(q, conn.Requests, 'EnsureChannel', request_props (handle))
@@ -115,9 +103,8 @@ def test_request_ensure(q, conn, self_handle, jid, handle):
 
     call_async(q, conn.Requests, 'CreateChannel', request_props (handle))
 
-    ret, old_sig, new_sig = q.expect_many(
+    ret, sig = q.expect_many(
         EventPattern('dbus-return', method='CreateChannel'),
-        EventPattern('dbus-signal', signal='NewChannel'),
         EventPattern('dbus-signal', signal='NewChannels'),
         )
 
@@ -126,29 +113,17 @@ def test_request_ensure(q, conn, self_handle, jid, handle):
 
     check_props(emitted_props, self_handle, handle, jid)
 
-    assert len(old_sig.args) == 5
-    old_path, old_ct, old_ht, old_h, old_sh = old_sig.args
-
-    assert old_path == path
-    assert old_ct == u'org.freedesktop.Telepathy.Channel.Type.Text'
-    # check that handle type == contact handle
-    assert old_ht == 1
-    assert old_h == handle
-    assert old_sh == True      # suppress handler
-
-    assert len(new_sig.args) == 1
-    assert len(new_sig.args[0]) == 1        # one channel
-    assert len(new_sig.args[0][0]) == 2     # two struct members
-    assert new_sig.args[0][0][0] == path
-    assert new_sig.args[0][0][1] == emitted_props
+    assertLength(1, sig.args)
+    assertLength(1, sig.args[0])        # one channel
+    assertLength(2, sig.args[0][0])     # two struct members
+    assertEquals(path, sig.args[0][0][0])
+    assertEquals(emitted_props, sig.args[0][0][1])
 
     properties = conn.GetAll(
             'org.freedesktop.Telepathy.Connection.Interface.Requests',
             dbus_interface=dbus.PROPERTIES_IFACE)
 
-    assert new_sig.args[0][0] in properties['Channels'], \
-            (new_sig.args[0][0], properties['Channels'])
-
+    assertContains(sig.args[0][0], properties['Channels'])
 
     # Now try Ensuring that same channel.
     call_async(q, conn.Requests, 'EnsureChannel', request_props (handle))

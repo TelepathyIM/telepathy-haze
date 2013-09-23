@@ -8,7 +8,8 @@ import datetime
 from twisted.words.xish import domish
 
 from hazetest import exec_test
-from servicetest import EventPattern
+from servicetest import EventPattern, assertEquals
+import constants as cs
 
 def test(q, bus, conn, stream):
     m = domish.Element((None, 'message'))
@@ -22,12 +23,10 @@ def test(q, bus, conn, stream):
 
     stream.send(m)
 
-    event = q.expect('dbus-signal', signal='NewChannel')
-    assert event.args[1] == u'org.freedesktop.Telepathy.Channel.Type.Text'
-    # check that handle type == contact handle
-    assert event.args[2] == 1
-    jid = conn.InspectHandles(1, [event.args[3]])[0]
-    assert jid == 'foo@bar.com'
+    event = q.expect('dbus-signal', signal='NewChannels')
+    assertEquals(cs.CHANNEL_TYPE_TEXT, event.args[0][0][1][cs.CHANNEL_TYPE])
+    assertEquals(cs.HT_CONTACT, event.args[0][0][1][cs.TARGET_HANDLE_TYPE])
+    assertEquals('foo@bar.com', event.args[0][0][1][cs.TARGET_ID])
 
     received, message_received = q.expect_many(
         EventPattern('dbus-signal', signal='Received'),

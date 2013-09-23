@@ -18,7 +18,6 @@ TWISTED_TESTS = \
 	text/destroy.py \
 	text/ensure.py \
 	text/initiate-requestotron.py \
-	text/initiate.py \
 	text/respawn.py \
 	text/test-text-delayed.py \
 	text/test-text-no-body.py \

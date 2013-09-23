@@ -8,9 +8,12 @@ import dbus
 from twisted.words.xish import domish
 
 from hazetest import exec_test
-from servicetest import EventPattern
+from servicetest import EventPattern, assertEquals
+import constants as cs
 
 def test(q, bus, conn, stream):
+    jid = 'foo@bar.com'
+
     # <message type="chat"><body>hello</body</message>
     m = domish.Element((None, 'message'))
     m['from'] = 'foo@bar.com/Pidgin'
@@ -18,22 +21,19 @@ def test(q, bus, conn, stream):
     m.addElement('body', content='hello')
     stream.send(m)
 
-    event = q.expect('dbus-signal', signal='NewChannel')
-    text_chan = bus.get_object(conn.bus_name, event.args[0])
-    assert event.args[1] == u'org.freedesktop.Telepathy.Channel.Type.Text'
-    # check that handle type == contact handle
-    assert event.args[2] == 1
-    foo_at_bar_dot_com_handle = event.args[3]
-    jid = conn.InspectHandles(1, [foo_at_bar_dot_com_handle])[0]
-    assert jid == 'foo@bar.com'
-    assert event.args[4] == False   # suppress handler
+    event = q.expect('dbus-signal', signal='NewChannels')
+    assertEquals(cs.CHANNEL_TYPE_TEXT, event.args[0][0][1][cs.CHANNEL_TYPE])
+    assertEquals(cs.HT_CONTACT, event.args[0][0][1][cs.TARGET_HANDLE_TYPE])
+    assertEquals(jid, event.args[0][0][1][cs.TARGET_ID])
+    foo_at_bar_dot_com_handle = event.args[0][0][1][cs.TARGET_HANDLE]
+
+    text_chan = bus.get_object(conn.bus_name, event.args[0][0][0])
 
     # Exercise basic Channel Properties from spec 0.17.7
     channel_props = text_chan.GetAll(
             'org.freedesktop.Telepathy.Channel',
             dbus_interface=dbus.PROPERTIES_IFACE)
-    assert channel_props.get('TargetHandle') == event.args[3],\
-            (channel_props.get('TargetHandle'), event.args[3])
+    assertEquals(foo_at_bar_dot_com_handle, channel_props.get('TargetHandle'))
     assert channel_props.get('TargetHandleType') == 1,\
             channel_props.get('TargetHandleType')
     assert channel_props.get('ChannelType') == \
@@ -48,8 +48,7 @@ def test(q, bus, conn, stream):
     assert channel_props['TargetID'] == jid,\
             (channel_props['TargetID'], jid)
     assert channel_props['Requested'] == False
-    assert channel_props['InitiatorHandle'] == event.args[3],\
-            (channel_props['InitiatorHandle'], event.args[3])
+    assertEquals(foo_at_bar_dot_com_handle, channel_props['InitiatorHandle'])
     assert channel_props['InitiatorID'] == jid,\
             (channel_props['InitiatorID'], jid)
 

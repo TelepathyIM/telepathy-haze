@@ -7,7 +7,7 @@ import dbus
 from twisted.words.xish import domish
 
 from hazetest import exec_test
-from servicetest import call_async, EventPattern, assertEquals
+from servicetest import call_async, EventPattern, assertEquals, assertLength
 import constants as cs
 
 def test(q, bus, conn, stream):
@@ -19,9 +19,8 @@ def test(q, bus, conn, stream):
     call_async(q, conn, 'RequestChannel',
         'org.freedesktop.Telepathy.Channel.Type.Text', 1, foo_handle, True)
 
-    ret, old_sig, new_sig = q.expect_many(
+    ret, sig = q.expect_many(
         EventPattern('dbus-return', method='RequestChannel'),
-        EventPattern('dbus-signal', signal='NewChannel'),
         EventPattern('dbus-signal', signal='NewChannels'),
         )
 
@@ -31,18 +30,11 @@ def test(q, bus, conn, stream):
     text_iface = dbus.Interface(text_chan,
             'org.freedesktop.Telepathy.Channel.Type.Text')
 
-    assert old_sig.args[0] == ret.value[0]
-    assert old_sig.args[1] == u'org.freedesktop.Telepathy.Channel.Type.Text'
-    # check that handle type == contact handle
-    assert old_sig.args[2] == 1
-    assert old_sig.args[3] == foo_handle
-    assert old_sig.args[4] == True      # suppress handler
-
-    assert len(new_sig.args) == 1
-    assert len(new_sig.args[0]) == 1        # one channel
-    assert len(new_sig.args[0][0]) == 2     # two struct members
-    assert new_sig.args[0][0][0] == ret.value[0]
-    emitted_props = new_sig.args[0][0][1]
+    assertLength(1, sig.args)
+    assertLength(1, sig.args[0])        # one channel
+    assertLength(2, sig.args[0][0])     # two struct members
+    assertEquals(ret.value[0], sig.args[0][0][0])
+    emitted_props = sig.args[0][0][1]
     assert emitted_props['org.freedesktop.Telepathy.Channel.ChannelType'] ==\
             'org.freedesktop.Telepathy.Channel.Type.Text'
     assert emitted_props['org.freedesktop.Telepathy.Channel.'
@@ -120,16 +112,19 @@ def test(q, bus, conn, stream):
     assertEquals(text_chan.object_path, old.path)
     assertEquals(text_chan.object_path, new.args[0])
 
-    event = q.expect('dbus-signal', signal='NewChannel')
-    assert event.args[0] == text_chan.object_path
-    assert event.args[1] == u'org.freedesktop.Telepathy.Channel.Type.Text'
-    assert event.args[2] == 1   # CONTACT
-    assert event.args[3] == foo_handle
-    assert event.args[4] == False   # suppress handler
+    # it now behaves as if the message had initiated it
+    new_props = {}
+    for k in emitted_props:
+        new_props[k] = emitted_props[k]
+    new_props[cs.INITIATOR_HANDLE] = foo_handle
+    new_props[cs.INITIATOR_ID] = 'foo@bar.com'
+    new_props[cs.REQUESTED] = False
+
+    event = q.expect('dbus-signal', signal='NewChannels')
+    assertEquals(text_chan.object_path, event.args[0][0][0])
+    assertEquals(new_props, event.args[0][0][1])
 
     event = q.expect('dbus-return', method='Close')
-
-    # it now behaves as if the message had initiated it
 
     channel_props = text_chan.GetAll(
             'org.freedesktop.Telepathy.Channel',
