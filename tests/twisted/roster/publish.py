@@ -26,7 +26,7 @@ def test(q, bus, conn, stream):
     e = q.expect('dbus-return', method='EnsureChannel')
     publish = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
             cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, publish.Group.GetMembers()))
+    jids = set(conn.inspect_contacts_sync(publish.Group.GetMembers()))
     assertEquals(set(), jids)
 
     call_async(q, conn.Requests, 'EnsureChannel',{
@@ -37,7 +37,7 @@ def test(q, bus, conn, stream):
     e = q.expect('dbus-return', method='EnsureChannel')
     stored = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
             cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, stored.Group.GetMembers()))
+    jids = set(conn.inspect_contacts_sync(stored.Group.GetMembers()))
     assertEquals(set(), jids)
 
     call_async(q, conn.Requests, 'EnsureChannel',{
@@ -48,7 +48,7 @@ def test(q, bus, conn, stream):
     e = q.expect('dbus-return', method='EnsureChannel')
     subscribe = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
             cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, subscribe.Group.GetMembers()))
+    jids = set(conn.inspect_contacts_sync(subscribe.Group.GetMembers()))
     assertEquals(set(), jids)
 
     # receive a subscription request

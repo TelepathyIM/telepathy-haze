@@ -54,7 +54,7 @@ def test(q, bus, conn, stream):
     e = q.expect('dbus-return', method='EnsureChannel')
     stored = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
             cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, stored.Group.GetMembers()))
+    jids = set(conn.inspect_contacts_sync(stored.Group.GetMembers()))
     assertEquals(set(['amy@foo.com', 'bob@foo.com', 'chris@foo.com']), jids)
 
     call_async(q, conn.Requests, 'EnsureChannel',{
@@ -65,7 +65,7 @@ def test(q, bus, conn, stream):
     e = q.expect('dbus-return', method='EnsureChannel')
     subscribe = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
             cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, subscribe.Group.GetMembers()))
+    jids = set(conn.inspect_contacts_sync(subscribe.Group.GetMembers()))
     # everyone on our roster is (falsely!) alleged to be on 'subscribe'
     # (in fact this ought to be just Amy and Chris, but libpurple apparently
     # can't represent this)
@@ -79,7 +79,7 @@ def test(q, bus, conn, stream):
     e = q.expect('dbus-return', method='EnsureChannel')
     publish = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
             cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, publish.Group.GetMembers()))
+    jids = set(conn.inspect_contacts_sync(publish.Group.GetMembers()))
     # the publish list is somewhat imaginary because libpurple doesn't have
     # state-recovery
     assertEquals(set(), jids)
@@ -92,8 +92,7 @@ def test(q, bus, conn, stream):
     e = q.expect('dbus-return', method='EnsureChannel')
     group_chan = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
             cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT,
-        group_chan.Group.GetMembers()))
+    jids = set(conn.inspect_contacts_sync(group_chan.Group.GetMembers()))
     assertEquals(set(['amy@foo.com', 'bob@foo.com']), jids)
 
     # the XMPP prpl puts people into some sort of group, probably called
@@ -120,8 +119,7 @@ def test(q, bus, conn, stream):
                 cs.CHANNEL_TYPE_CONTACT_LIST)
         default_props = props
 
-    jids = set(conn.InspectHandles(cs.HT_CONTACT,
-        default_group.Group.GetMembers()))
+    jids = set(conn.inspect_contacts_sync(default_group.Group.GetMembers()))
     assertEquals(set(['chris@foo.com']), jids)
 
     call_async(q, conn.Requests, 'EnsureChannel',{

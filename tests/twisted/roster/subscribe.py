@@ -27,7 +27,7 @@ def test(q, bus, conn, stream):
     e = q.expect('dbus-return', method='EnsureChannel')
     subscribe = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
             cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, subscribe.Group.GetMembers()))
+    jids = set(conn.inspect_contacts_sync(subscribe.Group.GetMembers()))
     assertEquals(set(), jids)
 
     assertLength(0, subscribe.Group.GetMembers())
