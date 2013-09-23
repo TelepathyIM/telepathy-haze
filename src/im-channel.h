@@ -35,13 +35,13 @@ typedef struct _HazeIMChannelClass HazeIMChannelClass;
 
 
 struct _HazeIMChannelClass {
-    GObjectClass parent_class;
+    TpBaseChannelClass parent_class;
 
     TpDBusPropertiesMixinClass properties_class;
 };
 
 struct _HazeIMChannel {
-    GObject parent;
+    TpBaseChannel parent;
 
     TpMessageMixin messages;
 

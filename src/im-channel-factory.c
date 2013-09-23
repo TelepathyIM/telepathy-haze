@@ -264,29 +264,24 @@ new_im_channel (HazeImChannelFactory *self,
                 TpHandle initiator,
                 gpointer request_token)
 {
-    TpBaseConnection *conn;
     HazeIMChannel *chan;
-    char *object_path;
     GSList *requests = NULL;
 
     g_assert (HAZE_IS_IM_CHANNEL_FACTORY (self));
 
-    conn = (TpBaseConnection *) self->priv->conn;
-
     g_assert (!g_hash_table_lookup (self->priv->channels,
           GINT_TO_POINTER (handle)));
 
-    object_path = g_strdup_printf ("%s/ImChannel%u",
-        tp_base_connection_get_object_path (conn), handle);
-
     chan = g_object_new (HAZE_TYPE_IM_CHANNEL,
                          "connection", self->priv->conn,
-                         "object-path", object_path,
                          "handle", handle,
                          "initiator-handle", initiator,
+                         "requested", (handle != initiator),
                          NULL);
+    tp_base_channel_register (TP_BASE_CHANNEL (chan));
 
-    DEBUG ("Created IM channel with object path %s", object_path);
+    DEBUG ("Created IM channel with object path %s",
+        tp_base_channel_get_object_path (TP_BASE_CHANNEL (chan)));
 
     g_signal_connect (chan, "closed", G_CALLBACK (im_channel_closed_cb), self);
 
@@ -300,8 +295,6 @@ new_im_channel (HazeImChannelFactory *self,
     tp_channel_manager_emit_new_channel (self,
         TP_EXPORTABLE_CHANNEL (chan), requests);
     g_slist_free (requests);
-
-    g_free (object_path);
 
     return chan;
 }
