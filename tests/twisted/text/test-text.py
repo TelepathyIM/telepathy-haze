@@ -8,12 +8,11 @@ import dbus
 from twisted.words.xish import domish
 
 from hazetest import exec_test
-from servicetest import EventPattern, assertEquals
+from servicetest import EventPattern, assertEquals, assertContains
 import constants as cs
 
 def test(q, bus, conn, stream):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
+    jid = 'foo@bar.com'
 
     # <message type="chat"><body>hello</body</message>
     m = domish.Element((None, 'message'))
@@ -23,41 +22,46 @@ def test(q, bus, conn, stream):
     stream.send(m)
 
     event = q.expect('dbus-signal', signal='NewChannels')
-    assertEquals(1, len(event.args[0]))
-    path, props = event.args[0][0]
-    text_chan = bus.get_object(conn.bus_name, path)
-    assertEquals(cs.CHANNEL_TYPE_TEXT, props[cs.CHANNEL_TYPE])
-    # check that handle type == contact handle
-    assertEquals(cs.HT_CONTACT, props[cs.TARGET_HANDLE_TYPE])
-    foo_at_bar_dot_com_handle = props[cs.TARGET_HANDLE]
-    jid = conn.InspectHandles(1, [foo_at_bar_dot_com_handle])[0]
-    assertEquals('foo@bar.com', jid)
-    assertEquals(jid, props[cs.TARGET_ID])
+    assertEquals(cs.CHANNEL_TYPE_TEXT, event.args[0][0][1][cs.CHANNEL_TYPE])
+    assertEquals(cs.HT_CONTACT, event.args[0][0][1][cs.TARGET_HANDLE_TYPE])
+    assertEquals(jid, event.args[0][0][1][cs.TARGET_ID])
+    foo_at_bar_dot_com_handle = event.args[0][0][1][cs.TARGET_HANDLE]
+
+    text_chan = bus.get_object(conn.bus_name, event.args[0][0][0])
 
     # Exercise basic Channel Properties from spec 0.17.7
-    channel_props = text_chan.GetAll(
-            'im.telepathy1.Channel',
+    channel_props = text_chan.GetAll(cs.CHANNEL,
             dbus_interface=dbus.PROPERTIES_IFACE)
-    assert channel_props.get('TargetHandle') == props[cs.TARGET_HANDLE],\
-            (channel_props.get('TargetHandle'), props[cs.TARGET_HANDLE])
-    assert channel_props.get('TargetHandleType') == cs.HT_CONTACT,\
+    assertEquals(foo_at_bar_dot_com_handle, channel_props.get('TargetHandle'))
+    assert channel_props.get('TargetHandleType') == 1,\
             channel_props.get('TargetHandleType')
-    assert channel_props.get('ChannelType') == cs.CHANNEL_TYPE_TEXT,\
-            channel_props.get('ChannelType')
-    assert cs.CHANNEL_IFACE_CHAT_STATE in \
-            channel_props.get('Interfaces', ()), \
-            channel_props.get('Interfaces')
+    assertEquals(cs.CHANNEL_TYPE_TEXT, channel_props.get('ChannelType'))
+    assertContains(cs.CHANNEL_IFACE_CHAT_STATE,
+            channel_props.get('Interfaces', ()))
+    assertContains(cs.CHANNEL_IFACE_MESSAGES,
+            channel_props.get('Interfaces', ()))
     assert channel_props['TargetID'] == jid,\
             (channel_props['TargetID'], jid)
     assert channel_props['Requested'] == False
-    assert channel_props['InitiatorHandle'] == props[cs.TARGET_HANDLE],\
-            (channel_props['InitiatorHandle'], props[cs.TARGET_HANDLE])
+    assertEquals(foo_at_bar_dot_com_handle, channel_props['InitiatorHandle'])
     assert channel_props['InitiatorID'] == jid,\
             (channel_props['InitiatorID'], jid)
 
-    message_received = q.expect('dbus-signal', signal='MessageReceived')
+    received, message_received = q.expect_many(
+        EventPattern('dbus-signal', signal='Received'),
+        EventPattern('dbus-signal', signal='MessageReceived'),
+        )
 
-    # Check that MessageReceived looks right.
+    # Check that C.T.Text.Received looks right
+    # message type: normal
+    assert received.args[3] == 0
+    # flags: none
+    assert received.args[4] == 0
+    # body
+    assert received.args[5] == 'hello'
+
+
+    # Check that C.I.Messages.MessageReceived looks right.
     message = message_received.args[0]
 
     # message should have two parts: the header and one content part
@@ -76,8 +80,7 @@ def test(q, bus, conn, stream):
     # PendingMessagesRemoved fires.
     message_id = header['pending-message-id']
 
-    dbus.Interface(text_chan,
-        u'im.telepathy1.Channel.Type.Text'
+    dbus.Interface(text_chan, cs.CHANNEL_TYPE_TEXT
         ).AcknowledgePendingMessages([message_id])
 
     removed = q.expect('dbus-signal', signal='PendingMessagesRemoved')
@@ -96,11 +99,12 @@ def test(q, bus, conn, stream):
         }
     ]
 
-    dbus.Interface(text_chan, cs.CHANNEL_TYPE_TEXT
-                   ).SendMessage(greeting, dbus.UInt32(0))
+    dbus.Interface(text_chan, cs.CHANNEL_IFACE_MESSAGES
+        ).SendMessage(greeting, dbus.UInt32(0))
 
-    stream_message, message_sent = q.expect_many(
+    stream_message, sent, message_sent = q.expect_many(
         EventPattern('stream-message'),
+        EventPattern('dbus-signal', signal='Sent'),
         EventPattern('dbus-signal', signal='MessageSent'),
         )
 
@@ -123,6 +127,45 @@ def test(q, bus, conn, stream):
     body = sent_message[1]
     assert body['content-type'] == 'text/plain', body
     assert body['content'] == u'waves', body
+
+    assert sent.args[1] == 1, sent.args # Action
+    assert sent.args[2] == u'waves', sent.args
+
+
+    # Send a message using Channel.Type.Text API
+    dbus.Interface(text_chan, cs.CHANNEL_TYPE_TEXT).Send(0, 'goodbye')
+
+    stream_message, sent, message_sent = q.expect_many(
+        EventPattern('stream-message'),
+        EventPattern('dbus-signal', signal='Sent'),
+        EventPattern('dbus-signal', signal='MessageSent'),
+        )
+
+    elem = stream_message.stanza
+    assert elem.name == 'message'
+    assert elem['type'] == 'chat'
+
+    found = False
+    for e in elem.elements():
+        if e.name == 'body':
+            found = True
+            e.children[0] == u'goodbye'
+            break
+    assert found, elem.toXml()
+
+    sent_message = message_sent.args[0]
+    assert len(sent_message) == 2, sent_message
+    header = sent_message[0]
+    # the spec says that message-type "MAY be omitted for normal chat
+    # messages."
+    assert 'message-type' not in header or header['message-type'] == 0, header
+    body = sent_message[1]
+    assert body['content-type'] == 'text/plain', body
+    assert body['content'] == u'goodbye', body
+
+    assert sent.args[1] == 0, sent.args # message type normal
+    assert sent.args[2] == u'goodbye', sent.args
+
 
     conn.Disconnect()
     q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])

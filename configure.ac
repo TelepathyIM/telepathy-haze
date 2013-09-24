@@ -7,8 +7,8 @@ AC_PREREQ([2.59])
 #  set nano_version to 1
 
 m4_define([haze_major_version], [0])
-m4_define([haze_minor_version], [6])
-m4_define([haze_micro_version], [999])
+m4_define([haze_minor_version], [8])
+m4_define([haze_micro_version], [99])
 m4_define([haze_nano_version], [1])
 
 m4_define([haze_base_version],
@@ -32,6 +32,7 @@ AC_CONFIG_FILES([Makefile
 		 m4/Makefile
 		 tests/Makefile
 		 tests/twisted/Makefile
+		 tests/twisted/tools/Makefile
 		 tools/Makefile
 		 extensions/Makefile
 		 ])
@@ -72,9 +73,17 @@ AC_ARG_ENABLE(leaky-request-stubs,
 AC_SUBST(ENABLE_LEAKY_REQUEST_STUBS)
 
 PKG_CHECK_MODULES(PURPLE,[purple >= 2.7])
-PKG_CHECK_MODULES(TP_GLIB,[telepathy-glib-1 >= 0.99])
 PKG_CHECK_MODULES(GLIB,[glib-2.0 >= 2.22, gobject-2.0, gio-2.0])
 PKG_CHECK_MODULES(DBUS_GLIB,[dbus-glib-1 >= 0.73])
+
+AC_DEFINE([TP_SEAL_ENABLE], [], [Prevent to use sealed variables])
+AC_DEFINE([TP_VERSION_MIN_REQUIRED], [TP_VERSION_1_0], [Ignore post 1.0 deprecations])
+AC_DEFINE([TP_VERSION_MAX_ALLOWED], [TP_VERSION_1_0], [Prevent post 1.0 APIs])
+PKG_CHECK_MODULES([TP_GLIB], [telepathy-glib-1 >= 0.99.1, telepathy-glib-1-dbus >= 0.99.1])
+
+dnl MIN_REQUIRED must stay to 2.30 because of GValueArray
+AC_DEFINE([GLIB_VERSION_MIN_REQUIRED], [GLIB_VERSION_2_30], [Ignore post 2.30 deprecations])
+AC_DEFINE([GLIB_VERSION_MAX_ALLOWED], [GLIB_VERSION_2_30], [Prevent post 2.30 APIs])
 
 GLIB_GENMARSHAL=`$PKG_CONFIG --variable=glib_genmarshal glib-2.0`
 AC_SUBST(GLIB_GENMARSHAL)
@@ -103,16 +112,6 @@ fi
 AC_MSG_RESULT([$TEST_PYTHON])
 AC_SUBST(TEST_PYTHON)
 AM_CONDITIONAL([WANT_TWISTED_TESTS], test false != "$TEST_PYTHON")
-
-AC_ARG_ENABLE(media,
-  AC_HELP_STRING([--disable-media],[disable audio/video calls]),
-  [
-    AM_CONDITIONAL([MEDIA_ENABLED], false)
-  ],[
-    AC_DEFINE(ENABLE_MEDIA, [], [Enable audio/video calls])
-    AM_CONDITIONAL([MEDIA_ENABLED], true)
-  ])
-AC_SUBST(ENABLE_MEDIA)
 
 #AS_AC_EXPAND(DATADIR, $datadir)
 #DBUS_SERVICES_DIR="$DATADIR/dbus-1/services"

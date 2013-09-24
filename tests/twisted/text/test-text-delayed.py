@@ -12,9 +12,6 @@ from servicetest import EventPattern, assertEquals
 import constants as cs
 
 def test(q, bus, conn, stream):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
-
     m = domish.Element((None, 'message'))
     m['from'] = 'foo@bar.com'
     m['type'] = 'chat'
@@ -27,14 +24,18 @@ def test(q, bus, conn, stream):
     stream.send(m)
 
     event = q.expect('dbus-signal', signal='NewChannels')
-    assertEquals(1, len(event.args[0]))
-    path, props = event.args[0][0]
-    assert props[cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT
-    # check that handle type == contact handle
-    assert props[cs.TARGET_HANDLE_TYPE] == cs.HT_CONTACT
-    assert props[cs.TARGET_ID] == 'foo@bar.com'
+    assertEquals(cs.CHANNEL_TYPE_TEXT, event.args[0][0][1][cs.CHANNEL_TYPE])
+    assertEquals(cs.HT_CONTACT, event.args[0][0][1][cs.TARGET_HANDLE_TYPE])
+    assertEquals('foo@bar.com', event.args[0][0][1][cs.TARGET_ID])
 
-    message_received = q.expect('dbus-signal', signal='MessageReceived')
+    received, message_received = q.expect_many(
+        EventPattern('dbus-signal', signal='Received'),
+        EventPattern('dbus-signal', signal='MessageReceived'),
+        )
+
+    old_signal_time = str(datetime.datetime.utcfromtimestamp(received.args[1]))
+    assert old_signal_time == '2007-05-17 16:15:01', old_signal_time
+    assert received.args[5] == 'hello'
 
     message = message_received.args[0]
     header = message[0]

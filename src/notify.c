@@ -18,7 +18,9 @@
  *
  */
 
+#include <config.h>
 #include "notify.h"
+
 #include "connection-mail.h"
 #include "debug.h"
 

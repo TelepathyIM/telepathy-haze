@@ -19,6 +19,9 @@
  *
  */
 
+#include <config.h>
+#include "connection-manager.h"
+
 #include <string.h>
 
 #include <glib.h>
@@ -27,9 +30,8 @@
 #include <libpurple/prpl.h>
 #include <libpurple/accountopt.h>
 
-#include <telepathy-glib/debug-sender.h>
+#include <telepathy-glib/telepathy-glib.h>
 
-#include "connection-manager.h"
 #include "debug.h"
 
 G_DEFINE_TYPE(HazeConnectionManager,
@@ -95,9 +97,7 @@ haze_connection_manager_class_init (HazeConnectionManagerClass *klass)
     object_class->constructed = _haze_cm_constructed;
     object_class->finalize = _haze_cm_finalize;
 
-    base_class->new_connection = NULL;
     base_class->cm_dbus_name = "haze";
-    base_class->protocol_params = NULL;
 
     g_type_class_add_private (klass, sizeof (HazeConnectionManagerPrivate));
 }

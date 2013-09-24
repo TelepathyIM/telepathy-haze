@@ -9,8 +9,19 @@ cd "${abs_top_builddir}/tests"
 
 export LC_ALL=C
 export HAZE_DEBUG=all
+G_MESSAGES_DEBUG=all
+export G_MESSAGES_DEBUG
 ulimit -c unlimited
 exec >> haze-testing.log 2>&1
+
+# Avoid using a non-trivial GSettings backend
+GSETTINGS_BACKEND=memory
+export GSETTINGS_BACKEND
+# Avoid libpurple doing "clever" things
+unset KDE_FULL_SESSION
+unset KDEDIR
+unset KDEDIRS
+unset GNOME_DESKTOP_SESSION_ID
 
 if test -n "$HAZE_TEST_VALGRIND"; then
         export G_DEBUG=${G_DEBUG:+"${G_DEBUG},"}gc-friendly
@@ -27,6 +38,8 @@ elif test -n "$HAZE_TEST_REFDBG"; then
         if test -z "$HAZE_WRAPPER" ; then
                 HAZE_WRAPPER="refdbg"
         fi
+elif test -n "$HAZE_TEST_BACKTRACE"; then
+        HAZE_WRAPPER="gdb -x ${abs_top_srcdir}/tools/run_and_bt.gdb"
 fi
 
 # not suitable for haze:

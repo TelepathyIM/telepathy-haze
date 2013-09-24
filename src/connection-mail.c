@@ -17,12 +17,11 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
  */
+#include "config.h"
 
 #include "extensions/extensions.h"
 
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/svc-connection.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "connection.h"
 #include "connection-mail.h"

@@ -19,18 +19,36 @@
  *
  */
 
+#include <config.h>
 #include "connection-avatars.h"
 
 #include <string.h>
 
-#include <telepathy-glib/contacts-mixin.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/svc-connection.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include <libpurple/cipher.h>
 
 #include "connection.h"
 #include "debug.h"
+
+static gchar **
+dup_mime_types (PurpleBuddyIconSpec *icon_spec)
+{
+    gchar **mime_types, **i;
+    gchar *format;
+
+    mime_types = g_strsplit (icon_spec->format, ",", 0);
+
+    for (i = mime_types; *i != NULL; i++)
+    {
+        format = *i;
+        /* FIXME: image/ico is not the correct mime type. */
+        *i = g_strconcat ("image/", format, NULL);
+        g_free (format);
+    }
+
+    return mime_types;
+}
 
 static gchar **
 _get_acceptable_mime_types (HazeConnection *self)
@@ -41,20 +59,8 @@ _get_acceptable_mime_types (HazeConnection *self)
 
     if (self->acceptable_avatar_mime_types == NULL)
     {
-        gchar **mime_types, **i;
-        gchar *format;
-
-        mime_types = g_strsplit (prpl_info->icon_spec.format, ",", 0);
-
-        for (i = mime_types; *i != NULL; i++)
-        {
-            format = *i;
-            /* FIXME: image/ico is not the correct mime type. */
-            *i = g_strconcat ("image/", format, NULL);
-            g_free (format);
-        }
-
-        self->acceptable_avatar_mime_types = mime_types;
+        self->acceptable_avatar_mime_types = dup_mime_types (
+            &prpl_info->icon_spec);
     }
 
     return self->acceptable_avatar_mime_types;
@@ -97,7 +103,7 @@ haze_connection_avatars_properties_getter (GObject *object,
     PurplePluginProtocolInfo *prpl_info;
     PurpleBuddyIconSpec *icon_spec;
 
-    if (base->status != TP_CONNECTION_STATUS_CONNECTED)
+    if (tp_base_connection_get_status (base) != TP_CONNECTION_STATUS_CONNECTED)
     {
         /* not CONNECTED yet, so our connection doesn't have the prpl info
          * yet - return dummy values */
@@ -153,6 +159,36 @@ haze_connection_avatars_properties_getter (GObject *object,
     }
 }
 
+void
+haze_connection_get_icon_spec_requirements (PurpleBuddyIconSpec *icon_spec,
+    GStrv *mime_types,
+    guint *min_height,
+    guint *min_width,
+    guint *rec_height,
+    guint *rec_width,
+    guint *max_height,
+    guint *max_width,
+    guint *max_bytes)
+{
+  if (mime_types != NULL)
+    *mime_types = dup_mime_types (icon_spec);
+  if (min_height != NULL)
+      *min_height = icon_spec->min_height;
+  if (min_width != NULL)
+      *min_width = icon_spec->min_width;
+  /* libpurple has no recommendation */
+  if (rec_height != NULL)
+      *rec_height = 0;
+  if (rec_width != NULL)
+      *rec_width = 0;
+  if (max_height != NULL)
+      *max_height = icon_spec->max_height;
+  if (max_width != NULL)
+      *max_width = icon_spec->max_width;
+  if (max_bytes != NULL)
+      *max_bytes = icon_spec->max_filesize;
+}
+
 static GArray *
 get_avatar (HazeConnection *conn,
             TpHandle handle)
@@ -163,7 +199,8 @@ get_avatar (HazeConnection *conn,
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
     gconstpointer icon_data = NULL;
     size_t icon_size = 0;
-    if (handle == base->self_handle)
+
+    if (handle == tp_base_connection_get_self_handle (base))
     {
         PurpleStoredImage *image =
             purple_buddy_icons_find_account_icon (conn->account);
@@ -283,7 +320,7 @@ haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
          * avatar you last used.  So we special-case self_handle here.
          */
 
-        if (handle == base_conn->self_handle)
+        if (handle == tp_base_connection_get_self_handle (base_conn))
         {
             GArray *avatar = get_avatar (conn, handle);
             if (avatar != NULL)
@@ -347,7 +384,7 @@ haze_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *self,
 
     tp_svc_connection_interface_avatars_return_from_clear_avatar (context);
     tp_svc_connection_interface_avatars_emit_avatar_updated (conn,
-        base_conn->self_handle, "");
+        tp_base_connection_get_self_handle (base_conn), "");
 }
 
 static void
@@ -425,7 +462,7 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
 
     tp_svc_connection_interface_avatars_return_from_set_avatar (context, token);
     tp_svc_connection_interface_avatars_emit_avatar_updated (conn,
-        base_conn->self_handle, token);
+        tp_base_connection_get_self_handle (base_conn), token);
     g_free (token);
 }
 
@@ -463,7 +500,6 @@ buddy_icon_changed_cb (PurpleBuddy *buddy,
 
     tp_svc_connection_interface_avatars_emit_avatar_updated (conn, contact,
         token);
-    tp_handle_unref (contact_repo, contact);
     g_free (token);
 }
 

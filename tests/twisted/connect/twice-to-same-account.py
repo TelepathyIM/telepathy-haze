@@ -13,19 +13,6 @@ from servicetest import (
 import constants as cs
 
 def test(q, bus, conn, stream):
-    conn.Connect()
-    q.expect_many(
-        EventPattern('dbus-signal', signal='StatusChanged', args=[1, 1]),
-        EventPattern('stream-authenticated'),
-        )
-
-    # FIXME: unlike Gabble, Haze does not signal a presence update to
-    # available during connect
-    #q.expect('dbus-signal', signal='PresenceUpdate',
-    #    args=[{1L: (0L, {u'available': {}})}])
-
-    q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
-
     haze = bus.get_object(
         tp_name_prefix + '.ConnectionManager.haze',
         tp_path_prefix + '/ConnectionManager/haze')

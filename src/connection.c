@@ -38,6 +38,7 @@
 #include "connection-avatars.h"
 #include "connection-mail.h"
 #include "extensions/extensions.h"
+#include "request.h"
 
 #include "connection-capabilities.h"
 
@@ -107,16 +108,44 @@ static const gchar * implemented_interfaces[] = {
     NULL
 };
 
-const gchar **
-haze_connection_get_implemented_interfaces (void)
+static void
+add_always_present_connection_interfaces (GPtrArray *interfaces)
 {
-  return implemented_interfaces;
+  const gchar **iter;
+
+  for (iter = implemented_interfaces + HAZE_NUM_CONDITIONAL_INTERFACES;
+      *iter != NULL; iter++)
+    g_ptr_array_add (interfaces, (gchar *) *iter);
 }
 
-const gchar **
-haze_connection_get_guaranteed_interfaces (void)
+static GPtrArray *
+haze_connection_get_interfaces_always_present (TpBaseConnection *base)
 {
-  return implemented_interfaces + HAZE_NUM_CONDITIONAL_INTERFACES;
+  GPtrArray *interfaces;
+
+  interfaces = TP_BASE_CONNECTION_CLASS (
+      haze_connection_parent_class)->get_interfaces_always_present (base);
+
+  add_always_present_connection_interfaces (interfaces);
+
+  return interfaces;
+}
+
+static void add_optional_connection_interfaces (GPtrArray *ifaces,
+        PurplePluginProtocolInfo *prpl_info);
+
+/* Returns a (transfer container) not NULL terminated of (const gchar *)
+ * interface names. */
+GPtrArray *
+haze_connection_dup_implemented_interfaces (PurplePluginProtocolInfo *prpl_info)
+{
+    GPtrArray *ifaces;
+
+    ifaces = g_ptr_array_new ();
+    add_always_present_connection_interfaces (ifaces);
+    add_optional_connection_interfaces (ifaces, prpl_info);
+
+    return ifaces;
 }
 
 struct _HazeConnectionPrivate
@@ -127,6 +156,9 @@ struct _HazeConnectionPrivate
 
     gchar *prpl_id;
     PurplePluginProtocolInfo *prpl_info;
+
+    /* Set if purple_account_request_password() was called */
+    gpointer password_request;
 
     /* Set if purple_account_disconnect has been called or is scheduled to be
      * called, so should not be called again.
@@ -142,28 +174,56 @@ struct _HazeConnectionPrivate
 #define PC_GET_BASE_CONN(pc) \
     (ACCOUNT_GET_TP_BASE_CONNECTION (purple_connection_get_account (pc)))
 
+static gboolean
+protocol_info_supports_avatar (PurplePluginProtocolInfo *prpl_info)
+{
+    return (prpl_info->icon_spec.format != NULL);
+}
+
+static gboolean
+protocol_info_supports_blocking (PurplePluginProtocolInfo *prpl_info)
+{
+    return (prpl_info->add_deny != NULL);
+}
+
+static gboolean
+protocol_info_supports_mail_notification (PurplePluginProtocolInfo *prpl_info)
+{
+    return ((prpl_info->options & OPT_PROTO_MAIL_CHECK) != 0);
+}
+
+static void
+add_optional_connection_interfaces (GPtrArray *ifaces,
+        PurplePluginProtocolInfo *prpl_info)
+{
+    if (protocol_info_supports_avatar (prpl_info))
+        g_ptr_array_add (ifaces,
+                TP_IFACE_CONNECTION_INTERFACE_AVATARS);
+
+    if (protocol_info_supports_blocking (prpl_info))
+        g_ptr_array_add (ifaces,
+                TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING);
+
+    if (protocol_info_supports_mail_notification (prpl_info))
+        g_ptr_array_add (ifaces,
+                HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION);
+}
+
 static void
 connected_cb (PurpleConnection *pc)
 {
     TpBaseConnection *base_conn = PC_GET_BASE_CONN (pc);
     HazeConnection *conn = HAZE_CONNECTION (base_conn);
     PurplePluginProtocolInfo *prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
+    GPtrArray *ifaces;
 
-    if (prpl_info->icon_spec.format != NULL)
-    {
-        static const gchar *avatar_ifaces[] = {
-            TP_IFACE_CONNECTION_INTERFACE_AVATARS,
-            NULL };
-        tp_base_connection_add_interfaces (base_conn, avatar_ifaces);
-    }
+    ifaces = g_ptr_array_new ();
+    add_optional_connection_interfaces (ifaces, prpl_info);
+    g_ptr_array_add (ifaces, NULL);
 
-    if (prpl_info->add_deny != NULL)
-    {
-        static const gchar *blocking_ifaces[] = {
-            TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING,
-            NULL };
-        tp_base_connection_add_interfaces (base_conn, blocking_ifaces);
-    }
+    tp_base_connection_add_interfaces (base_conn,
+            (const gchar **) ifaces->pdata);
+    g_ptr_array_unref (ifaces);
 
     tp_base_contact_list_set_list_received (
         (TpBaseContactList *) conn->contact_list);
@@ -289,7 +349,8 @@ haze_report_disconnect_reason (PurpleConnection *gc,
   priv->disconnecting = TRUE;
 
   map_purple_error_to_tp (reason,
-      (base_conn->status == TP_CONNECTION_STATUS_CONNECTING),
+      (tp_base_connection_get_status (base_conn) ==
+         TP_CONNECTION_STATUS_CONNECTING),
       &tp_reason, &tp_error_name);
   details = tp_asv_new ("debug-message", G_TYPE_STRING, text, NULL);
   tp_base_connection_disconnect_with_dbus_error (base_conn, tp_error_name,
@@ -314,7 +375,8 @@ disconnected_cb (PurpleConnection *pc)
 
     priv->disconnecting = TRUE;
 
-    if(base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
+    if (tp_base_connection_get_status (base_conn) !=
+        TP_CONNECTION_STATUS_DISCONNECTED)
     {
         /* Because we have report_disconnect_reason, if status is not already
          * DISCONNECTED, we know that it was requested. */
@@ -436,15 +498,24 @@ _haze_connection_password_manager_prompt_cb (GObject *source,
     {
       DEBUG ("Simple password manager failed: %s", error->message);
 
-      if (base_conn->status != TP_CONNECTION_STATUS_DISCONNECTED)
+      if (priv->password_request)
+        {
+          haze_request_password_cb (priv->password_request, NULL);
+          /* no need to call purple_account_disconnect(): the prpl will take
+           * the account offline. If we're lucky it'll use an
+           * AUTHENTICATION_FAILED-type message.
+           */
+        }
+      else if (tp_base_connection_get_status (base_conn) !=
+          TP_CONNECTION_STATUS_DISCONNECTED)
         {
           tp_base_connection_disconnect_with_dbus_error (base_conn,
               tp_error_get_dbus_name (error->code), NULL,
               TP_CONNECTION_STATUS_REASON_AUTHENTICATION_FAILED);
+          /* no need to call purple_account_disconnect because _connect
+           * was never called ...
+           */
         }
-
-      /* no need to call purple_account_disconnect because _connect
-       * was never called */
 
       g_error_free (error);
       return;
@@ -453,11 +524,18 @@ _haze_connection_password_manager_prompt_cb (GObject *source,
   g_free (priv->password);
   priv->password = g_strdup (password->str);
 
-  purple_account_set_password (self->account, priv->password);
+  if (priv->password_request)
+    {
+      haze_request_password_cb (priv->password_request, priv->password);
+    }
+  else
+    {
+      purple_account_set_password (self->account, priv->password);
 
-  purple_account_set_enabled(self->account, UI_ID, TRUE);
-  purple_account_connect (self->account);
-  priv->connect_called = TRUE;
+      purple_account_set_enabled(self->account, UI_ID, TRUE);
+      purple_account_connect (self->account);
+      priv->connect_called = TRUE;
+    }
 }
 
 static gboolean
@@ -469,13 +547,16 @@ _haze_connection_start_connecting (TpBaseConnection *base,
     TpHandleRepoIface *contact_handles =
         tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
     const gchar *password;
+    TpHandle self_handle;
 
     g_return_val_if_fail (self->account != NULL, FALSE);
 
-    base->self_handle = tp_handle_ensure (contact_handles,
+    self_handle = tp_handle_ensure (contact_handles,
         purple_account_get_username (self->account), NULL, error);
-    if (!base->self_handle)
-        return FALSE;
+    if (self_handle == 0)
+      return FALSE;
+
+    tp_base_connection_set_self_handle (base, self_handle);
 
     tp_base_connection_change_status(base, TP_CONNECTION_STATUS_CONNECTING,
                                      TP_CONNECTION_STATUS_REASON_REQUESTED);
@@ -504,6 +585,30 @@ _haze_connection_start_connecting (TpBaseConnection *base,
       }
 
     return TRUE;
+}
+
+void
+haze_connection_request_password (PurpleAccount *account,
+                                  void *user_data)
+{
+    HazeConnection *self = ACCOUNT_GET_HAZE_CONNECTION (account);
+    HazeConnectionPrivate *priv = self->priv;
+
+    priv->password_request = user_data;
+
+    /* pop up auth channel */
+    tp_simple_password_manager_prompt_async (self->password_manager,
+                                             _haze_connection_password_manager_prompt_cb,
+                                             self);
+}
+
+void
+haze_connection_cancel_password_request (PurpleAccount *account)
+{
+    HazeConnection *self = ACCOUNT_GET_HAZE_CONNECTION (account);
+    HazeConnectionPrivate *priv = self->priv;
+
+    priv->password_request = NULL;
 }
 
 static void
@@ -556,16 +661,6 @@ _haze_connection_create_channel_managers (TpBaseConnection *base)
     self->im_factory = HAZE_IM_CHANNEL_FACTORY (
         g_object_new (HAZE_TYPE_IM_CHANNEL_FACTORY, "connection", self, NULL));
     g_ptr_array_add (channel_managers, self->im_factory);
-
-#ifdef ENABLE_MEDIA
-    /* Instantiate the media manager only if the protocol support calls */
-    if (PURPLE_PROTOCOL_PLUGIN_HAS_FUNC (self->priv->prpl_info, initiate_media))
-      {
-        self->media_manager = HAZE_MEDIA_MANAGER (
-            g_object_new (HAZE_TYPE_MEDIA_MANAGER, "connection", self, NULL));
-        g_ptr_array_add (channel_managers, self->media_manager);
-      }
-#endif
 
     self->password_manager = tp_simple_password_manager_new (
         TP_BASE_CONNECTION (self));
@@ -711,8 +806,6 @@ haze_connection_finalize (GObject *object)
     tp_contacts_mixin_finalize (object);
     tp_presence_mixin_finalize (object);
 
-    haze_connection_capabilities_finalize (object);
-
     g_strfreev (self->acceptable_avatar_mime_types);
     g_free (priv->username);
     g_free (priv->password);
@@ -768,8 +861,8 @@ haze_connection_class_init (HazeConnectionClass *klass)
         haze_connection_get_unique_connection_name;
     base_class->start_connecting = _haze_connection_start_connecting;
     base_class->shut_down = _haze_connection_shut_down;
-    base_class->interfaces_always_present =
-      haze_connection_get_guaranteed_interfaces();
+    base_class->get_interfaces_always_present =
+      haze_connection_get_interfaces_always_present;
 
     param_spec = g_param_spec_boxed ("parameters", "gchar * => GValue",
         "Connection parameters (password, etc.)",
@@ -809,7 +902,6 @@ haze_connection_class_init (HazeConnectionClass *klass)
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);
     haze_connection_avatars_class_init (object_class);
-    haze_connection_capabilities_class_init (object_class);
 }
 
 static void

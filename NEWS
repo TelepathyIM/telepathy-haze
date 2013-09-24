@@ -1,7 +1,74 @@
-telepathy-haze 0.7.0 (UNRELEASED)
+telepathy-haze 0.9.0 (UNRELEASED)
 =================================
 
-...
+Dependencies:
+
+• telepathy-glib ≥ 0.21.0 is required
+
+Features removed:
+
+• StreamedMedia channels are no longer supported. We'd potentially
+  accept patches to bring back audio/video support, but only via the
+  newer Call1 channels. (fd.o #69318, Simon)
+
+Internal changes:
+
+• fix various deprecation warnings (fd.o #69272; Guillaume, Simon)
+
+• remove deprecated Capabilities and Presence interfaces (fd.o #69318;
+  Guillaume, Simon)
+
+Fixes:
+
+• Report contacts with unknown presence as 'unknown' rather than raising
+  an error, and don't crash if libpurple reports a "primitive status"
+  that we don't understand (fd.o #69474, Simon)
+
+• Fix a memory leak when IM channels are closed (fd.o #31723, Simon)
+
+• Fix ContactGroups.SetContactGroups() implementation so it removes
+  the contact from groups if desired (fd.o #49389, Simon)
+
+telepathy-haze 0.7.1 (2013-09-17)
+=================================
+
+The “buzzes like a fridge” release.
+
+This is a release candidate for telepathy-haze 0.8, recommended for
+use with GNOME 3.10.
+
+Deprecations:
+
+• This will be the last branch with StreamedMedia support. Anyone
+  relying on Haze for audio/video calling is invited to port it to Call1.
+
+Enhancements:
+
+• Support interactive password prompting for protocols like SIPE that
+  have an optional password (fd.o #63326; Stefan Becker, Will Thompson)
+
+Fixes:
+
+• Adapt to Sametime accounts getting a "usersplit" in libpurple 2.10.1
+  (fd.o #44631, Simon McVittie)
+
+• Regression test improvements (fd.o #69269, #65290, #65296, #63119;
+  Will Thompson, Guillaume Desmottes, Simon McVittie)
+
+telepathy-haze 0.7.0 (2012-11-21)
+=================================
+
+This is the start of a new unstable branch. Don't swing on it too hard.
+
+Enhancements:
+
+• Jonny implemented ContactCapabilities;
+• Simon got rid of some deprecated API;
+• So did Xavier;
+• Gabriele Giacone kindly mapped two of the extant Skype prpls to
+  "skype-x11" and "skype-dbus". Maybe you'd like to give them a whirl?
+  (fd.o#57201)
+
 
 telepathy-haze 0.6.0 (2012-04-04)
 =================================
