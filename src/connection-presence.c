@@ -164,8 +164,7 @@ _status_available (GObject *obj,
 
 static GHashTable *
 _get_contact_statuses (GObject *obj,
-                       const GArray *contacts,
-                       GError **error)
+    const GArray *contacts)
 {
     GHashTable *status_table = g_hash_table_new_full (g_direct_hash,
         g_direct_equal, NULL, NULL);
