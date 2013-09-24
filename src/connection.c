@@ -833,6 +833,10 @@ haze_connection_class_init (HazeConnectionClass *klass)
         { NULL }
     };
     static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
+        { TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+            haze_connection_aliasing_properties_getter,
+            NULL,
+            NULL },     /* initialized a bit later */
         { TP_IFACE_CONNECTION_INTERFACE_AVATARS,
             haze_connection_avatars_properties_getter,
             NULL,
@@ -890,7 +894,8 @@ haze_connection_class_init (HazeConnectionClass *klass)
         G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property (object_class, PROP_PRPL_INFO, param_spec);
 
-    prop_interfaces[0].props = haze_connection_avatars_properties;
+    prop_interfaces[0].props = haze_connection_aliasing_properties;
+    prop_interfaces[1].props = haze_connection_avatars_properties;
     klass->properties_class.interfaces = prop_interfaces;
     tp_dbus_properties_mixin_class_init (object_class,
         G_STRUCT_OFFSET (HazeConnectionClass, properties_class));
