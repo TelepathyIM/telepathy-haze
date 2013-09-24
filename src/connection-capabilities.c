@@ -31,12 +31,6 @@
 #include "debug.h"
 
 static void
-free_rcc_list (GPtrArray *rccs)
-{
-  g_boxed_free (TP_ARRAY_TYPE_REQUESTABLE_CHANNEL_CLASS_LIST, rccs);
-}
-
-static void
 haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities *iface,
                                      const GPtrArray *clients,
                                      DBusGMethodInvocation *context)
@@ -131,47 +125,6 @@ conn_capabilities_fill_contact_attributes_contact_caps (
     }
 }
 
-static void
-haze_connection_get_contact_capabilities (
-    TpSvcConnectionInterfaceContactCapabilities *svc,
-    const GArray *handles,
-    DBusGMethodInvocation *context)
-{
-  HazeConnection *self = HAZE_CONNECTION (svc);
-  TpBaseConnection *base = (TpBaseConnection *) self;
-  TpHandleRepoIface *contact_handles = tp_base_connection_get_handles (base,
-      TP_HANDLE_TYPE_CONTACT);
-  guint i;
-  GHashTable *ret;
-  GError *error = NULL;
-
-  TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
-
-  if (!tp_handles_are_valid (contact_handles, handles, FALSE, &error))
-    {
-      dbus_g_method_return_error (context, error);
-      g_error_free (error);
-      return;
-    }
-
-  ret = g_hash_table_new_full (NULL, NULL, NULL,
-      (GDestroyNotify) free_rcc_list);
-
-  for (i = 0; i < handles->len; i++)
-    {
-      TpHandle handle = g_array_index (handles, TpHandle, i);
-      GPtrArray *arr;
-
-      arr = haze_connection_get_handle_contact_capabilities (self, handle);
-      g_hash_table_insert (ret, GUINT_TO_POINTER (handle), arr);
-    }
-
-  tp_svc_connection_interface_contact_capabilities_return_from_get_contact_capabilities
-      (context, ret);
-
-  g_hash_table_unref (ret);
-}
-
 void
 haze_connection_contact_capabilities_iface_init (gpointer g_iface,
                                                  gpointer iface_data)
@@ -182,7 +135,6 @@ haze_connection_contact_capabilities_iface_init (gpointer g_iface,
     tp_svc_connection_interface_contact_capabilities_implement_##x (\
     klass, haze_connection_##x)
   IMPLEMENT(update_capabilities);
-  IMPLEMENT(get_contact_capabilities);
 #undef IMPLEMENT
 }
 
