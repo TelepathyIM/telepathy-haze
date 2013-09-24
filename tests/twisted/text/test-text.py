@@ -38,8 +38,6 @@ def test(q, bus, conn, stream):
     assertEquals(cs.CHANNEL_TYPE_TEXT, channel_props.get('ChannelType'))
     assertContains(cs.CHANNEL_IFACE_CHAT_STATE,
             channel_props.get('Interfaces', ()))
-    assertContains(cs.CHANNEL_IFACE_MESSAGES,
-            channel_props.get('Interfaces', ()))
     assert channel_props['TargetID'] == jid,\
             (channel_props['TargetID'], jid)
     assert channel_props['Requested'] == False
@@ -47,21 +45,8 @@ def test(q, bus, conn, stream):
     assert channel_props['InitiatorID'] == jid,\
             (channel_props['InitiatorID'], jid)
 
-    received, message_received = q.expect_many(
-        EventPattern('dbus-signal', signal='Received'),
-        EventPattern('dbus-signal', signal='MessageReceived'),
-        )
+    message_received = q.expect('dbus-signal', signal='MessageReceived')
 
-    # Check that C.T.Text.Received looks right
-    # message type: normal
-    assert received.args[3] == 0
-    # flags: none
-    assert received.args[4] == 0
-    # body
-    assert received.args[5] == 'hello'
-
-
-    # Check that C.I.Messages.MessageReceived looks right.
     message = message_received.args[0]
 
     # message should have two parts: the header and one content part
@@ -92,19 +77,18 @@ def test(q, bus, conn, stream):
     # Send an action using the Messages API
     # In Gabble, this is a Notice, but we don't support those.
     greeting = [
-        dbus.Dictionary({ 'message-type': 1, # Action
+        dbus.Dictionary({ 'message-type': cs.MT_ACTION,
                         }, signature='sv'),
         { 'content-type': 'text/plain',
           'content': u"waves",
         }
     ]
 
-    dbus.Interface(text_chan, cs.CHANNEL_IFACE_MESSAGES
+    dbus.Interface(text_chan, cs.CHANNEL_TYPE_TEXT
         ).SendMessage(greeting, dbus.UInt32(0))
 
-    stream_message, sent, message_sent = q.expect_many(
+    stream_message, message_sent = q.expect_many(
         EventPattern('stream-message'),
-        EventPattern('dbus-signal', signal='Sent'),
         EventPattern('dbus-signal', signal='MessageSent'),
         )
 
@@ -128,16 +112,15 @@ def test(q, bus, conn, stream):
     assert body['content-type'] == 'text/plain', body
     assert body['content'] == u'waves', body
 
-    assert sent.args[1] == 1, sent.args # Action
-    assert sent.args[2] == u'waves', sent.args
-
-
     # Send a message using Channel.Type.Text API
-    dbus.Interface(text_chan, cs.CHANNEL_TYPE_TEXT).Send(0, 'goodbye')
+    dbus.Interface(text_chan, cs.CHANNEL_TYPE_TEXT
+            ).SendMessage([{}, {
+        'content-type': 'text/plain',
+        'content': 'goodbye',
+        }], 0)
 
-    stream_message, sent, message_sent = q.expect_many(
+    stream_message, message_sent = q.expect_many(
         EventPattern('stream-message'),
-        EventPattern('dbus-signal', signal='Sent'),
         EventPattern('dbus-signal', signal='MessageSent'),
         )
 
@@ -162,10 +145,6 @@ def test(q, bus, conn, stream):
     body = sent_message[1]
     assert body['content-type'] == 'text/plain', body
     assert body['content'] == u'goodbye', body
-
-    assert sent.args[1] == 0, sent.args # message type normal
-    assert sent.args[2] == u'goodbye', sent.args
-
 
     conn.Disconnect()
     q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])

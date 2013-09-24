@@ -54,7 +54,10 @@ def test(q, bus, conn, stream):
     assert channel_props['InitiatorID'] == 'test@localhost',\
             channel_props['InitiatorID']
 
-    text_iface.Send(0, 'hey')
+    text_iface.SendMessage([{}, {
+        'content-type': 'text/plain',
+        'content': 'hey',
+        }], 0)
 
     event = q.expect('stream-message')
 
@@ -77,23 +80,21 @@ def test(q, bus, conn, stream):
     m.addElement('body', content='hello')
     stream.send(m)
 
-    event = q.expect('dbus-signal', signal='Received')
+    event = q.expect('dbus-signal', signal='MessageReceived')
 
-    hello_message_id = event.args[0]
-    hello_message_time = event.args[1]
-    assert event.args[2] == foo_handle
-    # message type: normal
-    assert event.args[3] == 0
-    # flags: none
-    assert event.args[4] == 0
-    # body
-    assert event.args[5] == 'hello'
+    message = event.args[0]
+    assertLength(2, message)
+    hello_message_id = message[0]['pending-message-id']
+    assertEquals(foo_handle, message[0]['message-sender'])
+    assertEquals('foo@bar.com', message[0]['message-sender-id'])
+    assertEquals(cs.MT_NORMAL,
+            message[0].get('message-type', cs.MT_NORMAL))
+    assertEquals('text/plain', message[1]['content-type'])
+    assertEquals('hello', message[1]['content'])
 
-    messages = text_chan.ListPendingMessages(False,
-            dbus_interface=cs.CHANNEL_TYPE_TEXT)
-    assert messages == \
-            [(hello_message_id, hello_message_time, foo_handle,
-                0, 0, 'hello')], messages
+    messages = text_chan.Get(cs.CHANNEL_TYPE_TEXT, 'PendingMessages',
+            dbus_interface=cs.PROPERTIES_IFACE)
+    assertEquals([message], messages)
 
     # close the channel without acking the message; it comes back
 
@@ -130,22 +131,21 @@ def test(q, bus, conn, stream):
     assert channel_props['InitiatorID'] == 'foo@bar.com',\
             channel_props['InitiatorID']
 
-    # the message is still there
+    # the message is still there, but is marked as rescued now
+    message[0]['rescued'] = True
 
-    messages = text_chan.ListPendingMessages(False,
-            dbus_interface=cs.CHANNEL_TYPE_TEXT)
-    assert messages == \
-            [(hello_message_id, hello_message_time, foo_handle,
-                0, 8, 'hello')], messages
+    messages = text_chan.Get(cs.CHANNEL_TYPE_TEXT, 'PendingMessages',
+            dbus_interface=cs.PROPERTIES_IFACE)
+    assertEquals([message], messages)
 
     # acknowledge it
 
     text_chan.AcknowledgePendingMessages([hello_message_id],
             dbus_interface=cs.CHANNEL_TYPE_TEXT)
 
-    messages = text_chan.ListPendingMessages(False,
-            dbus_interface=cs.CHANNEL_TYPE_TEXT)
-    assert messages == []
+    messages = text_chan.Get(cs.CHANNEL_TYPE_TEXT, 'PendingMessages',
+            dbus_interface=cs.PROPERTIES_IFACE)
+    assertEquals([], messages)
 
     # close the channel again
 
