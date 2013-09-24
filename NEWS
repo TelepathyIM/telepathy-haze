@@ -24,6 +24,11 @@ Fixes:
   an error, and don't crash if libpurple reports a "primitive status"
   that we don't understand (fd.o #69474, Simon)
 
+• Fix a memory leak when IM channels are closed (fd.o #31723, Simon)
+
+• Fix ContactGroups.SetContactGroups() implementation so it removes
+  the contact from groups if desired (fd.o #49389, Simon)
+
 telepathy-haze 0.7.1 (2013-09-17)
 =================================
 
