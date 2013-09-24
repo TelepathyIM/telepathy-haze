@@ -105,7 +105,7 @@ def test(q, bus, conn, stream):
 
             assertDoesNotContain(cs.CONN_IFACE_AVATARS, flat_props['ConnectionInterfaces'])
             assertDoesNotContain(cs.CONN_IFACE_CONTACT_BLOCKING, flat_props['ConnectionInterfaces'])
-            assertDoesNotContain(cs.CONN_IFACE_MAIL_NOTIFICATION + '.DRAFT', flat_props['ConnectionInterfaces'])
+            assertDoesNotContain(cs.CONN_IFACE_MAIL_NOTIFICATION, flat_props['ConnectionInterfaces'])
 
             # Avatar not supported
             assertEquals(0, protocol_avatar_props['MaximumAvatarBytes'])
@@ -164,7 +164,7 @@ def test(q, bus, conn, stream):
 
             assertContains(cs.CONN_IFACE_AVATARS, flat_props['ConnectionInterfaces'])
             assertContains(cs.CONN_IFACE_CONTACT_BLOCKING, flat_props['ConnectionInterfaces'])
-            assertContains(cs.CONN_IFACE_MAIL_NOTIFICATION + '.DRAFT', flat_props['ConnectionInterfaces'])
+            assertContains(cs.CONN_IFACE_MAIL_NOTIFICATION, flat_props['ConnectionInterfaces'])
 
             # libpurple currently says there's no max size
             assertEquals(0, protocol_avatar_props['MaximumAvatarBytes'])

@@ -79,7 +79,7 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         tp_base_contact_list_mixin_groups_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_BLOCKING,
         tp_base_contact_list_mixin_blocking_iface_init);
-    G_IMPLEMENT_INTERFACE (HAZE_TYPE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
         haze_connection_mail_iface_init);
     );
 
@@ -87,7 +87,7 @@ static const gchar * implemented_interfaces[] = {
     /* Conditionally present */
 
     TP_IFACE_CONNECTION_INTERFACE_AVATARS,
-    HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
+    TP_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
     TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING,
 #   define HAZE_NUM_CONDITIONAL_INTERFACES 3
 
@@ -205,7 +205,7 @@ add_optional_connection_interfaces (GPtrArray *ifaces,
 
     if (protocol_info_supports_mail_notification (prpl_info))
         g_ptr_array_add (ifaces,
-                HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION);
+                TP_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION);
 }
 
 static void
@@ -836,7 +836,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
             haze_connection_avatars_properties_getter,
             NULL,
             NULL },     /* initialized a bit later */
-        { HAZE_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
+        { TP_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
             haze_connection_mail_properties_getter,
             NULL,
             mail_props,
