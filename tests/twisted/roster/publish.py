@@ -33,7 +33,7 @@ def test(q, bus, conn, stream):
 
     # it seems either libpurple or haze doesn't pass the message through
     q.expect_many(
-            EventPattern('dbus-signal', signal='ContactsChangedWithID',
+            EventPattern('dbus-signal', signal='ContactsChanged',
                 args=[{
                     alice:
                         (cs.SUBSCRIPTION_STATE_NO, cs.SUBSCRIPTION_STATE_ASK,
@@ -50,7 +50,7 @@ def test(q, bus, conn, stream):
     q.expect_many(
             EventPattern('stream-presence', presence_type='subscribed',
                 to='alice@wonderland.lit'),
-            EventPattern('dbus-signal', signal='ContactsChangedWithID',
+            EventPattern('dbus-signal', signal='ContactsChanged',
                 args=[{
                     alice:
                         (cs.SUBSCRIPTION_STATE_NO, cs.SUBSCRIPTION_STATE_YES,
@@ -75,7 +75,7 @@ def test(q, bus, conn, stream):
                 predicate=lambda e: e.stanza['id'] == 'roster-push'),
             # She's not really on our subscribe list, but this is the closest
             # we can guess from libpurple
-            EventPattern('dbus-signal', signal='ContactsChangedWithID',
+            EventPattern('dbus-signal', signal='ContactsChanged',
                 args=[{
                     alice:
                         (cs.SUBSCRIPTION_STATE_YES, cs.SUBSCRIPTION_STATE_YES,
@@ -103,7 +103,7 @@ def test(q, bus, conn, stream):
 
     # it seems either libpurple or haze doesn't pass the message through
     q.expect_many(
-            EventPattern('dbus-signal', signal='ContactsChangedWithID',
+            EventPattern('dbus-signal', signal='ContactsChanged',
                 args=[{
                     queen:
                         (cs.SUBSCRIPTION_STATE_NO, cs.SUBSCRIPTION_STATE_ASK,
@@ -124,7 +124,7 @@ def test(q, bus, conn, stream):
     q.expect_many(
             EventPattern('stream-presence', presence_type='unsubscribed',
                 to='queen.of.hearts@wonderland.lit'),
-            EventPattern('dbus-signal', signal='ContactsChangedWithID',
+            EventPattern('dbus-signal', signal='ContactsChanged',
                 args=[{
                     queen:
                         (cs.SUBSCRIPTION_STATE_NO, cs.SUBSCRIPTION_STATE_NO,
@@ -150,7 +150,7 @@ def test(q, bus, conn, stream):
     stream.send(presence)
 
     q.expect_many(
-            EventPattern('dbus-signal', signal='ContactsChangedWithID',
+            EventPattern('dbus-signal', signal='ContactsChanged',
                 args=[{
                     queen:
                         (cs.SUBSCRIPTION_STATE_NO, cs.SUBSCRIPTION_STATE_ASK,

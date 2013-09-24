@@ -67,7 +67,13 @@ def test(q, bus, conn, stream):
         amy: (cs.SUBSCRIPTION_STATE_YES, cs.SUBSCRIPTION_STATE_UNKNOWN, ''),
         bob: (cs.SUBSCRIPTION_STATE_YES, cs.SUBSCRIPTION_STATE_UNKNOWN, ''),
         chris: (cs.SUBSCRIPTION_STATE_YES, cs.SUBSCRIPTION_STATE_UNKNOWN, ''),
-        }, []], s.args)
+        },
+        {
+        amy: 'amy@foo.com',
+        bob: 'bob@foo.com',
+        chris: 'chris@foo.com',
+        },
+        {}], s.args)
 
     # the XMPP prpl puts people into some sort of group, probably called
     # Buddies
@@ -85,7 +91,7 @@ def test(q, bus, conn, stream):
         default_group = group
 
     call_async(q, conn.ContactList, 'GetContactListAttributes',
-            [cs.CONN_IFACE_CONTACT_GROUPS], False)
+            [cs.CONN_IFACE_CONTACT_GROUPS])
     r = q.expect('dbus-return', method='GetContactListAttributes')
 
     assertEquals(cs.SUBSCRIPTION_STATE_YES, r.value[0][amy][cs.ATTR_SUBSCRIBE])

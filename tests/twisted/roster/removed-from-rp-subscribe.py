@@ -40,7 +40,7 @@ def test(q, bus, conn, stream, remove, local):
 
     # In response, Haze adds Marco to the roster, which we guess (wrongly,
     # in this case) also means subscribe
-    q.expect('dbus-signal', signal='ContactsChangedWithID',
+    q.expect('dbus-signal', signal='ContactsChanged',
             args=[{
                 h:
                     (cs.SUBSCRIPTION_STATE_YES,
@@ -93,7 +93,7 @@ def test(q, bus, conn, stream, remove, local):
 
         # In response, Haze should announce that Marco has been removed from
         # the roster
-        q.expect('dbus-signal', signal='ContactsChangedWithID',
+        q.expect('dbus-signal', signal='ContactsChanged',
                 args=[{}, {}, {h: jid}])
     else:
         # ...rescinds the subscription request...

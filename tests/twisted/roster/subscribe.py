@@ -38,7 +38,7 @@ def test(q, bus, conn, stream):
             EventPattern('stream-presence', presence_type='subscribe',
                 to='suggs@night.boat.cairo'),
             EventPattern('dbus-return', method='RequestSubscription', value=()),
-            EventPattern('dbus-signal', signal='ContactsChangedWithID',
+            EventPattern('dbus-signal', signal='ContactsChanged',
                 args=[{
                     handle:
                         (cs.SUBSCRIPTION_STATE_YES,
@@ -79,7 +79,7 @@ def test(q, bus, conn, stream):
             EventPattern('stream-presence', presence_type='subscribe',
                 to='ayria@revenge.world'),
             EventPattern('dbus-return', method='AddToGroup', value=()),
-            EventPattern('dbus-signal', signal='ContactsChangedWithID',
+            EventPattern('dbus-signal', signal='ContactsChanged',
                 args=[{
                     handle:
                         (cs.SUBSCRIPTION_STATE_YES,
