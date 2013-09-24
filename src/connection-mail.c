@@ -22,6 +22,7 @@
 #include "extensions/extensions.h"
 
 #include <telepathy-glib/telepathy-glib.h>
+#include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include "connection.h"
 #include "connection-mail.h"
@@ -40,32 +41,9 @@ enum
 
 static GPtrArray empty_array = { 0 };
 
-
-static void
-haze_connection_mail_subscribe (
-        HazeSvcConnectionInterfaceMailNotification *iface,
-        DBusGMethodInvocation *context)
-{
-    /* Nothing do do, no resources attached to mail notification */
-    haze_svc_connection_interface_mail_notification_return_from_subscribe (
-      context);
-}
-
-
-static void
-haze_connection_mail_unsubscribe (
-        HazeSvcConnectionInterfaceMailNotification *iface,
-        DBusGMethodInvocation *context)
-{
-    /* Nothing do do, no resources attached to mail notification */
-    haze_svc_connection_interface_mail_notification_return_from_unsubscribe (
-        context);
-}
-
-
 static void
 haze_connection_mail_request_inbox_url (
-        HazeSvcConnectionInterfaceMailNotification *iface,
+        TpSvcConnectionInterfaceMailNotification *iface,
         DBusGMethodInvocation *context)
 {
     GError e = {TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
@@ -76,7 +54,7 @@ haze_connection_mail_request_inbox_url (
 
 static void
 haze_connection_mail_request_mail_url (
-        HazeSvcConnectionInterfaceMailNotification *iface,
+        TpSvcConnectionInterfaceMailNotification *iface,
         const gchar *in_id,
         const GValue *in_url_data,
         DBusGMethodInvocation *context)
@@ -93,11 +71,11 @@ haze_connection_mail_request_mail_url (
 
     result = tp_value_array_build (3,
         G_TYPE_STRING, g_value_get_string (in_url_data),
-        G_TYPE_UINT, HAZE_HTTP_METHOD_GET,
-        HAZE_ARRAY_TYPE_HTTP_POST_DATA_LIST, &empty_array,
+        G_TYPE_UINT, TP_HTTP_METHOD_GET,
+        TP_ARRAY_TYPE_HTTP_POST_DATA_LIST, &empty_array,
         G_TYPE_INVALID);
 
-    haze_svc_connection_interface_mail_notification_return_from_request_inbox_url (
+    tp_svc_connection_interface_mail_notification_return_from_request_inbox_url (
         context, result);
 
     g_value_array_free (result);
@@ -115,12 +93,10 @@ void
 haze_connection_mail_iface_init (gpointer g_iface,
         gpointer iface_data)
 {
-    HazeSvcConnectionInterfaceMailNotificationClass *klass = g_iface;
+    TpSvcConnectionInterfaceMailNotificationClass *klass = g_iface;
 
-#define IMPLEMENT(x) haze_svc_connection_interface_mail_notification_implement_##x (\
+#define IMPLEMENT(x) tp_svc_connection_interface_mail_notification_implement_##x (\
         klass, haze_connection_mail_##x)
-    IMPLEMENT(subscribe);
-    IMPLEMENT(unsubscribe);
     IMPLEMENT(request_inbox_url);
     IMPLEMENT(request_mail_url);
 #undef IMPLEMENT
@@ -180,8 +156,8 @@ haze_connection_mail_properties_getter (GObject *object,
 
     if (name == prop_quarks[PROP_MAIL_NOTIFICATION_FLAGS])
         g_value_set_uint (value,
-            HAZE_MAIL_NOTIFICATION_FLAG_EMITS_MAILS_RECEIVED
-            | HAZE_MAIL_NOTIFICATION_FLAG_SUPPORTS_REQUEST_MAIL_URL);
+            TP_MAIL_NOTIFICATION_FLAG_EMITS_MAILS_RECEIVED
+            | TP_MAIL_NOTIFICATION_FLAG_SUPPORTS_REQUEST_MAIL_URL);
     else if (name == prop_quarks[PROP_UNREAD_MAIL_COUNT])
         g_value_set_uint (value, 0);
     else if (name == prop_quarks[PROP_UNREAD_MAILS])
@@ -216,7 +192,7 @@ static GPtrArray *
 wrap_mail_address (const char *name_str, const char *addr_str)
 {
     GPtrArray *addr_array;
-    GType addr_type = HAZE_STRUCT_TYPE_MAIL_ADDRESS;
+    GType addr_type = TP_STRUCT_TYPE_MAIL_ADDRESS;
     GValue addr = {0};
 
     addr_array = g_ptr_array_new ();
@@ -246,8 +222,8 @@ haze_connection_mail_notify_emails (PurpleConnection *pc,
         const char **urls)
 {
     GPtrArray *mails;
-    HazeSvcConnectionInterfaceMailNotification *conn =
-        HAZE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION (
+    TpSvcConnectionInterfaceMailNotification *conn =
+        TP_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION (
             ACCOUNT_GET_TP_BASE_CONNECTION (
                 purple_connection_get_account (pc)));
 
@@ -280,7 +256,7 @@ haze_connection_mail_notify_emails (PurpleConnection *pc,
             /* Filter out any aberations */
             if (from && to && subject && url)
                 {
-                    GType addr_list_type = HAZE_ARRAY_TYPE_MAIL_ADDRESS_LIST;
+                    GType addr_list_type = TP_ARRAY_TYPE_MAIL_ADDRESS_LIST;
                     GPtrArray *senders, *recipients;
                     GHashTable *mail;
 
@@ -316,7 +292,7 @@ haze_connection_mail_notify_emails (PurpleConnection *pc,
                 }
         }
 
-    haze_svc_connection_interface_mail_notification_emit_mails_received (
+    tp_svc_connection_interface_mail_notification_emit_mails_received (
             conn, mails);
     g_ptr_array_unref (mails);
 
