@@ -22,17 +22,13 @@
  */
 
 #include <glib-object.h>
-#include <telepathy-glib/base-connection.h>
-#include <telepathy-glib/contacts-mixin.h>
-#include <telepathy-glib/presence-mixin.h>
-#include <telepathy-glib/simple-password-manager.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include <libpurple/account.h>
 #include <libpurple/prpl.h>
 
 #include "contact-list.h"
 #include "im-channel-factory.h"
-#include "media-manager.h"
 
 G_BEGIN_DECLS
 
@@ -54,18 +50,12 @@ struct _HazeConnection {
 
     HazeContactList *contact_list;
     HazeImChannelFactory *im_factory;
-    HazeMediaManager *media_manager;
     TpSimplePasswordManager *password_manager;
 
     TpContactsMixin contacts;
     TpPresenceMixin presence;
 
     gchar **acceptable_avatar_mime_types;
-
-    GHashTable *client_caps;
-
-    /* Part of the hack for Jabber media caps */
-    gulong status_changed_id;
 
     HazeConnectionPrivate *priv;
 };
@@ -108,8 +98,14 @@ GType haze_connection_get_type (void);
 
 const gchar *haze_get_fallback_group (void);
 
-const gchar **haze_connection_get_implemented_interfaces (void);
+GPtrArray * haze_connection_dup_implemented_interfaces (
+        PurplePluginProtocolInfo *prpl_info);
+
 const gchar **haze_connection_get_guaranteed_interfaces (void);
+
+void haze_connection_request_password (PurpleAccount *account,
+                                       gpointer user_data);
+void haze_connection_cancel_password_request (PurpleAccount *account);
 
 G_END_DECLS
 

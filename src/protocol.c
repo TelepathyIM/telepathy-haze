@@ -32,6 +32,7 @@
 #include <telepathy-glib/telepathy-glib-dbus.h>
 
 #include "connection.h"
+#include "connection-avatars.h"
 #include "debug.h"
 
 G_DEFINE_TYPE (HazeProtocol, haze_protocol, TP_TYPE_BASE_PROTOCOL)
@@ -85,6 +86,11 @@ static const HazeParameterMapping encoding_to_charset[] = {
 
 static const HazeParameterMapping irc_mappings[] = {
     { "encoding", "charset" },
+    { "usersplit1", "server" },
+    { NULL, NULL }
+};
+
+static const HazeParameterMapping sametime_mappings[] = {
     { "usersplit1", "server" },
     { NULL, NULL }
 };
@@ -201,13 +207,15 @@ static const KnownProtocolInfo known_protocol_info[] = {
     { "local-xmpp", "prpl-bonjour", bonjour_mappings, "" /* ? */ },
     { "msn", "prpl-msn", NULL, "x-msn" },
     { "qq", "prpl-qq", NULL, "x-qq" /* ? */ },
-    { "sametime", "prpl-meanwhile", NULL, "x-sametime" /* ? */ },
+    { "sametime", "prpl-meanwhile", sametime_mappings, "x-sametime" /* ? */ },
     { "sipe", "prpl-sipe", sipe_mappings, "" /* ? */ },
     { "yahoo", "prpl-yahoo", yahoo_mappings, "x-yahoo" },
     { "yahoojp", "prpl-yahoojp", yahoo_mappings, "x-yahoo" /* ? */ },
     { "zephyr", "prpl-zephyr", encoding_to_charset, "x-zephyr" /* ? */ },
     { "mxit", "prpl-loubserp-mxit", NULL, "x-mxit" /* ? */ },
     { "sip", "prpl-simple", NULL, "x-sip" },
+    { "skype-dbus", "prpl-bigbrownchunx-skype-dbus", NULL, "x-skype" },
+    { "skype-x11", "prpl-bigbrownchunx-skype", NULL, "x-skype" },
     { NULL, NULL, NULL }
 };
 
@@ -876,10 +884,32 @@ haze_protocol_identify_account (TpBaseProtocol *base,
   return ret;
 }
 
-static GStrv
-haze_protocol_get_interfaces (TpBaseProtocol *base)
+static GPtrArray *
+haze_protocol_get_interfaces_array (TpBaseProtocol *base)
 {
-  return g_new0 (gchar *, 1);
+  HazeProtocol *self = HAZE_PROTOCOL (base);
+  GPtrArray *interfaces;
+  GPtrArray *tmp;
+  guint i;
+
+  interfaces = TP_BASE_PROTOCOL_CLASS (
+      haze_protocol_parent_class)->get_interfaces_array (base);
+
+  /* Claim to implement Avatars only if we support avatars for this
+   * protocol. */
+  tmp = haze_connection_dup_implemented_interfaces (self->priv->prpl_info);
+  for (i = 0; i < tmp->len; i++)
+    {
+      if (!tp_strdiff (g_ptr_array_index (tmp, i),
+            TP_IFACE_CONNECTION_INTERFACE_AVATARS))
+        {
+          g_ptr_array_add (interfaces, TP_IFACE_PROTOCOL_INTERFACE_AVATARS);
+          break;
+        }
+    }
+  g_ptr_array_unref (tmp);
+
+  return interfaces;
 }
 
 static void
@@ -894,16 +924,28 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
 
   if (connection_interfaces != NULL)
     {
-      *connection_interfaces = g_strdupv (
-        (gchar **) haze_connection_get_implemented_interfaces ());
+      GPtrArray *tmp, *ifaces;
+      guint i;
+
+      tmp = haze_connection_dup_implemented_interfaces (
+          self->priv->prpl_info);
+
+      /* @connection_interfaces takes a NULL terminated (transfer full)
+       * gchar ** so we have to dup each string and append NULL. */
+      ifaces = g_ptr_array_new ();
+
+      for (i = 0; i < tmp->len; i++)
+        g_ptr_array_add (ifaces, g_strdup (g_ptr_array_index (tmp, i)));
+
+      g_ptr_array_add (ifaces, NULL);
+
+      *connection_interfaces = (gchar **) g_ptr_array_free (ifaces, FALSE);
+      g_ptr_array_unref (tmp);
     }
 
   if (channel_manager_types != NULL)
     {
       GType types[] = { HAZE_TYPE_IM_CHANNEL_FACTORY,
-#ifdef ENABLE_MEDIA
-          HAZE_TYPE_MEDIA_MANAGER,
-#endif
           G_TYPE_INVALID };
 
       *channel_manager_types = g_memdup (types, sizeof (types));
@@ -954,6 +996,41 @@ haze_protocol_dup_authentication_types (TpBaseProtocol *base)
 }
 
 static void
+haze_protocol_get_avatar_details (TpBaseProtocol *base,
+    GStrv *supported_mime_types,
+    guint *min_height,
+    guint *min_width,
+    guint *rec_height,
+    guint *rec_width,
+    guint *max_height,
+    guint *max_width,
+    guint *max_bytes)
+{
+  HazeProtocol *self = HAZE_PROTOCOL (base);
+  PurpleBuddyIconSpec *icon_spec;
+
+  icon_spec = &(self->priv->prpl_info->icon_spec);
+
+  if (icon_spec->format == NULL)
+    {
+      /* We don't support avatar for this protocol */
+      *supported_mime_types = NULL;
+      *min_height = 0;
+      *min_width = 0;
+      *rec_height = 0;
+      *rec_width = 0;
+      *max_height = 0;
+      *max_width = 0;
+      *max_bytes = 0;
+      return;
+    }
+
+  haze_connection_get_icon_spec_requirements (icon_spec, supported_mime_types,
+      min_height, min_width, rec_height, rec_width, max_height, max_width,
+      max_bytes);
+}
+
+static void
 haze_protocol_class_init (HazeProtocolClass *cls)
 {
   GObjectClass *object_class = (GObjectClass *) cls;
@@ -964,10 +1041,11 @@ haze_protocol_class_init (HazeProtocolClass *cls)
   base_class->new_connection = haze_protocol_new_connection;
   base_class->normalize_contact = haze_protocol_normalize_contact;
   base_class->identify_account = haze_protocol_identify_account;
-  base_class->get_interfaces = haze_protocol_get_interfaces;
+  base_class->get_interfaces_array = haze_protocol_get_interfaces_array;
   base_class->get_connection_details = haze_protocol_get_connection_details;
   base_class->dup_authentication_types =
     haze_protocol_dup_authentication_types;
+  base_class->get_avatar_details = haze_protocol_get_avatar_details;
 
   g_type_class_add_private (cls, sizeof (HazeProtocolPrivate));
   object_class->get_property = haze_protocol_get_property;

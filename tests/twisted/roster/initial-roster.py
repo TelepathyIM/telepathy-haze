@@ -6,17 +6,9 @@ import dbus
 
 from hazetest import exec_test, JabberXmlStream
 from servicetest import (assertLength, EventPattern, wrap_channel,
-        assertEquals, call_async)
+        assertEquals, call_async, assertSameSets)
 import constants as cs
 import ns
-
-# TODO: this needs to be ported to Connection.ContactList
-raise SystemExit(77)
-
-class RosterXmlStream(JabberXmlStream):
-    def add_roster_observer(self):
-        # don't wait for the roster IQ before continuing into the test
-        pass
 
 def test(q, bus, conn, stream):
     conn.Connect()
@@ -50,97 +42,69 @@ def test(q, bus, conn, stream):
 
     stream.send(event.stanza)
 
-    q.expect('dbus-signal', signal='StatusChanged',
-            args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
+    _, s, _ = q.expect_many(
+            EventPattern('dbus-signal', signal='StatusChanged',
+                args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED]),
+            EventPattern('dbus-signal', signal='ContactsChanged',
+                interface=cs.CONN_IFACE_CONTACT_LIST, path=conn.object_path),
+            EventPattern('dbus-signal', signal='ContactListStateChanged',
+                args=[cs.CONTACT_LIST_STATE_SUCCESS]),
+            )
 
-    # Amy, Bob and Chris are all stored on our server-side roster
-    call_async(q, conn.Requests, 'EnsureChannel',{
-        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
-        cs.TARGET_ID: 'stored',
-        })
-    e = q.expect('dbus-return', method='EnsureChannel')
-    stored = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
-            cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, stored.Group.GetMembers()))
-    assertEquals(set(['amy@foo.com', 'bob@foo.com', 'chris@foo.com']), jids)
+    amy, bob, chris = conn.get_contact_handles_sync(
+            ['amy@foo.com', 'bob@foo.com', 'chris@foo.com'])
 
-    call_async(q, conn.Requests, 'EnsureChannel',{
-        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
-        cs.TARGET_ID: 'subscribe',
-        })
-    e = q.expect('dbus-return', method='EnsureChannel')
-    subscribe = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
-            cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, subscribe.Group.GetMembers()))
-    # everyone on our roster is (falsely!) alleged to be on 'subscribe'
-    # (in fact this ought to be just Amy and Chris, but libpurple apparently
-    # can't represent this)
-    assertEquals(set(['amy@foo.com', 'bob@foo.com', 'chris@foo.com']), jids)
-
-    call_async(q, conn.Requests, 'EnsureChannel',{
-        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
-        cs.TARGET_ID: 'publish',
-        })
-    e = q.expect('dbus-return', method='EnsureChannel')
-    publish = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
-            cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, publish.Group.GetMembers()))
-    # the publish list is somewhat imaginary because libpurple doesn't have
-    # state-recovery
-    assertEquals(set(), jids)
-
-    call_async(q, conn.Requests, 'EnsureChannel',{
-        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.TARGET_HANDLE_TYPE: cs.HT_GROUP,
-        cs.TARGET_ID: '3 letter names',
-        })
-    e = q.expect('dbus-return', method='EnsureChannel')
-    group_chan = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
-            cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT,
-        group_chan.Group.GetMembers()))
-    assertEquals(set(['amy@foo.com', 'bob@foo.com']), jids)
+    # Amy, Bob and Chris are all stored on our server-side roster.
+    #
+    # Everyone on our roster is (falsely!) alleged to have subscribe=YES
+    # (in fact this ought to be just Amy and Chris, because we're publishing
+    # presence to Bob without being subscribed to his presence, but libpurple
+    # apparently can't represent this).
+    #
+    # The publish value is unknown, because libpurple doesn't have
+    # state-recovery.
+    assertEquals([{
+        amy: (cs.SUBSCRIPTION_STATE_YES, cs.SUBSCRIPTION_STATE_UNKNOWN, ''),
+        bob: (cs.SUBSCRIPTION_STATE_YES, cs.SUBSCRIPTION_STATE_UNKNOWN, ''),
+        chris: (cs.SUBSCRIPTION_STATE_YES, cs.SUBSCRIPTION_STATE_UNKNOWN, ''),
+        },
+        {
+        amy: 'amy@foo.com',
+        bob: 'bob@foo.com',
+        chris: 'chris@foo.com',
+        },
+        {}], s.args)
 
     # the XMPP prpl puts people into some sort of group, probably called
     # Buddies
-    channels = conn.Properties.Get(cs.CONN_IFACE_REQUESTS, 'Channels')
+    groups = conn.Properties.Get(cs.CONN_IFACE_CONTACT_GROUPS, 'Groups')
     default_group = None
-    default_props = None
 
-    for path, props in channels:
-        if props.get(cs.CHANNEL_TYPE) != cs.CHANNEL_TYPE_CONTACT_LIST:
-            continue
-
-        if props.get(cs.TARGET_HANDLE_TYPE) != cs.HT_GROUP:
-            continue
-
-        if path == group_chan.object_path:
+    for group in groups:
+        if group == '3 letter names':
             continue
 
         if default_group is not None:
             raise AssertionError('Two unexplained groups: %s, %s' %
-                    (path, default_group.object_path))
+                    (group, default_group))
 
-        default_group = wrap_channel(bus.get_object(conn.bus_name, path),
-                cs.CHANNEL_TYPE_CONTACT_LIST)
-        default_props = props
+        default_group = group
 
-    jids = set(conn.InspectHandles(cs.HT_CONTACT,
-        default_group.Group.GetMembers()))
-    assertEquals(set(['chris@foo.com']), jids)
+    call_async(q, conn.ContactList, 'GetContactListAttributes',
+            [cs.CONN_IFACE_CONTACT_GROUPS])
+    r = q.expect('dbus-return', method='GetContactListAttributes')
 
-    call_async(q, conn.Requests, 'EnsureChannel',{
-        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.TARGET_HANDLE_TYPE: cs.HT_GROUP,
-        cs.TARGET_ID: default_props[cs.TARGET_ID],
-        })
-    e = q.expect('dbus-return', method='EnsureChannel')
-    assertEquals(False, e.value[0])
-    assertEquals(default_group.object_path, e.value[1])
-    assertEquals(default_props, e.value[2])
+    assertEquals(cs.SUBSCRIPTION_STATE_YES, r.value[0][amy][cs.ATTR_SUBSCRIBE])
+    assertEquals(cs.SUBSCRIPTION_STATE_YES, r.value[0][bob][cs.ATTR_SUBSCRIBE])
+    assertEquals(cs.SUBSCRIPTION_STATE_YES, r.value[0][chris][cs.ATTR_SUBSCRIBE])
+
+    assertEquals(cs.SUBSCRIPTION_STATE_UNKNOWN, r.value[0][amy][cs.ATTR_PUBLISH])
+    assertEquals(cs.SUBSCRIPTION_STATE_UNKNOWN, r.value[0][bob][cs.ATTR_PUBLISH])
+    assertEquals(cs.SUBSCRIPTION_STATE_UNKNOWN, r.value[0][chris][cs.ATTR_PUBLISH])
+
+    assertSameSets(['3 letter names'], r.value[0][amy][cs.ATTR_GROUPS])
+    assertSameSets(['3 letter names'], r.value[0][bob][cs.ATTR_GROUPS])
+    assertSameSets([default_group], r.value[0][chris][cs.ATTR_GROUPS])
 
 if __name__ == '__main__':
-    exec_test(test, protocol=RosterXmlStream)
+    exec_test(test, protocol=JabberXmlStream, do_connect=False)

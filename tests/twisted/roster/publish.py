@@ -8,8 +8,8 @@ from twisted.words.protocols.jabber.client import IQ
 from twisted.words.xish import domish
 
 from servicetest import (EventPattern, wrap_channel, assertLength,
-        assertEquals, call_async, sync_dbus)
-from hazetest import acknowledge_iq, exec_test, sync_stream, close_all_groups
+        assertEquals, call_async, sync_dbus, assertSameSets)
+from hazetest import acknowledge_iq, exec_test, sync_stream
 import constants as cs
 import ns
 
@@ -17,49 +17,13 @@ import ns
 raise SystemExit(77)
 
 def test(q, bus, conn, stream):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged',
-            args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
-
-    # Close all Group channels to get a clean slate, so we can rely on
-    # the NewChannels signal for the default group later
-    close_all_groups(q, bus, conn, stream)
-
-    call_async(q, conn.Requests, 'EnsureChannel',{
-        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
-        cs.TARGET_ID: 'publish',
-        })
-    e = q.expect('dbus-return', method='EnsureChannel')
-    publish = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
-            cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, publish.Group.GetMembers()))
-    assertEquals(set(), jids)
-
-    call_async(q, conn.Requests, 'EnsureChannel',{
-        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
-        cs.TARGET_ID: 'stored',
-        })
-    e = q.expect('dbus-return', method='EnsureChannel')
-    stored = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
-            cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, stored.Group.GetMembers()))
-    assertEquals(set(), jids)
-
-    call_async(q, conn.Requests, 'EnsureChannel',{
-        cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_CONTACT_LIST,
-        cs.TARGET_HANDLE_TYPE: cs.HT_LIST,
-        cs.TARGET_ID: 'subscribe',
-        })
-    e = q.expect('dbus-return', method='EnsureChannel')
-    subscribe = wrap_channel(bus.get_object(conn.bus_name, e.value[1]),
-            cs.CHANNEL_TYPE_CONTACT_LIST)
-    jids = set(conn.InspectHandles(cs.HT_CONTACT, subscribe.Group.GetMembers()))
-    assertEquals(set(), jids)
+    call_async(q, conn.ContactList, 'GetContactListAttributes',
+            [cs.CONN_IFACE_CONTACT_GROUPS], False)
+    r = q.expect('dbus-return', method='GetContactListAttributes')
+    assertLength(0, r.value[0].keys())
 
     # receive a subscription request
-    alice = conn.RequestHandles(cs.HT_CONTACT, ['alice@wonderland.lit'])[0]
+    alice = conn.get_contact_handle_sync('alice@wonderland.lit')
 
     presence = domish.Element(('jabber:client', 'presence'))
     presence['from'] = 'alice@wonderland.lit'
@@ -69,31 +33,31 @@ def test(q, bus, conn, stream):
 
     # it seems either libpurple or haze doesn't pass the message through
     q.expect_many(
-            EventPattern('dbus-signal', path=publish.object_path,
-                args=['', [], [], [alice], [], alice,
-                    cs.GC_REASON_NONE]),
-            # In the Conn.I.ContactList world, 'stored' has been
-            # re-purposed to mean "we have some reason to care", so she
-            # appears here even though she's not on the server-side roster
-            # just yet
-            EventPattern('dbus-signal', signal='MembersChanged',
-                path=stored.object_path,
-                args=['', [alice], [], [], [], 0, cs.GC_REASON_NONE]),
+            EventPattern('dbus-signal', signal='ContactsChanged',
+                args=[{
+                    alice:
+                        (cs.SUBSCRIPTION_STATE_NO, cs.SUBSCRIPTION_STATE_ASK,
+                            ''),
+                    },
+                    {alice: 'alice@wonderland.lit'}, {}]),
             )
 
-    self_handle = conn.GetSelfHandle()
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
 
     # accept
-    call_async(q, publish.Group, 'AddMembers', [alice], '')
+    call_async(q, conn.ContactList, 'AuthorizePublication', [alice])
 
     q.expect_many(
             EventPattern('stream-presence', presence_type='subscribed',
                 to='alice@wonderland.lit'),
-            EventPattern('dbus-signal', signal='MembersChanged',
-                path=publish.object_path,
-                args=['', [alice], [], [], [], self_handle,
-                    cs.GC_REASON_NONE]),
-            EventPattern('dbus-return', method='AddMembers'),
+            EventPattern('dbus-signal', signal='ContactsChanged',
+                args=[{
+                    alice:
+                        (cs.SUBSCRIPTION_STATE_NO, cs.SUBSCRIPTION_STATE_YES,
+                            ''),
+                    },
+                    {alice: 'alice@wonderland.lit'}, {}]),
+            EventPattern('dbus-return', method='AuthorizePublication'),
             )
 
     # the server sends us a roster push
@@ -106,33 +70,30 @@ def test(q, bus, conn, stream):
 
     stream.send(iq)
 
-    _, _, new_group = q.expect_many(
+    q.expect_many(
             EventPattern('stream-iq', iq_type='result',
                 predicate=lambda e: e.stanza['id'] == 'roster-push'),
             # She's not really on our subscribe list, but this is the closest
             # we can guess from libpurple
-            # FIXME: TpBaseContactList assumes she's the actor - she must have
-            # accepted our request, right? Not actually true in libpurple.
-            EventPattern('dbus-signal', signal='MembersChanged',
-                path=subscribe.object_path,
-                args=['', [alice], [], [], [], alice, cs.GC_REASON_NONE]),
+            EventPattern('dbus-signal', signal='ContactsChanged',
+                args=[{
+                    alice:
+                        (cs.SUBSCRIPTION_STATE_YES, cs.SUBSCRIPTION_STATE_YES,
+                            ''),
+                    },
+                    {alice: 'alice@wonderland.lit'}, {}]),
             # the buddy needs a group, because libpurple
-            EventPattern('dbus-signal', signal='NewChannels',
-                predicate=lambda e:
-                    e.args[0][0][1].get(cs.CHANNEL_TYPE) ==
-                        cs.CHANNEL_TYPE_CONTACT_LIST and
-                    e.args[0][0][1].get(cs.TARGET_HANDLE_TYPE) ==
-                        cs.HT_GROUP),
+            EventPattern('dbus-signal', signal='GroupsChanged',
+                predicate=lambda e: e.args[0] == [alice]),
             )
 
-    def_group = wrap_channel(bus.get_object(conn.bus_name,
-        new_group.args[0][0][0]), cs.CHANNEL_TYPE_CONTACT_LIST)
-
-    assertEquals(set([alice]), set(def_group.Group.GetMembers()))
+    call_async(q, conn.ContactList, 'GetContactListAttributes',
+            [cs.CONN_IFACE_CONTACT_GROUPS], False)
+    r = q.expect('dbus-return', method='GetContactListAttributes')
+    assertSameSets([alice], r.value[0].keys())
 
     # receive another subscription request
-    queen = conn.RequestHandles(cs.HT_CONTACT,
-            ['queen.of.hearts@wonderland.lit'])[0]
+    queen = conn.get_contact_handle_sync('queen.of.hearts@wonderland.lit')
 
     presence = domish.Element(('jabber:client', 'presence'))
     presence['from'] = 'queen.of.hearts@wonderland.lit'
@@ -141,27 +102,45 @@ def test(q, bus, conn, stream):
     stream.send(presence)
 
     # it seems either libpurple or haze doesn't pass the message through
-    q.expect('dbus-signal', path=publish.object_path,
-            args=['', [], [], [queen], [], queen,
-                cs.GC_REASON_NONE])
+    q.expect_many(
+            EventPattern('dbus-signal', signal='ContactsChanged',
+                args=[{
+                    queen:
+                        (cs.SUBSCRIPTION_STATE_NO, cs.SUBSCRIPTION_STATE_ASK,
+                            ''),
+                    },
+                    {queen: 'queen.of.hearts@wonderland.lit'}, {}]),
+            )
+
+    # the contact is temporarily on our roster
+    call_async(q, conn.ContactList, 'GetContactListAttributes',
+            [cs.CONN_IFACE_CONTACT_GROUPS], False)
+    r = q.expect('dbus-return', method='GetContactListAttributes')
+    assertSameSets([alice, queen], r.value[0].keys())
 
     # decline
-    call_async(q, publish.Group, 'RemoveMembers', [queen], '')
+    call_async(q, conn.ContactList, 'RemoveContacts', [queen])
 
     q.expect_many(
             EventPattern('stream-presence', presence_type='unsubscribed',
                 to='queen.of.hearts@wonderland.lit'),
-            EventPattern('dbus-signal', signal='MembersChanged',
-                path=publish.object_path,
-                args=['', [], [queen], [], [], 0, cs.GC_REASON_NONE]),
-            EventPattern('dbus-return', method='RemoveMembers'),
+            EventPattern('dbus-signal', signal='ContactsChanged',
+                args=[{
+                    queen:
+                        (cs.SUBSCRIPTION_STATE_NO, cs.SUBSCRIPTION_STATE_NO,
+                            ''),
+                    }, {queen: 'queen.of.hearts@wonderland.lit'}, {}]),
+            EventPattern('dbus-return', method='RemoveContacts'),
             )
 
     sync_dbus(bus, q, conn)
     sync_stream(q, stream)
 
-    # the declined contact isn't on our roster
-    assertEquals(set([alice]), set(def_group.Group.GetMembers()))
+    # the declined contact isn't on our roster any more
+    call_async(q, conn.ContactList, 'GetContactListAttributes',
+            [cs.CONN_IFACE_CONTACT_GROUPS], False)
+    r = q.expect('dbus-return', method='GetContactListAttributes')
+    assertSameSets([alice], r.value[0].keys())
 
     # she's persistent
     presence = domish.Element(('jabber:client', 'presence'))
@@ -169,9 +148,17 @@ def test(q, bus, conn, stream):
     presence['type'] = 'subscribe'
     presence.addElement('status', content='How dare you?')
     stream.send(presence)
-    q.expect('dbus-signal', path=publish.object_path,
-            args=['', [], [], [queen], [], queen,
-                cs.GC_REASON_NONE])
+
+    q.expect_many(
+            EventPattern('dbus-signal', signal='ContactsChanged',
+                args=[{
+                    queen:
+                        (cs.SUBSCRIPTION_STATE_NO, cs.SUBSCRIPTION_STATE_ASK,
+                            ''),
+                        },
+                        {queen: 'queen.of.hearts@wonderland.lit'}, {}]),
+            )
+
     # disconnect with the request outstanding, to make sure we don't crash
     conn.Disconnect()
     q.expect('dbus-signal', signal='StatusChanged',

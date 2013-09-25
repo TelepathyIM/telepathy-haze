@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <signal.h>
 
+#include <dbus/dbus.h>
 #include <glib.h>
 
 #include <libpurple/account.h>
@@ -38,15 +39,11 @@
 #include <libpurple/prefs.h>
 #include <libpurple/util.h>
 
-#ifdef ENABLE_MEDIA
-#include <libpurple/mediamanager.h>
-#endif
-
 #ifdef HAVE_PURPLE_DBUS_UNINIT
 #include <libpurple/dbus-server.h>
 #endif
 
-#include <telepathy-glib/run.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "defines.h"
 #include "debug.h"
@@ -54,10 +51,6 @@
 #include "notify.h"
 #include "request.h"
 #include "util.h"
-
-#ifdef ENABLE_MEDIA
-#include "media-backend.h"
-#endif
 
 /* Copied verbatim from nullclient, modulo changing whitespace. */
 #define PURPLE_GLIB_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
@@ -141,9 +134,7 @@ haze_ui_init (void)
     purple_accounts_set_ui_ops (haze_get_account_ui_ops ());
     purple_conversations_set_ui_ops (haze_get_conv_ui_ops ());
     purple_connections_set_ui_ops (haze_get_connection_ui_ops ());
-#ifdef ENABLE_LEAKY_REQUEST_STUBS
     purple_request_set_ui_ops (haze_request_get_ui_ops ());
-#endif
     purple_notify_set_ui_ops (haze_notify_get_ui_ops ());
     purple_privacy_set_ui_ops (haze_get_privacy_ui_ops ());
 }
@@ -213,11 +204,6 @@ init_libpurple (void)
         PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION, PURPLE_MICRO_VERSION);
 
     set_libpurple_preferences ();
-
-#ifdef ENABLE_MEDIA
-    purple_media_manager_set_backend_type (purple_media_manager_get (),
-        HAZE_TYPE_MEDIA_BACKEND);
-#endif
 }
 
 static TpBaseConnectionManager *
@@ -253,6 +239,10 @@ main(int argc,
      char **argv)
 {
     int ret = 0;
+
+    if (!dbus_threads_init_default ())
+        g_error ("Unable to initialize libdbus for thread-safety "
+            "(out of memory?)");
 
     g_set_prgname(UI_ID);
 

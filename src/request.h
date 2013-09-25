@@ -20,4 +20,7 @@
 
 #include <libpurple/request.h>
 
+void haze_request_password_cb (gpointer user_data,
+                               const gchar *password);
+
 PurpleRequestUiOps *haze_request_get_ui_ops (void);

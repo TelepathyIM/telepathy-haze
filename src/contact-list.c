@@ -19,15 +19,14 @@
  *
  */
 
+#include <config.h>
+#include "contact-list.h"
+
 #include <string.h>
 
-#include <telepathy-glib/dbus.h>
-#include <telepathy-glib/gtypes.h>
-#include <telepathy-glib/interfaces.h>
-#include <telepathy-glib/intset.h>
+#include <telepathy-glib/telepathy-glib.h>
 
 #include "connection.h"
-#include "contact-list.h"
 #include "debug.h"
 
 typedef struct _PublishRequestData PublishRequestData;
@@ -193,10 +192,7 @@ haze_contact_list_dup_contacts (TpBaseContactList *cl)
           purple_buddy_get_name (sl_iter->data), NULL, NULL);
 
       if (G_LIKELY (handle != 0))
-        {
-          tp_handle_set_add (handles, handle);
-          tp_handle_unref (contact_repo, handle);
-        }
+        tp_handle_set_add (handles, handle);
     }
 
   g_slist_free (buddies);
@@ -311,8 +307,6 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
     group_name = purple_group_get_name (purple_buddy_get_group (buddy));
     tp_base_contact_list_one_contact_groups_changed (
         (TpBaseContactList *) contact_list, handle, &group_name, 1, NULL, 0);
-
-    tp_handle_unref (contact_repo, handle);
 }
 
 static void
@@ -330,7 +324,8 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
     /* Every buddy gets removed after disconnection, because the PurpleAccount
      * gets deleted.  So let's ignore removals when we're offline.
      */
-    if (base_conn->status == TP_CONNECTION_STATUS_DISCONNECTED)
+    if (tp_base_connection_get_status (base_conn) ==
+        TP_CONNECTION_STATUS_DISCONNECTED)
         return;
 
     contact_list = conn->contact_list;
@@ -362,8 +357,6 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
         tp_base_contact_list_one_contact_removed (
             (TpBaseContactList *) contact_list, handle);
     }
-
-    tp_handle_unref (contact_repo, handle);
 }
 
 
@@ -385,18 +378,11 @@ static void
 remove_pending_publish_request (HazeContactList *self,
                                 TpHandle handle)
 {
-    HazeConnection *conn = self->priv->conn;
-    TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
-    TpHandleRepoIface *handle_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
-
     gpointer h = GUINT_TO_POINTER (handle);
     gboolean removed;
 
     removed = g_hash_table_remove (self->priv->pending_publish_requests, h);
     g_assert (removed);
-
-    tp_handle_unref (handle_repo, handle);
 }
 
 void
@@ -1037,7 +1023,7 @@ haze_contact_list_set_contact_groups_async (TpBaseContactList *cl,
 
       for (i = 0; i < n_names; i++)
         {
-          if (tp_strdiff (group_name, names[i]))
+          if (!tp_strdiff (group_name, names[i]))
             {
               desired = TRUE;
               break;

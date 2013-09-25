@@ -24,6 +24,14 @@ def test(q, bus, conn, stream):
         protocol_iface = dbus.Interface(protocol, cs.PROTOCOL)
         protocol_props = dbus.Interface(protocol, cs.PROPERTIES_IFACE)
         flat_props = protocol_props.GetAll(cs.PROTOCOL)
+        protocol_avatar_props = protocol_props.GetAll(cs.PROTOCOL_IFACE_AVATARS)
+
+        # Protocol is supposed to implement Interface.Avatars iff the
+        # connection implements Avatars as well.
+        if cs.CONN_IFACE_AVATARS in flat_props['ConnectionInterfaces']:
+            assertContains(cs.PROTOCOL_IFACE_AVATARS, props[cs.PROTOCOL + '.Interfaces'])
+        else:
+            assertDoesNotContain(cs.PROTOCOL_IFACE_AVATARS, props[cs.PROTOCOL + '.Interfaces'])
 
         parameters = props[cs.PROTOCOL + '.Parameters']
         assertEquals(parameters, flat_props['Parameters'])
@@ -90,6 +98,20 @@ def test(q, bus, conn, stream):
                     protocol_iface.IdentifyAccount({
                         'account': 'smcv',
                         'server': 'irc.debian.org'}))
+
+            assertDoesNotContain(cs.CONN_IFACE_AVATARS, flat_props['ConnectionInterfaces'])
+            assertDoesNotContain(cs.CONN_IFACE_CONTACT_BLOCKING, flat_props['ConnectionInterfaces'])
+            assertDoesNotContain(cs.CONN_IFACE_MAIL_NOTIFICATION, flat_props['ConnectionInterfaces'])
+
+            # Avatar not supported
+            assertEquals(0, protocol_avatar_props['MaximumAvatarBytes'])
+            assertEquals(0, protocol_avatar_props['MaximumAvatarHeight'])
+            assertEquals(0, protocol_avatar_props['MaximumAvatarWidth'])
+            assertEquals(0, protocol_avatar_props['MinimumAvatarHeight'])
+            assertEquals(0, protocol_avatar_props['MinimumAvatarWidth'])
+            assertEquals(0, protocol_avatar_props['RecommendedAvatarHeight'])
+            assertEquals(0, protocol_avatar_props['RecommendedAvatarWidth'])
+            assertEquals([], protocol_avatar_props['SupportedAvatarMIMETypes'])
         elif name == 'myspace':
             assertEquals('x-myspace', flat_props['VCardField'])
             assertEquals('im-myspace', flat_props['Icon'])
@@ -135,6 +157,20 @@ def test(q, bus, conn, stream):
                         'embrace-and-extend': r'WORKGROUP\Bill',
                         'password': 'letmein'})
             q.expect('dbus-error', name=cs.INVALID_ARGUMENT)
+
+            assertContains(cs.CONN_IFACE_AVATARS, flat_props['ConnectionInterfaces'])
+            assertContains(cs.CONN_IFACE_CONTACT_BLOCKING, flat_props['ConnectionInterfaces'])
+            assertContains(cs.CONN_IFACE_MAIL_NOTIFICATION, flat_props['ConnectionInterfaces'])
+
+            # libpurple currently says there's no max size
+            assertEquals(0, protocol_avatar_props['MaximumAvatarBytes'])
+            assertEquals(96, protocol_avatar_props['MaximumAvatarHeight'])
+            assertEquals(96, protocol_avatar_props['MaximumAvatarWidth'])
+            assertEquals(32, protocol_avatar_props['MinimumAvatarHeight'])
+            assertEquals(32, protocol_avatar_props['MinimumAvatarWidth'])
+            assertEquals(0, protocol_avatar_props['RecommendedAvatarHeight'])
+            assertEquals(0, protocol_avatar_props['RecommendedAvatarWidth'])
+            assertEquals(['image/png'], protocol_avatar_props['SupportedAvatarMIMETypes'])
         elif name == 'qq':
             assertEquals('x-qq', flat_props['VCardField'])
             assertEquals('im-qq', flat_props['Icon'])
@@ -176,11 +212,6 @@ def test(q, bus, conn, stream):
                         'account': 'billg@example.com',
                         'login': r'WORKGROUP\Bill',
                         'password': 'letmein'}))
-
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[1, 1])
-    conn.Disconnect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])
 
 if __name__ == '__main__':
     exec_test(test)

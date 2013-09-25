@@ -6,16 +6,13 @@ new text channel.
 
 from twisted.words.xish import domish
 
-from servicetest import assertEquals
 from hazetest import exec_test
+from servicetest import assertEquals
 import constants as cs
 
 import ns
 
 def test(q, bus, conn, stream):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
-
     # message without body
     m = domish.Element((None, 'message'))
     m['from'] = 'alice@foo.com'
@@ -33,10 +30,10 @@ def test(q, bus, conn, stream):
 
     # first message should be from Bob, not Alice
     event = q.expect('dbus-signal', signal='NewChannels')
-    assertEquals(1, len(event.args[0]))
-    path, props = event.args[0][0]
-    assertEquals(cs.CHANNEL_TYPE_TEXT, props[cs.CHANNEL_TYPE])
-    assertEquals('bob@foo.com', props[cs.TARGET_ID])
+    assertEquals(cs.CHANNEL_TYPE_TEXT, event.args[0][0][1][cs.CHANNEL_TYPE])
+    assertEquals(cs.HT_CONTACT, event.args[0][0][1][cs.TARGET_HANDLE_TYPE])
+    assertEquals('bob@foo.com', event.args[0][0][1][cs.TARGET_ID])
+
     conn.Disconnect()
     q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])
 

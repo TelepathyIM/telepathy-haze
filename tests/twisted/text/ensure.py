@@ -7,26 +7,20 @@ import dbus
 from twisted.words.xish import domish
 
 from hazetest import exec_test
-from servicetest import call_async, EventPattern, unwrap
+from servicetest import (call_async, EventPattern, unwrap, assertEquals,
+        assertLength, assertContains)
 
 import pprint
 
 import constants as cs
 
 def test(q, bus, conn, stream):
-    conn.Connect()
-    q.expect('dbus-signal', signal='StatusChanged', args=[0, 1])
-
-    self_handle = conn.Properties.Get(cs.CONN, 'SelfHandle')
+    self_handle = conn.Properties.Get(cs.CONN, "SelfHandle")
 
     jids = ['foo@bar.com', 'truc@cafe.fr']
-    call_async(q, conn, 'RequestHandles', 1, jids)
+    handles = conn.get_contact_handles_sync(jids)
 
-    event = q.expect('dbus-return', method='RequestHandles')
-    handles = event.value[0]
-
-    properties = conn.GetAll(
-            'im.telepathy1.Connection.Interface.Requests',
+    properties = conn.GetAll(cs.CONN_IFACE_REQUESTS,
             dbus_interface=dbus.PROPERTIES_IFACE)
     # Difference from Gabble: Haze's roster channels spring to life even if you
     # haven't received the XMPP roster.
@@ -34,13 +28,10 @@ def test(q, bus, conn, stream):
                 if c[1][cs.CHANNEL_TYPE] == cs.CHANNEL_TYPE_TEXT
                ]
     assert text_channels == [], text_channels
-    assert ({'im.telepathy1.Channel.ChannelType':
-                'im.telepathy1.Channel.Type.Text',
-             'im.telepathy1.Channel.TargetHandleType': 1,
+    assert ({cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_TEXT,
+             cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
              },
-             ['im.telepathy1.Channel.TargetHandle',
-              'im.telepathy1.Channel.TargetID'
-             ],
+             [cs.TARGET_HANDLE, cs.TARGET_ID],
              ) in properties.get('RequestableChannelClasses'),\
                      properties['RequestableChannelClasses']
 
@@ -60,7 +51,7 @@ def test_ensure_ensure(q, conn, self_handle, jid, handle):
     # Check that Ensuring a channel that doesn't exist succeeds
     call_async(q, conn.Requests, 'EnsureChannel', request_props (handle))
 
-    ret, new_sig = q.expect_many(
+    ret, sig = q.expect_many(
         EventPattern('dbus-return', method='EnsureChannel'),
         EventPattern('dbus-signal', signal='NewChannels'),
         )
@@ -74,19 +65,16 @@ def test_ensure_ensure(q, conn, self_handle, jid, handle):
 
     check_props(emitted_props, self_handle, handle, jid)
 
-    assert len(new_sig.args) == 1
-    assert len(new_sig.args[0]) == 1        # one channel
-    assert len(new_sig.args[0][0]) == 2     # two struct members
-    assert new_sig.args[0][0][0] == path
-    assert new_sig.args[0][0][1] == emitted_props
+    assertLength(1, sig.args)
+    assertLength(1, sig.args[0])        # one channel
+    assertLength(2, sig.args[0][0])     # two struct members
+    assertEquals(path, sig.args[0][0][0])
+    assertEquals(emitted_props, sig.args[0][0][1])
 
-    properties = conn.GetAll(
-            'im.telepathy1.Connection.Interface.Requests',
+    properties = conn.GetAll(cs.CONN_IFACE_REQUESTS,
             dbus_interface=dbus.PROPERTIES_IFACE)
 
-    assert new_sig.args[0][0] in properties['Channels'], \
-            (new_sig.args[0][0], properties['Channels'])
-
+    assertContains(sig.args[0][0], properties['Channels'])
 
     # Now try Ensuring a channel which already exists
     call_async(q, conn.Requests, 'EnsureChannel', request_props (handle))
@@ -110,7 +98,7 @@ def test_request_ensure(q, conn, self_handle, jid, handle):
 
     call_async(q, conn.Requests, 'CreateChannel', request_props (handle))
 
-    ret, new_sig = q.expect_many(
+    ret, sig = q.expect_many(
         EventPattern('dbus-return', method='CreateChannel'),
         EventPattern('dbus-signal', signal='NewChannels'),
         )
@@ -120,19 +108,16 @@ def test_request_ensure(q, conn, self_handle, jid, handle):
 
     check_props(emitted_props, self_handle, handle, jid)
 
-    assert len(new_sig.args) == 1
-    assert len(new_sig.args[0]) == 1        # one channel
-    assert len(new_sig.args[0][0]) == 2     # two struct members
-    assert new_sig.args[0][0][0] == path
-    assert new_sig.args[0][0][1] == emitted_props
+    assertLength(1, sig.args)
+    assertLength(1, sig.args[0])        # one channel
+    assertLength(2, sig.args[0][0])     # two struct members
+    assertEquals(path, sig.args[0][0][0])
+    assertEquals(emitted_props, sig.args[0][0][1])
 
-    properties = conn.GetAll(
-            'im.telepathy1.Connection.Interface.Requests',
+    properties = conn.GetAll(cs.CONN_IFACE_REQUESTS,
             dbus_interface=dbus.PROPERTIES_IFACE)
 
-    assert new_sig.args[0][0] in properties['Channels'], \
-            (new_sig.args[0][0], properties['Channels'])
-
+    assertContains(sig.args[0][0], properties['Channels'])
 
     # Now try Ensuring that same channel.
     call_async(q, conn.Requests, 'EnsureChannel', request_props (handle))
@@ -149,26 +134,19 @@ def test_request_ensure(q, conn, self_handle, jid, handle):
 
 
 def check_props(props, self_handle, handle, jid):
-    assert props['im.telepathy1.Channel.ChannelType'] ==\
-            'im.telepathy1.Channel.Type.Text'
-    assert props['im.telepathy1.Channel.'
-            'TargetHandleType'] == 1
-    assert props['im.telepathy1.Channel.TargetHandle'] ==\
-            handle
-    assert props['im.telepathy1.Channel.TargetID'] == jid
-    assert props['im.telepathy1.Channel.'
-            'Requested'] == True
-    assert props['im.telepathy1.Channel.'
-            'InitiatorHandle'] == self_handle
-    assert props['im.telepathy1.Channel.'
-            'InitiatorID'] == 'test@localhost'
+    assertEquals(cs.CHANNEL_TYPE_TEXT, props[cs.CHANNEL_TYPE])
+    assertEquals(cs.HT_CONTACT, props[cs.TARGET_HANDLE_TYPE])
+    assertEquals(handle, props[cs.TARGET_HANDLE])
+    assertEquals(jid, props[cs.TARGET_ID])
+    assertEquals(True, props[cs.REQUESTED])
+    assertEquals(self_handle, props[cs.INITIATOR_HANDLE])
+    assertEquals('test@localhost', props[cs.INITIATOR_ID])
 
 
 def request_props(handle):
-    return { 'im.telepathy1.Channel.ChannelType':
-                'im.telepathy1.Channel.Type.Text',
-             'im.telepathy1.Channel.TargetHandleType': 1,
-             'im.telepathy1.Channel.TargetHandle': handle,
+    return { cs.CHANNEL_TYPE: cs.CHANNEL_TYPE_TEXT,
+             cs.TARGET_HANDLE_TYPE: cs.HT_CONTACT,
+             cs.TARGET_HANDLE: handle,
            }
 
 

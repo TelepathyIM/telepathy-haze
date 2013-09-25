@@ -265,28 +265,24 @@ new_im_channel (HazeImChannelFactory *self,
                 TpHandle initiator,
                 gpointer request_token)
 {
-    TpBaseConnection *conn;
     HazeIMChannel *chan;
-    char *object_path;
     GSList *requests = NULL;
 
     g_assert (HAZE_IS_IM_CHANNEL_FACTORY (self));
 
-    conn = (TpBaseConnection *) self->priv->conn;
-
     g_assert (!g_hash_table_lookup (self->priv->channels,
           GINT_TO_POINTER (handle)));
 
-    object_path = g_strdup_printf ("%s/ImChannel%u", conn->object_path, handle);
-
     chan = g_object_new (HAZE_TYPE_IM_CHANNEL,
                          "connection", self->priv->conn,
-                         "object-path", object_path,
                          "handle", handle,
                          "initiator-handle", initiator,
+                         "requested", (handle != initiator),
                          NULL);
+    tp_base_channel_register (TP_BASE_CHANNEL (chan));
 
-    DEBUG ("Created IM channel with object path %s", object_path);
+    DEBUG ("Created IM channel with object path %s",
+        tp_base_channel_get_object_path (TP_BASE_CHANNEL (chan)));
 
     g_signal_connect (chan, "closed", G_CALLBACK (im_channel_closed_cb), self);
 
@@ -300,8 +296,6 @@ new_im_channel (HazeImChannelFactory *self,
     tp_channel_manager_emit_new_channel (self,
         TP_EXPORTABLE_CHANNEL (chan), requests);
     g_slist_free (requests);
-
-    g_free (object_path);
 
     return chan;
 }
@@ -453,14 +447,6 @@ haze_create_conversation (PurpleConversation *conv)
 static void
 haze_destroy_conversation (PurpleConversation *conv)
 {
-    PurpleAccount *account = purple_conversation_get_account (conv);
-
-    HazeImChannelFactory *im_factory =
-        ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
-    TpBaseConnection *base_conn = TP_BASE_CONNECTION (im_factory->priv->conn);
-    TpHandleRepoIface *contact_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
-
     HazeConversationUiData *ui_data;
 
     DEBUG ("(PurpleConversation *)%p destroyed", conv);
@@ -472,7 +458,6 @@ haze_destroy_conversation (PurpleConversation *conv)
 
     ui_data = PURPLE_CONV_GET_HAZE_UI_DATA (conv);
 
-    tp_handle_unref (contact_repo, ui_data->contact_handle);
     if (ui_data->resend_typing_timeout_id)
         g_source_remove (ui_data->resend_typing_timeout_id);
 
@@ -583,8 +568,9 @@ haze_im_channel_factory_request (HazeImChannelFactory *self,
         goto error;
     }
 
-    chan = get_im_channel (self, handle, base_conn->self_handle,
-        request_token, &created);
+    chan = get_im_channel (self, handle,
+        tp_base_connection_get_self_handle (base_conn), request_token,
+        &created);
     g_assert (chan != NULL);
 
     if (!created)

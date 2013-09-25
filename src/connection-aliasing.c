@@ -18,6 +18,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+
+#include <config.h>
 #include "connection-aliasing.h"
 
 #include <telepathy-glib/telepathy-glib.h>
@@ -38,24 +40,57 @@ can_alias (HazeConnection *conn)
     return (prpl->alias_buddy != NULL);
 }
 
-static void
-haze_connection_get_alias_flags (TpSvcConnectionInterfaceAliasing *self,
-                                 DBusGMethodInvocation *context)
+typedef enum {
+    DP_FLAGS
+} AliasingDBusProperty;
+
+static TpDBusPropertiesMixinPropImpl props[] = {
+      { "AliasFlags", GINT_TO_POINTER (DP_FLAGS), NULL },
+      { NULL }
+};
+TpDBusPropertiesMixinPropImpl *haze_connection_aliasing_properties = props;
+
+void
+haze_connection_aliasing_properties_getter (GObject *object,
+    GQuark interface,
+    GQuark name,
+    GValue *value,
+    gpointer getter_data)
 {
-    TpBaseConnection *base = TP_BASE_CONNECTION (self);
-    HazeConnection *conn = HAZE_CONNECTION (base);
-    guint flags = 0;
+  AliasingDBusProperty which = GPOINTER_TO_INT (getter_data);
+  HazeConnection *conn = HAZE_CONNECTION (object);
+  TpBaseConnection *base = (TpBaseConnection *) conn;
 
-    TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
-
-    if (can_alias (conn))
+  if (tp_base_connection_get_status (base) != TP_CONNECTION_STATUS_CONNECTED)
     {
-        flags = TP_CONNECTION_ALIAS_FLAG_USER_SET;
+      /* not CONNECTED yet, so our connection doesn't have the prpl info
+       * yet - return dummy values */
+      if (G_VALUE_HOLDS_UINT (value))
+        g_value_set_uint (value, 0);
+      else
+        g_assert_not_reached ();
+
+      return;
     }
 
-    DEBUG ("alias flags: %u", flags);
-    tp_svc_connection_interface_aliasing_return_from_get_alias_flags (
-            context, flags);
+  switch (which)
+    {
+      case DP_FLAGS:
+          {
+            guint flags = 0;
+
+            if (can_alias (conn))
+              {
+                flags = TP_CONNECTION_ALIAS_FLAG_USER_SET;
+              }
+
+            g_value_set_uint (value, flags);
+          }
+        break;
+
+      default:
+        g_assert_not_reached ();
+    }
 }
 
 static const gchar *
@@ -68,7 +103,7 @@ get_alias (HazeConnection *self,
     const gchar *bname = tp_handle_inspect (contact_handles, handle);
     const gchar *alias;
 
-    if (handle == base->self_handle)
+    if (handle == tp_base_connection_get_self_handle (base))
     {
         alias = purple_connection_get_display_name (self->account->gc);
 
@@ -94,41 +129,6 @@ get_alias (HazeConnection *self,
     }
     DEBUG ("%s has alias \"%s\"", bname, alias);
     return alias;
-}
-
-static void
-haze_connection_get_aliases (TpSvcConnectionInterfaceAliasing *self,
-                             const GArray *contacts,
-                             DBusGMethodInvocation *context)
-{
-    HazeConnection *conn = HAZE_CONNECTION (self);
-    TpBaseConnection *base = TP_BASE_CONNECTION (conn);
-    TpHandleRepoIface *contact_handles =
-        tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
-    guint i;
-    GError *error = NULL;
-    GHashTable *aliases;
-
-    if (!tp_handles_are_valid (contact_handles, contacts, FALSE, &error))
-    {
-        dbus_g_method_return_error (context, error);
-        g_error_free (error);
-        return;
-    }
-
-    aliases = g_hash_table_new (NULL, NULL);
-
-    for (i = 0; i < contacts->len; i++)
-    {
-        TpHandle handle = g_array_index (contacts, TpHandle, i);
-
-        g_hash_table_insert (aliases, GUINT_TO_POINTER (handle),
-            (gchar *) get_alias (conn, handle));
-    }
-
-    tp_svc_connection_interface_aliasing_return_from_get_aliases (
-        context, aliases);
-    g_hash_table_destroy (aliases);
 }
 
 static void
@@ -177,31 +177,22 @@ set_alias_success_cb (PurpleAccount *account,
                        const char *new_alias)
 {
     TpBaseConnection *base_conn;
-    GPtrArray *aliases;
-    GValue entry = {0, };
+    GHashTable *aliases;
 
     DEBUG ("purple_account_set_public_alias succeeded, new alias %s",
         new_alias);
 
     base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
 
-    g_value_init (&entry, TP_STRUCT_TYPE_ALIAS_PAIR);
-    g_value_take_boxed (&entry,
-        dbus_g_type_specialized_construct (TP_STRUCT_TYPE_ALIAS_PAIR));
-
-    dbus_g_type_struct_set (&entry,
-        0, base_conn->self_handle,
-        1, new_alias,
-        G_MAXUINT);
-
-    aliases = g_ptr_array_sized_new (1);
-    g_ptr_array_add (aliases, g_value_get_boxed (&entry));
+    aliases = g_hash_table_new (NULL, NULL);
+    g_hash_table_insert (aliases,
+        GUINT_TO_POINTER (tp_base_connection_get_self_handle (base_conn)),
+        (gchar *) new_alias);
 
     tp_svc_connection_interface_aliasing_emit_aliases_changed (base_conn,
         aliases);
 
-    g_value_unset (&entry);
-    g_ptr_array_free (aliases, TRUE);
+    g_hash_table_unref (aliases);
 }
 
 static void
@@ -228,7 +219,8 @@ set_aliases_foreach (gpointer key,
     {
         /* stop already */
     }
-    else if (handle == TP_BASE_CONNECTION (data->conn)->self_handle)
+    else if (handle == tp_base_connection_get_self_handle (
+          TP_BASE_CONNECTION (data->conn)))
     {
         DEBUG ("setting alias for myself to \"%s\"", new_alias);
         purple_account_set_public_alias (data->conn->account,
@@ -316,8 +308,6 @@ haze_connection_aliasing_iface_init (gpointer g_iface,
 
 #define IMPLEMENT(x) tp_svc_connection_interface_aliasing_implement_##x (\
     klass, haze_connection_##x)
-    IMPLEMENT(get_alias_flags);
-    IMPLEMENT(get_aliases);
     IMPLEMENT(request_aliases);
     IMPLEMENT(set_aliases);
 #undef IMPLEMENT
@@ -330,7 +320,7 @@ blist_node_aliased_cb (PurpleBlistNode *node,
 {
     PurpleBuddy *buddy;
     TpBaseConnection *base_conn;
-    GPtrArray *aliases;
+    GHashTable *aliases;
     TpHandle handle;
     TpHandleRepoIface *contact_handles;
 
@@ -343,17 +333,15 @@ blist_node_aliased_cb (PurpleBlistNode *node,
         tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
     handle = tp_handle_ensure (contact_handles, buddy->name, NULL, NULL);
 
-    aliases = g_ptr_array_sized_new (1);
-    g_ptr_array_add (aliases, tp_value_array_build (2,
-          G_TYPE_UINT, handle,
-          G_TYPE_STRING, purple_buddy_get_alias (buddy),
-          G_TYPE_INVALID));
+    aliases = g_hash_table_new (NULL, NULL);
+    g_hash_table_insert (aliases,
+        GUINT_TO_POINTER (handle),
+        (gchar *) purple_buddy_get_alias (buddy));
 
     tp_svc_connection_interface_aliasing_emit_aliases_changed (base_conn,
         aliases);
 
-    g_ptr_array_free (aliases, TRUE);
-    tp_handle_unref (contact_handles, handle);
+    g_hash_table_unref (aliases);
 }
 
 void

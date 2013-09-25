@@ -8,29 +8,54 @@ from twisted.internet.protocol import Protocol, Factory, ClientFactory
 glib2reactor.install()
 import sys
 import time
+import os
 
 import pprint
 import unittest
 
-import dbus.glib
+import dbus
+from dbus.mainloop.glib import DBusGMainLoop
+DBusGMainLoop(set_as_default=True)
 
 from twisted.internet import reactor
 
 import constants as cs
 
-tp_name_prefix = 'im.telepathy1'
-tp_path_prefix = '/im/telepathy1'
+tp_name_prefix = cs.PREFIX
+tp_path_prefix = '/' + cs.PREFIX.replace('.', '/')
 
-class Event:
+class DictionarySupersetOf (object):
+    """Utility class for expecting "a dictionary with at least these keys"."""
+    def __init__(self, dictionary):
+        self._dictionary = dictionary
+    def __repr__(self):
+        return "DictionarySupersetOf(%s)" % self._dictionary
+    def __eq__(self, other):
+        """would like to just do:
+        return set(other.items()).issuperset(self._dictionary.items())
+        but it turns out that this doesn't work if you have another dict
+        nested in the values of your dicts"""
+        try:
+            for k,v in self._dictionary.items():
+                if k not in other or other[k] != v:
+                    return False
+            return True
+        except TypeError: # other is not iterable
+            return False
+
+class Event(object):
     def __init__(self, type, **kw):
         self.__dict__.update(kw)
         self.type = type
         (self.subqueue, self.subtype) = type.split ("-", 1)
 
+    def __str__(self):
+        return '\n'.join([ str(type(self)) ] + format_event(self))
+
 def format_event(event):
     ret = ['- type %s' % event.type]
 
-    for key in dir(event):
+    for key in sorted(dir(event)):
         if key != 'type' and not key.startswith('_'):
             ret.append('- %s: %s' % (
                 key, pprint.pformat(getattr(event, key))))
@@ -79,6 +104,14 @@ class EventPattern:
 class TimeoutError(Exception):
     pass
 
+class ForbiddenEventOccurred(Exception):
+    def __init__(self, event):
+        Exception.__init__(self)
+        self.event = event
+
+    def __str__(self):
+        return '\n' + '\n'.join(format_event(self.event))
+
 class BaseEventQueue:
     """Abstract event queue base class.
 
@@ -124,13 +157,16 @@ class BaseEventQueue:
         """
         self.forbidden_events.difference_update(set(patterns))
 
+    def unforbid_all(self):
+        """
+        Remove all patterns from the set of forbidden events.
+        """
+        self.forbidden_events.clear()
+
     def _check_forbidden(self, event):
         for e in self.forbidden_events:
             if e.match(event):
-                print "forbidden event occurred:"
-                for x in format_event(event):
-                    print x
-                assert False
+                raise ForbiddenEventOccurred(event)
 
     def expect(self, type, **kw):
         """
@@ -390,16 +426,21 @@ def call_async(test, proxy, method, *args, **kw):
     method_proxy(*args, **kw)
 
 def sync_dbus(bus, q, conn):
-    # Dummy D-Bus method call
+    # Dummy D-Bus method call. We can't use DBus.Peer.Ping() because libdbus
+    # replies to that message immediately, rather than handing it up to
+    # dbus-glib and thence Gabble, which means that Ping()ing Gabble doesn't
+    # ensure that it's processed all D-Bus messages prior to our ping.
+    #
     # This won't do the right thing unless the proxy has a unique name.
     assert conn.object.bus_name.startswith(':')
-    root_object = bus.get_object(conn.object.bus_name, '/')
-    call_async(
-        q, dbus.Interface(root_object, 'org.freedesktop.DBus.Peer'), 'Ping')
-    q.expect('dbus-return', method='Ping')
+    root_object = bus.get_object(conn.object.bus_name, '/', introspect=False)
+    call_async(q,
+        dbus.Interface(root_object, cs.PREFIX + '.Tests'),
+        'DummySyncDBus')
+    q.expect('dbus-error', method='DummySyncDBus')
 
 class ProxyWrapper:
-    def __init__(self, object, default, others):
+    def __init__(self, object, default, others={}):
         self.object = object
         self.default_interface = dbus.Interface(object, default)
         self.Properties = dbus.Interface(object, dbus.PROPERTIES_IFACE)
@@ -418,12 +459,29 @@ class ProxyWrapper:
 
         return getattr(self.default_interface, name)
 
+class ConnWrapper(ProxyWrapper):
+    def inspect_contact_sync(self, handle):
+        return self.inspect_contacts_sync([handle])[0]
+
+    def inspect_contacts_sync(self, handles):
+        h2asv = self.Contacts.GetContactAttributes(handles, [], True)
+        ret = []
+        for h in handles:
+            ret.append(h2asv[h][cs.ATTR_CONTACT_ID])
+        return ret
+
+    def get_contact_handle_sync(self, identifier):
+        return self.Contacts.GetContactByID(identifier, [])[0]
+
+    def get_contact_handles_sync(self, ids):
+        return [self.get_contact_handle_sync(i) for i in ids]
+
 def wrap_connection(conn):
-    return ProxyWrapper(conn, tp_name_prefix + '.Connection',
+    return ConnWrapper(conn, tp_name_prefix + '.Connection',
         dict([
             (name, tp_name_prefix + '.Connection.Interface.' + name)
             for name in ['Aliasing', 'Avatars', 'Capabilities', 'Contacts',
-              'Presence', 'SimplePresence', 'Requests']] +
+              'SimplePresence', 'Requests']] +
         [('Peer', 'org.freedesktop.DBus.Peer'),
          ('ContactCapabilities', cs.CONN_IFACE_CONTACT_CAPS),
          ('ContactInfo', cs.CONN_IFACE_CONTACT_INFO),
@@ -433,6 +491,7 @@ def wrap_connection(conn):
          ('ContactList', cs.CONN_IFACE_CONTACT_LIST),
          ('ContactGroups', cs.CONN_IFACE_CONTACT_GROUPS),
          ('PowerSaving', cs.CONN_IFACE_POWER_SAVING),
+         ('Addressing', cs.CONN_IFACE_ADDRESSING),
         ]))
 
 def wrap_channel(chan, type_, extra=None):
@@ -448,14 +507,26 @@ def wrap_channel(chan, type_, extra=None):
 
     return ProxyWrapper(chan, tp_name_prefix + '.Channel', interfaces)
 
+
+def wrap_content(chan, extra=None):
+    interfaces = { }
+
+    if extra:
+        interfaces.update(dict([
+            (name, tp_name_prefix + '.Call1.Content.Interface.' + name)
+            for name in extra]))
+
+    return ProxyWrapper(chan, tp_name_prefix + '.Call1.Content', interfaces)
+
 def make_connection(bus, event_func, name, proto, params):
     cm = bus.get_object(
         tp_name_prefix + '.ConnectionManager.%s' % name,
-        tp_path_prefix + '/ConnectionManager/%s' % name)
+        tp_path_prefix + '/ConnectionManager/%s' % name,
+        introspect=False)
     cm_iface = dbus.Interface(cm, tp_name_prefix + '.ConnectionManager')
 
     connection_name, connection_path = cm_iface.RequestConnection(
-        proto, params)
+        proto, dbus.Dictionary(params, signature='sv'))
     conn = wrap_connection(bus.get_object(connection_name, connection_path))
 
     return conn
@@ -568,6 +639,12 @@ def assertFlagsUnset(flags, value):
             "expected none of flags %u, but %u are set in %u" % (
             flags, masked, value))
 
+def assertDBusError(name, error):
+    if error.get_dbus_name() != name:
+        raise AssertionError(
+            "expected DBus error named:\n  %s\ngot:\n  %s\n(with message: %s)"
+            % (name, error.get_dbus_name(), error.message))
+
 def install_colourer():
     def red(s):
         return '\x1b[31m%s\x1b[0m' % s
@@ -596,6 +673,16 @@ def install_colourer():
     sys.stdout = Colourer(sys.stdout, patterns)
     return sys.stdout
 
-if __name__ == '__main__':
-    unittest.main()
+# this is just to shut up unittest.
+class DummyStream(object):
+    def write(self, s):
+        if 'CHECK_TWISTED_VERBOSE' in os.environ:
+            print s,
 
+    def flush(self):
+        pass
+
+if __name__ == '__main__':
+    stream = DummyStream()
+    runner = unittest.TextTestRunner(stream=stream)
+    unittest.main(testRunner=runner)
