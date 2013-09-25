@@ -7,7 +7,8 @@ import dbus
 from twisted.words.xish import domish
 
 from hazetest import exec_test
-from servicetest import call_async, EventPattern, assertEquals, assertLength
+from servicetest import (call_async, EventPattern, assertEquals, assertLength,
+        assertContains)
 import constants as cs
 
 def test(q, bus, conn, stream):
@@ -30,6 +31,8 @@ def test(q, bus, conn, stream):
     text_chan = bus.get_object(conn.bus_name, ret.value[0])
     chan_iface = dbus.Interface(text_chan, cs.CHANNEL)
     text_iface = dbus.Interface(text_chan, cs.CHANNEL_TYPE_TEXT)
+    messages_iface = dbus.Interface(text_chan, cs.CHANNEL_IFACE_MESSAGES)
+    destroyable_iface = dbus.Interface(text_chan, cs.CHANNEL_IFACE_DESTROYABLE)
 
     assertLength(1, sig.args)
     assertLength(1, sig.args[0])        # one channel
@@ -43,6 +46,8 @@ def test(q, bus, conn, stream):
     assertEquals(True, emitted_props[cs.REQUESTED])
     assertEquals(self_handle, emitted_props[cs.INITIATOR_HANDLE])
     assertEquals('test@localhost', emitted_props[cs.INITIATOR_ID])
+    assertContains(cs.CHANNEL_IFACE_MESSAGES, emitted_props[cs.INTERFACES])
+    assertContains(cs.CHANNEL_IFACE_DESTROYABLE, emitted_props[cs.INTERFACES])
 
     channel_props = text_chan.GetAll(cs.CHANNEL,
             dbus_interface=dbus.PROPERTIES_IFACE)
@@ -54,7 +59,10 @@ def test(q, bus, conn, stream):
     assert channel_props['InitiatorID'] == 'test@localhost',\
             channel_props['InitiatorID']
 
-    text_iface.Send(0, 'hey')
+    messages_iface.SendMessage([{}, {
+        'content-type': 'text/plain',
+        'content': 'hey',
+        }], 0)
 
     event = q.expect('stream-message')
 
@@ -77,23 +85,21 @@ def test(q, bus, conn, stream):
     m.addElement('body', content='hello')
     stream.send(m)
 
-    event = q.expect('dbus-signal', signal='Received')
+    event = q.expect('dbus-signal', signal='MessageReceived')
 
-    hello_message_id = event.args[0]
-    hello_message_time = event.args[1]
-    assert event.args[2] == foo_handle
-    # message type: normal
-    assert event.args[3] == 0
-    # flags: none
-    assert event.args[4] == 0
-    # body
-    assert event.args[5] == 'hello'
+    message = event.args[0]
+    assertLength(2, message)
+    hello_message_id = message[0]['pending-message-id']
+    assertEquals(foo_handle, message[0]['message-sender'])
+    assertEquals('foo@bar.com', message[0]['message-sender-id'])
+    assertEquals(cs.MT_NORMAL,
+            message[0].get('message-type', cs.MT_NORMAL))
+    assertEquals('text/plain', message[1]['content-type'])
+    assertEquals('hello', message[1]['content'])
 
-    messages = text_chan.ListPendingMessages(False,
-            dbus_interface=cs.CHANNEL_TYPE_TEXT)
-    assert messages == \
-            [(hello_message_id, hello_message_time, foo_handle,
-                0, 0, 'hello')], messages
+    messages = text_chan.Get(cs.CHANNEL_IFACE_MESSAGES, 'PendingMessages',
+            dbus_interface=cs.PROPERTIES_IFACE)
+    assertEquals([message], messages)
 
     # close the channel without acking the message; it comes back
 
@@ -130,22 +136,21 @@ def test(q, bus, conn, stream):
     assert channel_props['InitiatorID'] == 'foo@bar.com',\
             channel_props['InitiatorID']
 
-    # the message is still there
+    # the message is still there, but is marked as rescued now
+    message[0]['rescued'] = True
 
-    messages = text_chan.ListPendingMessages(False,
-            dbus_interface=cs.CHANNEL_TYPE_TEXT)
-    assert messages == \
-            [(hello_message_id, hello_message_time, foo_handle,
-                0, 8, 'hello')], messages
+    messages = text_chan.Get(cs.CHANNEL_IFACE_MESSAGES, 'PendingMessages',
+            dbus_interface=cs.PROPERTIES_IFACE)
+    assertEquals([message], messages)
 
     # acknowledge it
 
     text_chan.AcknowledgePendingMessages([hello_message_id],
             dbus_interface=cs.CHANNEL_TYPE_TEXT)
 
-    messages = text_chan.ListPendingMessages(False,
-            dbus_interface=cs.CHANNEL_TYPE_TEXT)
-    assert messages == []
+    messages = text_chan.Get(cs.CHANNEL_IFACE_MESSAGES, 'PendingMessages',
+            dbus_interface=cs.PROPERTIES_IFACE)
+    assertEquals([], messages)
 
     # close the channel again
 

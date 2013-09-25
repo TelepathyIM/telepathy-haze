@@ -28,14 +28,7 @@ def test(q, bus, conn, stream):
     assertEquals(cs.HT_CONTACT, event.args[0][0][1][cs.TARGET_HANDLE_TYPE])
     assertEquals('foo@bar.com', event.args[0][0][1][cs.TARGET_ID])
 
-    received, message_received = q.expect_many(
-        EventPattern('dbus-signal', signal='Received'),
-        EventPattern('dbus-signal', signal='MessageReceived'),
-        )
-
-    old_signal_time = str(datetime.datetime.utcfromtimestamp(received.args[1]))
-    assert old_signal_time == '2007-05-17 16:15:01', old_signal_time
-    assert received.args[5] == 'hello'
+    message_received = q.expect('dbus-signal', signal='MessageReceived')
 
     message = message_received.args[0]
     header = message[0]
