@@ -1,3 +1,10 @@
+telepathy-haze 0.99.1 (UNRELEASED)
+==================================
+
+Dependencies:
+
+• telepathy-glib-1 ≥ 0.99.1 is required
+
 telepathy-haze 0.9.0 (UNRELEASED)
 =================================
 
