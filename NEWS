@@ -18,6 +18,11 @@ Internal changes:
 • remove deprecated Capabilities and Presence interfaces (fd.o #69318;
   Guillaume, Simon)
 
+• update regression tests to exercise modern APIs, and not obsolete ones
+  (fd.o #49389, Simon)
+
+• use TpBaseChannel (fd.o #31723, Simon)
+
 Fixes:
 
 • Report contacts with unknown presence as 'unknown' rather than raising
