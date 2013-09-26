@@ -65,7 +65,7 @@ def test(q, bus, conn, stream):
         assertDoesNotContain('encoding', param_map)
         assertDoesNotContain('local_charset', param_map)
 
-        if name not in ('local-xmpp', 'irc'):
+        if name not in ('local_xmpp', 'irc'):
             # it would be more correct for these protocols not to have this
             # parameter
             assertEquals((cs.PARAM_REQUIRED, 's', ''), param_map['account'])
@@ -182,7 +182,7 @@ def test(q, bus, conn, stream):
             assertEquals('im-zephyr', flat_props['Icon'])
             assertEquals('s', param_type['realm'])
             assertEquals('s', param_type['charset'])
-        elif name == 'local-xmpp':
+        elif name == 'local_xmpp':
             # makes very little sense in an address book
             assertEquals('', flat_props['VCardField'])
             assertEquals('im-local-xmpp', flat_props['Icon'])

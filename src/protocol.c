@@ -204,7 +204,7 @@ static const KnownProtocolInfo known_protocol_info[] = {
     { "irc", "prpl-irc", irc_mappings, "x-irc" /* ? */ },
     { "icq", "prpl-icq", encoding_to_charset, "x-icq" },
     { "jabber", "prpl-jabber", jabber_mappings, "x-jabber", jabber_fixup },
-    { "local-xmpp", "prpl-bonjour", bonjour_mappings, "" /* ? */ },
+    { "local_xmpp", "prpl-bonjour", bonjour_mappings, "" /* ? */ },
     { "msn", "prpl-msn", NULL, "x-msn" },
     { "qq", "prpl-qq", NULL, "x-qq" /* ? */ },
     { "sametime", "prpl-meanwhile", sametime_mappings, "x-sametime" /* ? */ },
@@ -214,8 +214,8 @@ static const KnownProtocolInfo known_protocol_info[] = {
     { "zephyr", "prpl-zephyr", encoding_to_charset, "x-zephyr" /* ? */ },
     { "mxit", "prpl-loubserp-mxit", NULL, "x-mxit" /* ? */ },
     { "sip", "prpl-simple", NULL, "x-sip" },
-    { "skype-dbus", "prpl-bigbrownchunx-skype-dbus", NULL, "x-skype" },
-    { "skype-x11", "prpl-bigbrownchunx-skype", NULL, "x-skype" },
+    { "skype_dbus", "prpl-bigbrownchunx-skype-dbus", NULL, "x-skype" },
+    { "skype_x11", "prpl-bigbrownchunx-skype", NULL, "x-skype" },
     { NULL, NULL, NULL }
 };
 
@@ -246,20 +246,36 @@ haze_protocol_build_list (void)
 
       if (info == NULL)
         {
+          gchar *tmp;
           const gchar *tp_name;
 
           if (g_str_has_prefix (p_info->id, "prpl-"))
             {
-              tp_name = (p_info->id + 5);
+              /* We prepend _ in case the prpl ID starts with a digit.
+               * We'll skip it later if we don't need it. */
+              tmp = g_strdup_printf ("_%s", p_info->id + 5);
             }
           else
             {
               g_warning ("prpl '%s' has a dumb id; spank its author",
                   p_info->id);
-              tp_name = p_info->id;
+              tmp = g_strdup_printf ("_%s", p_info->id);
             }
 
-          DEBUG ("using default behaviour for unknown prpl '%s'", p_info->id);
+          /* filter out anything odd */
+          g_strcanon (tmp,
+              "abcdefghijklmnopqrstuvwzyz"
+              "ABCDEFGHIJKLMNOPQRSTUVWZYZ"
+              "0123456789_", '_');
+
+          /* see whether we need to prefix with _ or not */
+          if (tmp[1] >= '0' && tmp[1] <= '9')
+            tp_name = tmp;
+          else
+            tp_name = tmp + 1;
+
+          DEBUG ("using default behaviour for unknown prpl '%s' "
+              "(renamed to %s for Telepathy)", p_info->id, tp_name);
 
           protocol = g_object_new (HAZE_TYPE_PROTOCOL,
               "name", tp_name,
@@ -267,6 +283,7 @@ haze_protocol_build_list (void)
               "prpl-id", p_info->id,
               "prpl-info", prpl_info,
               NULL);
+          g_free (tmp);
         }
       else
         {
@@ -562,7 +579,7 @@ haze_protocol_get_parameters (TpBaseProtocol *protocol)
 
     paramspecs = g_array_new (TRUE, TRUE, sizeof (TpCMParamSpec));
 
-    /* TODO: local-xmpp shouldn't have an account parameter */
+    /* TODO: local_xmpp shouldn't have an account parameter */
     g_array_append_val (paramspecs, account_spec);
 
     /* Translate user splits for protocols that have a mapping */
@@ -958,6 +975,7 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
     {
       /* guess from the protocol name, like TpProtocol and TpAccount do */
       *icon_name = g_strdup_printf ("im-%s", tp_base_protocol_get_name (base));
+      g_strdelimit (*icon_name, "_", '-');
     }
 
   if (vcard_field != NULL)
@@ -966,7 +984,7 @@ haze_protocol_get_connection_details (TpBaseProtocol *base,
           self->priv->known_protocol->vcard_field != NULL)
         {
           /* this might be "", for cases where we know that there isn't an
-           * applicable vCard field, like local-xmpp and facebook */
+           * applicable vCard field, like local_xmpp and facebook */
           *vcard_field = g_strdup (
               self->priv->known_protocol->vcard_field);
         }
