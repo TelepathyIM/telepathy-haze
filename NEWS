@@ -1,9 +1,13 @@
-telepathy-haze 0.99.1 (UNRELEASED)
+telepathy-haze 0.99.2 (2013-09-27)
 ==================================
+
+Changes:
+
+• Initial snapshot for the Telepathy 1.0 branch
 
 Dependencies:
 
-• telepathy-glib-1 ≥ 0.99.1 is required
+• telepathy-glib-1 ≥ 0.99.2 is required
 
 telepathy-haze 0.9.0 (UNRELEASED)
 =================================
