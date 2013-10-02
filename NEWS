@@ -1,5 +1,8 @@
-telepathy-haze 0.7.2 (UNRELEASED)
+telepathy-haze 0.8.0 (2013-10-02)
 =================================
+
+The “batch processing” release. This is a new stable branch,
+recommended GNOME 3.10-based distributions.
 
 Fixes:
 
