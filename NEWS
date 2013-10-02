@@ -23,6 +23,12 @@ Internal changes:
 
 • use TpBaseChannel (fd.o #31723, Simon)
 
+telepathy-haze 0.8.0 (2013-10-02)
+=================================
+
+The “batch processing” release. This is a new stable branch,
+recommended GNOME 3.10-based distributions.
+
 Fixes:
 
 • Report contacts with unknown presence as 'unknown' rather than raising
