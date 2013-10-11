@@ -283,7 +283,7 @@ get_handle_token (HazeConnection *conn,
 }
 
 static void
-haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
+haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars1 *self,
                                          const GArray *contacts,
                                          DBusGMethodInvocation *context)
 {
@@ -339,14 +339,14 @@ haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars *self,
             g_hash_table_insert (tokens, GUINT_TO_POINTER (handle), token);
     }
 
-    tp_svc_connection_interface_avatars_return_from_get_known_avatar_tokens (
+    tp_svc_connection_interface_avatars1_return_from_get_known_avatar_tokens (
         context, tokens);
 
     g_hash_table_unref (tokens);
 }
 
 static void
-haze_connection_request_avatars (TpSvcConnectionInterfaceAvatars *self,
+haze_connection_request_avatars (TpSvcConnectionInterfaceAvatars1 *self,
                                  const GArray *contacts,
                                  DBusGMethodInvocation *context)
 {
@@ -363,18 +363,18 @@ haze_connection_request_avatars (TpSvcConnectionInterfaceAvatars *self,
         if (avatar != NULL)
         {
             gchar *token = get_token (avatar);
-            tp_svc_connection_interface_avatars_emit_avatar_retrieved (
+            tp_svc_connection_interface_avatars1_emit_avatar_retrieved (
                 conn, handle, token, avatar, "" /* unknown MIME type */);
             g_free (token);
             g_array_free (avatar, TRUE);
         }
     }
 
-    tp_svc_connection_interface_avatars_return_from_request_avatars (context);
+    tp_svc_connection_interface_avatars1_return_from_request_avatars (context);
 }
 
 static void
-haze_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *self,
+haze_connection_clear_avatar (TpSvcConnectionInterfaceAvatars1 *self,
                               DBusGMethodInvocation *context)
 {
     HazeConnection *conn = HAZE_CONNECTION (self);
@@ -383,13 +383,13 @@ haze_connection_clear_avatar (TpSvcConnectionInterfaceAvatars *self,
 
     purple_buddy_icons_set_account_icon (account, NULL, 0);
 
-    tp_svc_connection_interface_avatars_return_from_clear_avatar (context);
-    tp_svc_connection_interface_avatars_emit_avatar_updated (conn,
+    tp_svc_connection_interface_avatars1_return_from_clear_avatar (context);
+    tp_svc_connection_interface_avatars1_emit_avatar_updated (conn,
         tp_base_connection_get_self_handle (base_conn), "");
 }
 
 static void
-haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
+haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars1 *self,
                             const GArray *avatar,
                             const gchar *mime_type,
                             DBusGMethodInvocation *context)
@@ -461,8 +461,8 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars *self,
     token = get_token (avatar);
     DEBUG ("%s", token);
 
-    tp_svc_connection_interface_avatars_return_from_set_avatar (context, token);
-    tp_svc_connection_interface_avatars_emit_avatar_updated (conn,
+    tp_svc_connection_interface_avatars1_return_from_set_avatar (context, token);
+    tp_svc_connection_interface_avatars1_emit_avatar_updated (conn,
         tp_base_connection_get_self_handle (base_conn), token);
     g_free (token);
 }
@@ -471,10 +471,10 @@ void
 haze_connection_avatars_iface_init (gpointer g_iface,
                                     gpointer iface_data)
 {
-    TpSvcConnectionInterfaceAvatarsClass *klass =
-        (TpSvcConnectionInterfaceAvatarsClass *) g_iface;
+    TpSvcConnectionInterfaceAvatars1Class *klass =
+        (TpSvcConnectionInterfaceAvatars1Class *) g_iface;
 
-#define IMPLEMENT(x) tp_svc_connection_interface_avatars_implement_##x (\
+#define IMPLEMENT(x) tp_svc_connection_interface_avatars1_implement_##x (\
     klass, haze_connection_##x)
     IMPLEMENT(get_known_avatar_tokens);
     IMPLEMENT(request_avatars);
@@ -499,7 +499,7 @@ buddy_icon_changed_cb (PurpleBuddy *buddy,
 
     DEBUG ("%s '%s'", bname, token);
 
-    tp_svc_connection_interface_avatars_emit_avatar_updated (conn, contact,
+    tp_svc_connection_interface_avatars1_emit_avatar_updated (conn, contact,
         token);
     g_free (token);
 }
@@ -532,7 +532,7 @@ fill_contact_attributes (GObject *object,
 
         /* this steals the GValue */
         tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
-            TP_IFACE_CONNECTION_INTERFACE_AVATARS "/token", value);
+            TP_IFACE_CONNECTION_INTERFACE_AVATARS1 "/token", value);
     }
 }
 
@@ -540,6 +540,6 @@ void
 haze_connection_avatars_init (GObject *object)
 {
     tp_contacts_mixin_add_contact_attributes_iface (object,
-        TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+        TP_IFACE_CONNECTION_INTERFACE_AVATARS1,
         fill_contact_attributes);
 }

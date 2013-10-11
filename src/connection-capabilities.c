@@ -31,7 +31,7 @@
 #include "debug.h"
 
 static void
-haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities *iface,
+haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities1 *iface,
                                      const GPtrArray *clients,
                                      DBusGMethodInvocation *context)
 {
@@ -40,7 +40,7 @@ haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities
 
   TP_BASE_CONNECTION_ERROR_IF_NOT_CONNECTED (base, context);
 
-  tp_svc_connection_interface_contact_capabilities_return_from_update_capabilities (
+  tp_svc_connection_interface_contact_capabilities1_return_from_update_capabilities (
       context);
 }
 
@@ -117,7 +117,7 @@ conn_capabilities_fill_contact_attributes_contact_caps (
 
           g_value_take_boxed (val, array);
           tp_contacts_mixin_set_contact_attribute (attributes_hash,
-              handle, TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES "/capabilities",
+              handle, TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1 "/capabilities",
               val);
         }
       else
@@ -129,10 +129,10 @@ void
 haze_connection_contact_capabilities_iface_init (gpointer g_iface,
                                                  gpointer iface_data)
 {
-  TpSvcConnectionInterfaceContactCapabilitiesClass *klass = g_iface;
+  TpSvcConnectionInterfaceContactCapabilities1Class *klass = g_iface;
 
 #define IMPLEMENT(x) \
-    tp_svc_connection_interface_contact_capabilities_implement_##x (\
+    tp_svc_connection_interface_contact_capabilities1_implement_##x (\
     klass, haze_connection_##x)
   IMPLEMENT(update_capabilities);
 #undef IMPLEMENT
@@ -142,6 +142,6 @@ void
 haze_connection_capabilities_init (GObject *object)
 {
   tp_contacts_mixin_add_contact_attributes_iface (object,
-      TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+      TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1,
       conn_capabilities_fill_contact_attributes_contact_caps);
 }

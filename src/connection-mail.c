@@ -43,7 +43,7 @@ static GPtrArray empty_array = { 0 };
 
 static void
 haze_connection_mail_request_inbox_url (
-        TpSvcConnectionInterfaceMailNotification *iface,
+        TpSvcConnectionInterfaceMailNotification1 *iface,
         DBusGMethodInvocation *context)
 {
     GError e = {TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
@@ -54,7 +54,7 @@ haze_connection_mail_request_inbox_url (
 
 static void
 haze_connection_mail_request_mail_url (
-        TpSvcConnectionInterfaceMailNotification *iface,
+        TpSvcConnectionInterfaceMailNotification1 *iface,
         const gchar *in_id,
         const GValue *in_url_data,
         DBusGMethodInvocation *context)
@@ -75,7 +75,7 @@ haze_connection_mail_request_mail_url (
         TP_ARRAY_TYPE_HTTP_POST_DATA_LIST, &empty_array,
         G_TYPE_INVALID);
 
-    tp_svc_connection_interface_mail_notification_return_from_request_inbox_url (
+    tp_svc_connection_interface_mail_notification1_return_from_request_inbox_url (
         context, result);
 
     g_value_array_free (result);
@@ -93,9 +93,9 @@ void
 haze_connection_mail_iface_init (gpointer g_iface,
         gpointer iface_data)
 {
-    TpSvcConnectionInterfaceMailNotificationClass *klass = g_iface;
+    TpSvcConnectionInterfaceMailNotification1Class *klass = g_iface;
 
-#define IMPLEMENT(x) tp_svc_connection_interface_mail_notification_implement_##x (\
+#define IMPLEMENT(x) tp_svc_connection_interface_mail_notification1_implement_##x (\
         klass, haze_connection_mail_##x)
     IMPLEMENT(request_inbox_url);
     IMPLEMENT(request_mail_url);
@@ -222,8 +222,8 @@ haze_connection_mail_notify_emails (PurpleConnection *pc,
         const char **urls)
 {
     GPtrArray *mails;
-    TpSvcConnectionInterfaceMailNotification *conn =
-        TP_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION (
+    TpSvcConnectionInterfaceMailNotification1 *conn =
+        TP_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION1 (
             ACCOUNT_GET_TP_BASE_CONNECTION (
                 purple_connection_get_account (pc)));
 
@@ -292,7 +292,7 @@ haze_connection_mail_notify_emails (PurpleConnection *pc,
                 }
         }
 
-    tp_svc_connection_interface_mail_notification_emit_mails_received (
+    tp_svc_connection_interface_mail_notification1_emit_mails_received (
             conn, mails);
     g_ptr_array_unref (mails);
 

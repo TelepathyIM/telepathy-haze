@@ -64,47 +64,47 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
     TP_TYPE_BASE_CONNECTION,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_DBUS_PROPERTIES,
         tp_dbus_properties_mixin_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE1,
         tp_presence_mixin_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING1,
         haze_connection_aliasing_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS1,
         haze_connection_avatars_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1,
         haze_connection_contact_capabilities_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
         tp_contacts_mixin_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_LIST,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_LIST1,
         tp_base_contact_list_mixin_list_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_GROUPS,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_GROUPS1,
         tp_base_contact_list_mixin_groups_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_BLOCKING,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_BLOCKING1,
         tp_base_contact_list_mixin_blocking_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION1,
         haze_connection_mail_iface_init);
     );
 
 static const gchar * implemented_interfaces[] = {
     /* Conditionally present */
 
-    TP_IFACE_CONNECTION_INTERFACE_AVATARS,
-    TP_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
-    TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING,
+    TP_IFACE_CONNECTION_INTERFACE_AVATARS1,
+    TP_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION1,
+    TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING1,
 #   define HAZE_NUM_CONDITIONAL_INTERFACES 3
 
     /* Always present */
 
-    TP_IFACE_CONNECTION_INTERFACE_CONTACT_LIST,
-    TP_IFACE_CONNECTION_INTERFACE_CONTACT_GROUPS,
+    TP_IFACE_CONNECTION_INTERFACE_CONTACT_LIST1,
+    TP_IFACE_CONNECTION_INTERFACE_CONTACT_GROUPS1,
     TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
-    TP_IFACE_CONNECTION_INTERFACE_PRESENCE,
-    TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES,
+    TP_IFACE_CONNECTION_INTERFACE_PRESENCE1,
+    TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1,
     TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
     /* TODO: This is a lie.  Not all protocols supported by libpurple
      *       actually have the concept of a user-settable alias, but
      *       there's no way for the UI to know (yet).
      */
-    TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+    TP_IFACE_CONNECTION_INTERFACE_ALIASING1,
     NULL
 };
 
@@ -198,15 +198,15 @@ add_optional_connection_interfaces (GPtrArray *ifaces,
 {
     if (protocol_info_supports_avatar (prpl_info))
         g_ptr_array_add (ifaces,
-                TP_IFACE_CONNECTION_INTERFACE_AVATARS);
+                TP_IFACE_CONNECTION_INTERFACE_AVATARS1);
 
     if (protocol_info_supports_blocking (prpl_info))
         g_ptr_array_add (ifaces,
-                TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING);
+                TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING1);
 
     if (protocol_info_supports_mail_notification (prpl_info))
         g_ptr_array_add (ifaces,
-                TP_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION);
+                TP_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION1);
 }
 
 static void
@@ -833,15 +833,15 @@ haze_connection_class_init (HazeConnectionClass *klass)
         { NULL }
     };
     static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
-        { TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+        { TP_IFACE_CONNECTION_INTERFACE_ALIASING1,
             haze_connection_aliasing_properties_getter,
             NULL,
             NULL },     /* initialized a bit later */
-        { TP_IFACE_CONNECTION_INTERFACE_AVATARS,
+        { TP_IFACE_CONNECTION_INTERFACE_AVATARS1,
             haze_connection_avatars_properties_getter,
             NULL,
             NULL },     /* initialized a bit later */
-        { TP_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION,
+        { TP_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION1,
             haze_connection_mail_properties_getter,
             NULL,
             mail_props,

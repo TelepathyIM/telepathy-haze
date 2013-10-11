@@ -40,12 +40,12 @@ static void chat_state_iface_init (gpointer g_iface, gpointer iface_data);
 G_DEFINE_TYPE_WITH_CODE(HazeIMChannel, haze_im_channel, TP_TYPE_BASE_CHANNEL,
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_TYPE_TEXT,
         tp_message_mixin_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_DESTROYABLE,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_DESTROYABLE1,
         destroyable_iface_init);
 
     /* For some reason we reimplement ChatState rather than having the
      * TpMessageMixin do it :-( */
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_CHAT_STATE,
+    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CHANNEL_INTERFACE_CHAT_STATE1,
         chat_state_iface_init))
 
 static void
@@ -100,9 +100,9 @@ haze_im_channel_get_interfaces (TpBaseChannel *base)
       haze_im_channel_parent_class)->get_interfaces (base);
 
   if (_chat_state_available (self))
-    g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_CHAT_STATE);
+    g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_CHAT_STATE1);
 
-  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_DESTROYABLE);
+  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_DESTROYABLE1);
 
   return interfaces;
 }
@@ -114,7 +114,7 @@ haze_im_channel_get_interfaces (TpBaseChannel *base)
  * on interface im.telepathy1.Channel.Interface.Destroyable
  */
 static void
-haze_im_channel_destroy (TpSvcChannelInterfaceDestroyable *iface,
+haze_im_channel_destroy (TpSvcChannelInterfaceDestroyable1 *iface,
                          DBusGMethodInvocation *context)
 {
     HazeIMChannel *self = HAZE_IM_CHANNEL (iface);
@@ -127,16 +127,16 @@ haze_im_channel_destroy (TpSvcChannelInterfaceDestroyable *iface,
     tp_message_mixin_clear ((GObject *) self);
 
     haze_im_channel_close (TP_BASE_CHANNEL (self));
-    tp_svc_channel_interface_destroyable_return_from_destroy (context);
+    tp_svc_channel_interface_destroyable1_return_from_destroy (context);
 }
 
 static void
 destroyable_iface_init (gpointer g_iface,
                         gpointer iface_data)
 {
-    TpSvcChannelInterfaceDestroyableClass *klass = g_iface;
+    TpSvcChannelInterfaceDestroyable1Class *klass = g_iface;
 
-#define IMPLEMENT(x) tp_svc_channel_interface_destroyable_implement_##x (\
+#define IMPLEMENT(x) tp_svc_channel_interface_destroyable1_implement_##x (\
     klass, haze_im_channel_##x)
     IMPLEMENT(destroy);
 #undef IMPLEMENT
@@ -172,7 +172,7 @@ resend_typing_cb (gpointer data)
 
 
 static void
-haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
+haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState1 *self,
                                 guint state,
                                 DBusGMethodInvocation *context)
 {
@@ -244,15 +244,15 @@ haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState *self,
             resend_typing_cb, conv);
     }
 
-    tp_svc_channel_interface_chat_state_return_from_set_chat_state (context);
+    tp_svc_channel_interface_chat_state1_return_from_set_chat_state (context);
 }
 
 static void
 chat_state_iface_init (gpointer g_iface, gpointer iface_data)
 {
-    TpSvcChannelInterfaceChatStateClass *klass =
-        (TpSvcChannelInterfaceChatStateClass *)g_iface;
-#define IMPLEMENT(x) tp_svc_channel_interface_chat_state_implement_##x (\
+    TpSvcChannelInterfaceChatState1Class *klass =
+        (TpSvcChannelInterfaceChatState1Class *)g_iface;
+#define IMPLEMENT(x) tp_svc_channel_interface_chat_state1_implement_##x (\
     klass, haze_im_channel_##x)
     IMPLEMENT(set_chat_state);
 #undef IMPLEMENT

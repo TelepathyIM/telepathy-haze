@@ -918,9 +918,9 @@ haze_protocol_get_interfaces_array (TpBaseProtocol *base)
   for (i = 0; i < tmp->len; i++)
     {
       if (!tp_strdiff (g_ptr_array_index (tmp, i),
-            TP_IFACE_CONNECTION_INTERFACE_AVATARS))
+            TP_IFACE_CONNECTION_INTERFACE_AVATARS1))
         {
-          g_ptr_array_add (interfaces, TP_IFACE_PROTOCOL_INTERFACE_AVATARS);
+          g_ptr_array_add (interfaces, TP_IFACE_PROTOCOL_INTERFACE_AVATARS1);
           break;
         }
     }
@@ -1006,7 +1006,7 @@ static GStrv
 haze_protocol_dup_authentication_types (TpBaseProtocol *base)
 {
   static const gchar *types[] = {
-    TP_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION,
+    TP_IFACE_CHANNEL_INTERFACE_SASL_AUTHENTICATION1,
     NULL
   };
 

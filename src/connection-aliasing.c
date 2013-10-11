@@ -132,7 +132,7 @@ get_alias (HazeConnection *self,
 }
 
 static void
-haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
+haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing1 *self,
                                  const GArray *contacts,
                                  DBusGMethodInvocation *context)
 {
@@ -160,7 +160,7 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing *self,
         aliases[i] = get_alias (conn, handle);
     }
 
-    tp_svc_connection_interface_aliasing_return_from_request_aliases (
+    tp_svc_connection_interface_aliasing1_return_from_request_aliases (
         context, aliases);
     g_free (aliases);
 }
@@ -189,7 +189,7 @@ set_alias_success_cb (PurpleAccount *account,
         GUINT_TO_POINTER (tp_base_connection_get_self_handle (base_conn)),
         (gchar *) new_alias);
 
-    tp_svc_connection_interface_aliasing_emit_aliases_changed (base_conn,
+    tp_svc_connection_interface_aliasing1_emit_aliases_changed (base_conn,
         aliases);
 
     g_hash_table_unref (aliases);
@@ -265,7 +265,7 @@ set_aliases_foreach (gpointer key,
 }
 
 static void
-haze_connection_set_aliases (TpSvcConnectionInterfaceAliasing *self,
+haze_connection_set_aliases (TpSvcConnectionInterfaceAliasing1 *self,
                              GHashTable *aliases,
                              DBusGMethodInvocation *context)
 {
@@ -294,7 +294,7 @@ haze_connection_set_aliases (TpSvcConnectionInterfaceAliasing *self,
     }
     else
     {
-        tp_svc_connection_interface_aliasing_return_from_set_aliases (context);
+        tp_svc_connection_interface_aliasing1_return_from_set_aliases (context);
     }
 
 }
@@ -303,10 +303,10 @@ void
 haze_connection_aliasing_iface_init (gpointer g_iface,
                                      gpointer iface_data)
 {
-    TpSvcConnectionInterfaceAliasingClass *klass =
-        (TpSvcConnectionInterfaceAliasingClass *) g_iface;
+    TpSvcConnectionInterfaceAliasing1Class *klass =
+        (TpSvcConnectionInterfaceAliasing1Class *) g_iface;
 
-#define IMPLEMENT(x) tp_svc_connection_interface_aliasing_implement_##x (\
+#define IMPLEMENT(x) tp_svc_connection_interface_aliasing1_implement_##x (\
     klass, haze_connection_##x)
     IMPLEMENT(request_aliases);
     IMPLEMENT(set_aliases);
@@ -338,7 +338,7 @@ blist_node_aliased_cb (PurpleBlistNode *node,
         GUINT_TO_POINTER (handle),
         (gchar *) purple_buddy_get_alias (buddy));
 
-    tp_svc_connection_interface_aliasing_emit_aliases_changed (base_conn,
+    tp_svc_connection_interface_aliasing1_emit_aliases_changed (base_conn,
         aliases);
 
     g_hash_table_unref (aliases);
@@ -370,7 +370,7 @@ fill_contact_attributes (GObject *object,
 
         /* this steals the GValue */
         tp_contacts_mixin_set_contact_attribute (attributes_hash, handle,
-            TP_IFACE_CONNECTION_INTERFACE_ALIASING "/alias", value);
+            TP_IFACE_CONNECTION_INTERFACE_ALIASING1 "/alias", value);
     }
 }
 
@@ -378,6 +378,6 @@ void
 haze_connection_aliasing_init (GObject *object)
 {
     tp_contacts_mixin_add_contact_attributes_iface (object,
-        TP_IFACE_CONNECTION_INTERFACE_ALIASING,
+        TP_IFACE_CONNECTION_INTERFACE_ALIASING1,
         fill_contact_attributes);
 }

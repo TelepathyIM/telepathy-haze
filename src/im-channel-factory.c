@@ -102,8 +102,8 @@ conversation_updated_cb (PurpleConversation *conv,
     chan = get_im_channel (im_factory, ui_data->contact_handle,
         ui_data->contact_handle, NULL, NULL);
 
-    tp_svc_channel_interface_chat_state_emit_chat_state_changed (
-        (TpSvcChannelInterfaceChatState*)chan, ui_data->contact_handle, state);
+    tp_svc_channel_interface_chat_state1_emit_chat_state_changed (
+        (TpSvcChannelInterfaceChatState1 *)chan, ui_data->contact_handle, state);
 }
 
 static void
