@@ -1,4 +1,4 @@
-AC_PREREQ([2.59])
+AC_PREREQ([2.60])
 
 # Making releases:
 #  set the new version number
@@ -24,7 +24,7 @@ AC_INIT([telepathy-haze], [haze_version],
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE([1.9 -Wno-portability])
+AM_INIT_AUTOMAKE([1.9 -Wno-portability subdir-objects])
 AM_CONFIG_HEADER([config.h])
 AC_CONFIG_FILES([Makefile
 		 src/Makefile

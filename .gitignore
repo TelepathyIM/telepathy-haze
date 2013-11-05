@@ -3,6 +3,7 @@ Makefile
 Makefile.in
 _gen
 aclocal.m4
+/build-aux
 config.guess
 config.log
 config.status
