@@ -29,8 +29,8 @@ m4/lt~obsolete.m4
 missing
 .deps
 .libs
-src/telepathy-haze
-src/telepathy-haze.8
+src/telepathy-haze-1
+src/telepathy-haze-1.8
 tags
 /tests/haze-testing.log
 /tests/twisted/tools/im.telepathy.v1.ConnectionManager.haze.service

@@ -45,4 +45,4 @@ fi
 # not suitable for haze:
 #export G_DEBUG=fatal-warnings" ${G_DEBUG}"
 exec "${abs_top_builddir}/libtool" --mode=execute $HAZE_WRAPPER \
-    "${abs_top_builddir}/src/telepathy-haze"
+    "${abs_top_builddir}/src/telepathy-haze-1"

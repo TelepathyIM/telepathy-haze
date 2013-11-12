@@ -1,14 +1,14 @@
-libexec_PROGRAMS = telepathy-haze
+libexec_PROGRAMS = telepathy-haze-1
 
-man_MANS = telepathy-haze.8
+man_MANS = telepathy-haze-1.8
 
 %.8: %.8.in Makefile
 	$(AM_V_GEN)sed -e 's,[@]libexecdir[@],@libexecdir@,' < $< > $@
 
-EXTRA_DIST = telepathy-haze.8.in
+EXTRA_DIST = telepathy-haze-1.8.in
 CLEANFILES = $(man_MANS)
 
-telepathy_haze_SOURCES = main.c \
+telepathy_haze_1_SOURCES = main.c \
                          defines.h \
                          debug.c \
                          debug.h \
@@ -42,7 +42,7 @@ telepathy_haze_SOURCES = main.c \
                          util.h \
                          $(NULL)
 
-telepathy_haze_LDADD = $(top_builddir)/extensions/libhaze-extensions.la
+telepathy_haze_1_LDADD = $(top_builddir)/extensions/libhaze-extensions.la
 
 AM_CFLAGS = \
 	-I$(top_srcdir) \
