@@ -79,7 +79,7 @@ PKG_CHECK_MODULES(DBUS_GLIB,[dbus-glib-1 >= 0.73])
 AC_DEFINE([TP_SEAL_ENABLE], [], [Prevent to use sealed variables])
 AC_DEFINE([TP_VERSION_MIN_REQUIRED], [TP_VERSION_1_0], [Ignore post 1.0 deprecations])
 AC_DEFINE([TP_VERSION_MAX_ALLOWED], [TP_VERSION_1_0], [Prevent post 1.0 APIs])
-PKG_CHECK_MODULES([TP_GLIB], [telepathy-glib-1 >= 0.99.2, telepathy-glib-1-dbus >= 0.99.2])
+PKG_CHECK_MODULES([TP_GLIB], [telepathy-glib-1 >= 0.99.5, telepathy-glib-1-dbus >= 0.99.5])
 
 dnl MIN_REQUIRED must stay to 2.30 because of GValueArray
 AC_DEFINE([GLIB_VERSION_MIN_REQUIRED], [GLIB_VERSION_2_30], [Ignore post 2.30 deprecations])

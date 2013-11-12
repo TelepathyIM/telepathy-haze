@@ -1,7 +1,7 @@
 # Dbus service file
 servicedir = $(datadir)/dbus-1/services
-service_in_files = im.telepathy1.ConnectionManager.haze.service.in
-service_DATA = $(service_in_files:.service.in=.service)
+service_in_files = haze.service.in
+service_DATA = im.telepathy.v1.ConnectionManager.haze.service
 
 BUILT_FILES = $(service_DATA)
 

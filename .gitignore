@@ -13,7 +13,7 @@ config.h
 config.h.in
 cscope.out
 stamp-h1
-data/im.telepathy1.ConnectionManager.haze.service
+data/im.telepathy.v1.ConnectionManager.haze.service
 depcomp
 /extensions/extensions.html
 install-sh
@@ -33,7 +33,7 @@ src/telepathy-haze
 src/telepathy-haze.8
 tags
 /tests/haze-testing.log
-/tests/twisted/tools/im.telepathy1.ConnectionManager.haze.service
+/tests/twisted/tools/im.telepathy.v1.ConnectionManager.haze.service
 /tests/twisted/tools/tmp-session-bus.conf
 /tests/twisted/config.py
 /tests/twisted/haze-twisted-tests.list
