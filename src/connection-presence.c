@@ -162,56 +162,45 @@ _status_available (GObject *obj,
 }
 
 
-static GHashTable *
-_get_contact_statuses (GObject *obj,
-    const GArray *contacts)
+static TpPresenceStatus *
+_get_contact_status (GObject *obj,
+    TpHandle handle)
 {
-    GHashTable *status_table = g_hash_table_new_full (g_direct_hash,
-        g_direct_equal, NULL, NULL);
     HazeConnection *conn = HAZE_CONNECTION (obj);
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (obj);
     TpHandleRepoIface *handle_repo =
         tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
-    guint i;
+    PurpleStatus *p_status;
 
-    for (i = 0; i < contacts->len; i++)
+    g_assert (tp_handle_is_valid (handle_repo, handle, NULL));
+
+    if (handle == tp_base_connection_get_self_handle (base_conn))
     {
-        TpHandle handle = g_array_index (contacts, TpHandle, i);
+        p_status = purple_account_get_active_status (conn->account);
+    }
+    else
+    {
         const gchar *bname;
-        TpPresenceStatus *tp_status;
         PurpleBuddy *buddy;
-        PurpleStatus *p_status;
 
-        g_assert (tp_handle_is_valid (handle_repo, handle, NULL));
+        bname = tp_handle_inspect (handle_repo, handle);
+        buddy = purple_find_buddy (conn->account, bname);
 
-        if (handle == tp_base_connection_get_self_handle (base_conn))
+        if (buddy)
         {
-            p_status = purple_account_get_active_status (conn->account);
+            PurplePresence *presence = purple_buddy_get_presence (buddy);
+
+            p_status = purple_presence_get_active_status (presence);
         }
         else
         {
-            bname = tp_handle_inspect (handle_repo, handle);
-            buddy = purple_find_buddy (conn->account, bname);
-
-            if (buddy)
-            {
-                PurplePresence *presence = purple_buddy_get_presence (buddy);
-
-                p_status = purple_presence_get_active_status (presence);
-            }
-            else
-            {
-                DEBUG ("[%s] %s isn't on the blist, ergo no status!",
-                         conn->account->username, bname);
-                p_status = NULL;
-            }
+            DEBUG ("[%s] %s isn't on the blist, ergo no status!",
+                     conn->account->username, bname);
+            p_status = NULL;
         }
-
-        tp_status = _get_tp_status (p_status);
-        g_hash_table_insert (status_table, GINT_TO_POINTER (handle), tp_status);
     }
 
-    return status_table;
+    return _get_tp_status (p_status);
 }
 
 void
@@ -330,7 +319,7 @@ haze_connection_presence_class_init (GObjectClass *object_class)
 
     tp_presence_mixin_class_init (object_class,
         G_STRUCT_OFFSET (HazeConnectionClass, presence_class),
-        _status_available, _get_contact_statuses, _set_own_status, statuses);
+        _status_available, _get_contact_status, _set_own_status, statuses);
 
     tp_presence_mixin_init_dbus_properties (object_class);
 }
