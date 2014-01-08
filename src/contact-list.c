@@ -1213,6 +1213,28 @@ haze_contact_list_mutable_groups_init (
   /* assume default: groups are stored persistently */
 }
 
+static gboolean
+is_blocked (TpBaseContactList *cl,
+    TpHandle contact)
+{
+  HazeContactList *self = HAZE_CONTACT_LIST (cl);
+  PurpleAccount *account = self->priv->conn->account;
+  TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->conn);
+  TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
+      TP_HANDLE_TYPE_CONTACT);
+  GSList *l;
+
+  for (l = account->deny; l != NULL; l = l->next)
+    {
+      TpHandle denied = tp_handle_ensure (contact_repo, l->data, NULL, NULL);
+
+      if (denied == contact)
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
 static TpHandleSet *
 dup_blocked_contacts (TpBaseContactList *cl)
 {
@@ -1295,6 +1317,7 @@ static void
 haze_contact_list_blockable_init(
     TpBlockableContactListInterface *vtable)
 {
+  vtable->is_blocked = is_blocked;
   vtable->dup_blocked_contacts = dup_blocked_contacts;
   vtable->block_contacts_async = block_contacts_async;
   vtable->unblock_contacts_async = unblock_contacts_async;
