@@ -8,8 +8,8 @@ AC_PREREQ([2.60])
 
 m4_define([haze_major_version], [0])
 m4_define([haze_minor_version], [99])
-m4_define([haze_micro_version], [2])
-m4_define([haze_nano_version], [1])
+m4_define([haze_micro_version], [6])
+m4_define([haze_nano_version], [0])
 
 m4_define([haze_base_version],
           [haze_major_version.haze_minor_version.haze_micro_version])
