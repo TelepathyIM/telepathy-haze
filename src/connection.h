@@ -39,7 +39,6 @@ typedef struct _HazeConnectionClass HazeConnectionClass;
 struct _HazeConnectionClass {
     TpBaseConnectionClass parent_class;
     TpDBusPropertiesMixinClass properties_class;
-    TpContactsMixinClass contacts_class;
     TpPresenceMixinClass presence_class;
 };
 
@@ -52,7 +51,6 @@ struct _HazeConnection {
     HazeImChannelFactory *im_factory;
     TpSimplePasswordManager *password_manager;
 
-    TpContactsMixin contacts;
     TpPresenceMixin presence;
 
     gchar **acceptable_avatar_mime_types;

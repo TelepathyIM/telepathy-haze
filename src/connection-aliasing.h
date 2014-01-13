@@ -25,13 +25,20 @@
 #include <glib-object.h>
 #include <telepathy-glib/telepathy-glib.h>
 
+#include "connection.h"
+
 void haze_connection_aliasing_iface_init (gpointer g_iface,
     gpointer iface_data);
 void haze_connection_aliasing_class_init (GObjectClass *object_class);
-void haze_connection_aliasing_init (GObject *object);
 
 extern TpDBusPropertiesMixinPropImpl *haze_connection_aliasing_properties;
 void haze_connection_aliasing_properties_getter (GObject *object,
     GQuark interface, GQuark name, GValue *value, gpointer getter_data);
+
+gboolean haze_connection_aliasing_fill_contact_attributes (
+    HazeConnection *self,
+    const gchar *dbus_interface,
+    TpHandle handle,
+    TpContactAttributeMap *attributes);
 
 #endif

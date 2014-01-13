@@ -23,8 +23,17 @@
 
 #include <glib-object.h>
 
+#include <telepathy-glib/telepathy-glib.h>
+
+#include "connection.h"
+
 void haze_connection_contact_capabilities_iface_init (gpointer g_iface,
                                                       gpointer iface_data);
-void haze_connection_capabilities_init (GObject *object);
+
+gboolean haze_connection_contact_capabilities_fill_contact_attributes (
+    HazeConnection *self,
+    const gchar *dbus_interface,
+    TpHandle handle,
+    TpContactAttributeMap *attributes);
 
 #endif

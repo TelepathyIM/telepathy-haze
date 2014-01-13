@@ -27,9 +27,10 @@
 
 #include <libpurple/purple.h>
 
+#include "connection.h"
+
 void haze_connection_avatars_iface_init (gpointer g_iface, gpointer iface_data);
 void haze_connection_avatars_class_init (GObjectClass *object_class);
-void haze_connection_avatars_init (GObject *object);
 
 extern TpDBusPropertiesMixinPropImpl *haze_connection_avatars_properties;
 void haze_connection_avatars_properties_getter (GObject *object,
@@ -44,5 +45,11 @@ void haze_connection_get_icon_spec_requirements (PurpleBuddyIconSpec *icon_spec,
     guint *max_height,
     guint *max_width,
     guint *max_bytes);
+
+gboolean haze_connection_avatars_fill_contact_attributes (
+    HazeConnection *self,
+    const gchar *dbus_interface,
+    TpHandle handle,
+    TpContactAttributeMap *attributes);
 
 #endif

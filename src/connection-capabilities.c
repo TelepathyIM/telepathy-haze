@@ -94,18 +94,16 @@ haze_connection_get_handle_contact_capabilities (HazeConnection *self,
   return arr;
 }
 
-static void
-conn_capabilities_fill_contact_attributes_contact_caps (
-    GObject *obj,
-    const GArray *contacts,
-    GHashTable *attributes_hash)
+gboolean
+haze_connection_contact_capabilities_fill_contact_attributes (
+    HazeConnection *self,
+    const gchar *dbus_interface,
+    TpHandle handle,
+    TpContactAttributeMap *attributes)
 {
-  HazeConnection *self = HAZE_CONNECTION (obj);
-  guint i;
-
-  for (i = 0; i < contacts->len; i++)
+  if (!tp_strdiff (dbus_interface,
+        TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1))
     {
-      TpHandle handle = g_array_index (contacts, TpHandle, i);
       GPtrArray *array;
 
       array = haze_connection_get_handle_contact_capabilities (self, handle);
@@ -116,13 +114,18 @@ conn_capabilities_fill_contact_attributes_contact_caps (
               TP_ARRAY_TYPE_REQUESTABLE_CHANNEL_CLASS_LIST);
 
           g_value_take_boxed (val, array);
-          tp_contacts_mixin_set_contact_attribute (attributes_hash,
-              handle, TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1 "/capabilities",
+          tp_contact_attribute_map_take_sliced_gvalue (attributes,
+              handle,
+              TP_TOKEN_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1_CAPABILITIES,
               val);
         }
       else
         g_ptr_array_free (array, TRUE);
+
+      return TRUE;
     }
+
+  return FALSE;
 }
 
 void
@@ -136,12 +139,4 @@ haze_connection_contact_capabilities_iface_init (gpointer g_iface,
     klass, haze_connection_##x)
   IMPLEMENT(update_capabilities);
 #undef IMPLEMENT
-}
-
-void
-haze_connection_capabilities_init (GObject *object)
-{
-  tp_contacts_mixin_add_contact_attributes_iface (object,
-      TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1,
-      conn_capabilities_fill_contact_attributes_contact_caps);
 }

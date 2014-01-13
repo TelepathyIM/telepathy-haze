@@ -340,5 +340,4 @@ haze_connection_presence_init (GObject *object)
 {
     tp_presence_mixin_init (object, G_STRUCT_OFFSET (HazeConnection,
         presence));
-    tp_presence_mixin_register_with_contacts_mixin (object);
 }

@@ -72,8 +72,6 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_avatars_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1,
         haze_connection_contact_capabilities_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACTS,
-        tp_contacts_mixin_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_LIST1,
         tp_base_contact_list_mixin_list_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_GROUPS1,
@@ -99,7 +97,6 @@ static const gchar * implemented_interfaces[] = {
     TP_IFACE_CONNECTION_INTERFACE_REQUESTS,
     TP_IFACE_CONNECTION_INTERFACE_PRESENCE1,
     TP_IFACE_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1,
-    TP_IFACE_CONNECTION_INTERFACE_CONTACTS,
     /* TODO: This is a lie.  Not all protocols supported by libpurple
      *       actually have the concept of a user-settable alias, but
      *       there's no way for the UI to know (yet).
@@ -748,7 +745,6 @@ haze_connection_constructor (GType type,
     HazeConnection *self = HAZE_CONNECTION (
             G_OBJECT_CLASS (haze_connection_parent_class)->constructor (
                 type, n_construct_properties, construct_params));
-    TpBaseConnection *base_conn = TP_BASE_CONNECTION (self);
     GObject *object = (GObject *) self;
     HazeConnectionPrivate *priv = self->priv;
 
@@ -760,18 +756,9 @@ haze_connection_constructor (GType type,
 
     priv->disconnecting = FALSE;
 
-    tp_contacts_mixin_init (object,
-        G_STRUCT_OFFSET (HazeConnection, contacts));
-    tp_base_connection_register_with_contacts_mixin (base_conn);
-
     self->contact_list = HAZE_CONTACT_LIST (
         g_object_new (HAZE_TYPE_CONTACT_LIST, "connection", self, NULL));
-    tp_base_contact_list_mixin_register_with_contacts_mixin (
-        TP_BASE_CONTACT_LIST (self->contact_list), base_conn);
 
-    haze_connection_aliasing_init (object);
-    haze_connection_avatars_init (object);
-    haze_connection_capabilities_init (object);
     haze_connection_presence_init (object);
     haze_connection_mail_init (object);
 
@@ -803,7 +790,6 @@ haze_connection_finalize (GObject *object)
     HazeConnection *self = HAZE_CONNECTION (object);
     HazeConnectionPrivate *priv = self->priv;
 
-    tp_contacts_mixin_finalize (object);
     tp_presence_mixin_finalize (object);
 
     g_strfreev (self->acceptable_avatar_mime_types);
@@ -817,6 +803,39 @@ haze_connection_finalize (GObject *object)
       }
 
     G_OBJECT_CLASS (haze_connection_parent_class)->finalize (object);
+}
+
+static void
+haze_connection_fill_contact_attributes (TpBaseConnection *base,
+    const gchar *dbus_interface,
+    TpHandle handle,
+    TpContactAttributeMap *attributes)
+{
+  HazeConnection *self = HAZE_CONNECTION (base);
+
+  if (haze_connection_aliasing_fill_contact_attributes (self,
+        dbus_interface, handle, attributes))
+    return;
+
+  if (haze_connection_avatars_fill_contact_attributes (self,
+        dbus_interface, handle, attributes))
+    return;
+
+  if (haze_connection_contact_capabilities_fill_contact_attributes (self,
+        dbus_interface, handle, attributes))
+    return;
+
+  if (tp_base_contact_list_fill_contact_attributes (
+        TP_BASE_CONTACT_LIST (self->contact_list),
+        dbus_interface, handle, attributes))
+    return;
+
+  if (tp_presence_mixin_fill_contact_attributes ((GObject *) self,
+        dbus_interface, handle, attributes))
+    return;
+
+  TP_BASE_CONNECTION_CLASS (haze_connection_parent_class)->
+    fill_contact_attributes (base, dbus_interface, handle, attributes);
 }
 
 static void
@@ -867,6 +886,8 @@ haze_connection_class_init (HazeConnectionClass *klass)
     base_class->shut_down = _haze_connection_shut_down;
     base_class->get_interfaces_always_present =
       haze_connection_get_interfaces_always_present;
+    base_class->fill_contact_attributes =
+      haze_connection_fill_contact_attributes;
 
     param_spec = g_param_spec_boxed ("parameters", "gchar * => GValue",
         "Connection parameters (password, etc.)",
@@ -900,8 +921,6 @@ haze_connection_class_init (HazeConnectionClass *klass)
     tp_dbus_properties_mixin_class_init (object_class,
         G_STRUCT_OFFSET (HazeConnectionClass, properties_class));
 
-    tp_contacts_mixin_class_init (object_class,
-        G_STRUCT_OFFSET (HazeConnectionClass, contacts_class));
     tp_base_contact_list_mixin_class_init (base_class);
 
     haze_connection_presence_class_init (object_class);
