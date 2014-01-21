@@ -23,10 +23,10 @@ def test(q, bus, conn, stream):
 
     stream.send(m)
 
-    event = q.expect('dbus-signal', signal='NewChannels')
-    assertEquals(cs.CHANNEL_TYPE_TEXT, event.args[0][0][1][cs.CHANNEL_TYPE])
-    assertEquals(cs.HT_CONTACT, event.args[0][0][1][cs.TARGET_HANDLE_TYPE])
-    assertEquals('foo@bar.com', event.args[0][0][1][cs.TARGET_ID])
+    event = q.expect('dbus-signal', signal='NewChannel')
+    assertEquals(cs.CHANNEL_TYPE_TEXT, event.args[1][cs.CHANNEL_TYPE])
+    assertEquals(cs.HT_CONTACT, event.args[1][cs.TARGET_HANDLE_TYPE])
+    assertEquals('foo@bar.com', event.args[1][cs.TARGET_ID])
 
     message_received = q.expect('dbus-signal', signal='MessageReceived')
 

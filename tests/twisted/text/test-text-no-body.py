@@ -29,10 +29,10 @@ def test(q, bus, conn, stream):
     stream.send(m)
 
     # first message should be from Bob, not Alice
-    event = q.expect('dbus-signal', signal='NewChannels')
-    assertEquals(cs.CHANNEL_TYPE_TEXT, event.args[0][0][1][cs.CHANNEL_TYPE])
-    assertEquals(cs.HT_CONTACT, event.args[0][0][1][cs.TARGET_HANDLE_TYPE])
-    assertEquals('bob@foo.com', event.args[0][0][1][cs.TARGET_ID])
+    event = q.expect('dbus-signal', signal='NewChannel')
+    assertEquals(cs.CHANNEL_TYPE_TEXT, event.args[1][cs.CHANNEL_TYPE])
+    assertEquals(cs.HT_CONTACT, event.args[1][cs.TARGET_HANDLE_TYPE])
+    assertEquals('bob@foo.com', event.args[1][cs.TARGET_ID])
 
     conn.Disconnect()
     q.expect('dbus-signal', signal='StatusChanged', args=[2, 1])

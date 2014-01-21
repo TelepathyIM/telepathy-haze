@@ -24,18 +24,15 @@ def test(q, bus, conn, stream):
 
     ret, sig = q.expect_many(
         EventPattern('dbus-return', method='CreateChannel'),
-        EventPattern('dbus-signal', signal='NewChannels'),
+        EventPattern('dbus-signal', signal='NewChannel'),
         )
 
     text_chan = bus.get_object(conn.bus_name, ret.value[0])
     chan_iface = dbus.Interface(text_chan, cs.CHANNEL)
     text_iface = dbus.Interface(text_chan, cs.CHANNEL_TYPE_TEXT)
 
-    assertLength(1, sig.args)
-    assertLength(1, sig.args[0])        # one channel
-    assertLength(2, sig.args[0][0])     # two struct members
-    assertEquals(ret.value, sig.args[0][0])
-    emitted_props = sig.args[0][0][1]
+    assertEquals(ret.value, ( sig.args[0], sig.args[1] ))
+    emitted_props = sig.args[1]
     assertEquals(cs.CHANNEL_TYPE_TEXT, emitted_props[cs.CHANNEL_TYPE])
     assertEquals(cs.HT_CONTACT, emitted_props[cs.TARGET_HANDLE_TYPE])
     assertEquals(foo_handle, emitted_props[cs.TARGET_HANDLE])
@@ -115,9 +112,9 @@ def test(q, bus, conn, stream):
     new_props[cs.INITIATOR_ID] = 'foo@bar.com'
     new_props[cs.REQUESTED] = False
 
-    event = q.expect('dbus-signal', signal='NewChannels')
-    assertEquals(text_chan.object_path, event.args[0][0][0])
-    assertEquals(new_props, event.args[0][0][1])
+    event = q.expect('dbus-signal', signal='NewChannel')
+    assertEquals(text_chan.object_path, event.args[0])
+    assertEquals(new_props, event.args[1])
 
     event = q.expect('dbus-return', method='Close')
 

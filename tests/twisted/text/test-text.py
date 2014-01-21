@@ -21,13 +21,13 @@ def test(q, bus, conn, stream):
     m.addElement('body', content='hello')
     stream.send(m)
 
-    event = q.expect('dbus-signal', signal='NewChannels')
-    assertEquals(cs.CHANNEL_TYPE_TEXT, event.args[0][0][1][cs.CHANNEL_TYPE])
-    assertEquals(cs.HT_CONTACT, event.args[0][0][1][cs.TARGET_HANDLE_TYPE])
-    assertEquals(jid, event.args[0][0][1][cs.TARGET_ID])
-    foo_at_bar_dot_com_handle = event.args[0][0][1][cs.TARGET_HANDLE]
+    event = q.expect('dbus-signal', signal='NewChannel')
+    assertEquals(cs.CHANNEL_TYPE_TEXT, event.args[1][cs.CHANNEL_TYPE])
+    assertEquals(cs.HT_CONTACT, event.args[1][cs.TARGET_HANDLE_TYPE])
+    assertEquals(jid, event.args[1][cs.TARGET_ID])
+    foo_at_bar_dot_com_handle = event.args[1][cs.TARGET_HANDLE]
 
-    text_chan = bus.get_object(conn.bus_name, event.args[0][0][0])
+    text_chan = bus.get_object(conn.bus_name, event.args[0])
 
     # Exercise basic Channel Properties from spec 0.17.7
     channel_props = text_chan.GetAll(cs.CHANNEL,

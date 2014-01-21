@@ -89,17 +89,15 @@ def connect_and_get_sasl_channel(q, bus, conn):
     return expect_sasl_channel(q, bus, conn)
 
 def expect_sasl_channel(q, bus, conn):
-    signal, = q.expect_many(
-            EventPattern('dbus-signal', signal='NewChannels',
-                predicate=lambda e:
-                    e.args[0][0][1].get(cs.CHANNEL_TYPE) ==
-                        cs.CHANNEL_TYPE_SERVER_AUTHENTICATION),
-                )
-    path = signal.args[0][0][0]
+    signal = q.expect('dbus-signal', signal='NewChannel',
+            predicate=lambda e:
+                    e.args[1].get(cs.CHANNEL_TYPE) ==
+                        cs.CHANNEL_TYPE_SERVER_AUTHENTICATION)
+
+    path = signal.args[0]
 
     chan = SaslChannelWrapper(bus.get_object(conn.bus_name, path))
-    assertLength(1, signal.args[0])
-    props = signal.args[0][0][1]
+    props = signal.args[1]
 
     assertEquals(cs.CHANNEL_IFACE_SASL_AUTH, props.get(cs.AUTH_METHOD))
     return chan, props
