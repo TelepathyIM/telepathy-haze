@@ -54,7 +54,9 @@ enum {
 };
 
 static HazeIMChannel *get_im_channel (HazeImChannelFactory *self,
-    TpHandle handle, TpHandle initiator, gpointer request_token,
+    TpHandle handle,
+    TpHandle initiator,
+    TpChannelManagerRequest *request,
     gboolean *created);
 static void close_all (HazeImChannelFactory *self);
 
@@ -233,8 +235,8 @@ im_channel_closed_cb (HazeIMChannel *chan, gpointer user_data)
     TpHandle contact_handle;
     guint really_destroyed;
 
-    tp_channel_manager_emit_channel_closed_for_object (self,
-        TP_EXPORTABLE_CHANNEL (chan));
+    tp_channel_manager_emit_channel_closed_for_object (
+        TP_CHANNEL_MANAGER (self), TP_EXPORTABLE_CHANNEL (chan));
 
     if (self->priv->channels)
     {
@@ -253,7 +255,7 @@ im_channel_closed_cb (HazeIMChannel *chan, gpointer user_data)
         {
             DEBUG ("reopening channel with handle %u due to pending messages",
                 contact_handle);
-            tp_channel_manager_emit_new_channel (self,
+            tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (self),
                 (TpExportableChannel *) chan, NULL);
         }
     }
@@ -293,7 +295,7 @@ new_im_channel (HazeImChannelFactory *self,
     if (request_token != NULL)
         requests = g_slist_prepend (requests, request_token);
 
-    tp_channel_manager_emit_new_channel (self,
+    tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (self),
         TP_EXPORTABLE_CHANNEL (chan), requests);
     g_slist_free (requests);
 
@@ -302,10 +304,10 @@ new_im_channel (HazeImChannelFactory *self,
 
 static HazeIMChannel *
 get_im_channel (HazeImChannelFactory *self,
-                TpHandle handle,
-                TpHandle initiator,
-                gpointer request_token,
-                gboolean *created)
+    TpHandle handle,
+    TpHandle initiator,
+    TpChannelManagerRequest *request,
+    gboolean *created)
 {
     HazeIMChannel *chan =
         g_hash_table_lookup (self->priv->channels, GINT_TO_POINTER (handle));
@@ -317,7 +319,7 @@ get_im_channel (HazeImChannelFactory *self,
     }
     else
     {
-        chan = new_im_channel (self, handle, initiator, request_token);
+        chan = new_im_channel (self, handle, initiator, request);
         if (created)
             *created = TRUE;
     }
@@ -535,9 +537,9 @@ haze_im_channel_factory_foreach_channel_class (TpChannelManager *manager,
 
 static gboolean
 haze_im_channel_factory_request (HazeImChannelFactory *self,
-                                 gpointer request_token,
-                                 GHashTable *request_properties,
-                                 gboolean require_new)
+    TpChannelManagerRequest *request,
+    GHashTable *request_properties,
+    gboolean require_new)
 {
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->conn);
     TpHandle handle;
@@ -569,7 +571,7 @@ haze_im_channel_factory_request (HazeImChannelFactory *self,
     }
 
     chan = get_im_channel (self, handle,
-        tp_base_connection_get_self_handle (base_conn), request_token,
+        tp_base_connection_get_self_handle (base_conn), request,
         &created);
     g_assert (chan != NULL);
 
@@ -577,20 +579,22 @@ haze_im_channel_factory_request (HazeImChannelFactory *self,
     {
         if (require_new)
         {
-            tp_channel_manager_emit_request_failed (self, request_token,
-                TP_ERROR, TP_ERROR_NOT_AVAILABLE, "Channel already exists");
+            tp_channel_manager_emit_request_failed (TP_CHANNEL_MANAGER (self),
+                request, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
+                "Channel already exists");
         }
         else
         {
-            tp_channel_manager_emit_request_already_satisfied (self,
-                request_token, TP_EXPORTABLE_CHANNEL (chan));
+            tp_channel_manager_emit_request_already_satisfied (
+                TP_CHANNEL_MANAGER (self), request,
+                TP_EXPORTABLE_CHANNEL (chan));
         }
     }
 
     return TRUE;
 
 error:
-    tp_channel_manager_emit_request_failed (self, request_token,
+    tp_channel_manager_emit_request_failed (TP_CHANNEL_MANAGER (self), request,
         error->domain, error->code, error->message);
     g_error_free (error);
     return TRUE;
@@ -598,20 +602,20 @@ error:
 
 static gboolean
 haze_im_channel_factory_create_channel (TpChannelManager *manager,
-                                        gpointer request_token,
-                                        GHashTable *request_properties)
+    TpChannelManagerRequest *request,
+    GHashTable *request_properties)
 {
     return haze_im_channel_factory_request (HAZE_IM_CHANNEL_FACTORY (manager),
-        request_token, request_properties, TRUE);
+        request, request_properties, TRUE);
 }
 
 static gboolean
 haze_im_channel_factory_ensure_channel (TpChannelManager *manager,
-                                        gpointer request_token,
-                                        GHashTable *request_properties)
+    TpChannelManagerRequest *request,
+    GHashTable *request_properties)
 {
     return haze_im_channel_factory_request (HAZE_IM_CHANNEL_FACTORY (manager),
-        request_token, request_properties, FALSE);
+        request, request_properties, FALSE);
 }
 
 static void
@@ -625,6 +629,4 @@ channel_manager_iface_init (gpointer g_iface,
         haze_im_channel_factory_foreach_channel_class;
     iface->create_channel = haze_im_channel_factory_create_channel;
     iface->ensure_channel = haze_im_channel_factory_ensure_channel;
-    /* Request is equivalent to Ensure for this channel class */
-    iface->request_channel = haze_im_channel_factory_ensure_channel;
 }
