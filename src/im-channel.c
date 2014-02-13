@@ -441,7 +441,7 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
 
     base_class->channel_type = TP_IFACE_CHANNEL_TYPE_TEXT;
     base_class->get_interfaces = haze_im_channel_get_interfaces;
-    base_class->target_handle_type = TP_HANDLE_TYPE_CONTACT;
+    base_class->target_entity_type = TP_ENTITY_TYPE_CONTACT;
     base_class->close = haze_im_channel_close;
     base_class->fill_immutable_properties =
         haze_im_channel_fill_immutable_properties;
@@ -469,7 +469,7 @@ haze_im_channel_start (HazeIMChannel *self)
     HazeConnection *conn = HAZE_CONNECTION (base_conn);
 
     contact_handles = tp_base_connection_get_handles (base_conn,
-        TP_HANDLE_TYPE_CONTACT);
+        TP_ENTITY_TYPE_CONTACT);
     recipient = tp_handle_inspect (contact_handles,
         tp_base_channel_get_target_handle (base));
     priv->conv = purple_conversation_new (PURPLE_CONV_TYPE_IM,

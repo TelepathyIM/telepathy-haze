@@ -541,7 +541,7 @@ _haze_connection_start_connecting (TpBaseConnection *base,
     HazeConnection *self = HAZE_CONNECTION(base);
     HazeConnectionPrivate *priv = self->priv;
     TpHandleRepoIface *contact_handles =
-        tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+        tp_base_connection_get_handles (base, TP_ENTITY_TYPE_CONTACT);
     const gchar *password;
     TpHandle self_handle;
 
@@ -640,12 +640,12 @@ _contact_normalize (TpHandleRepoIface *repo,
 
 static void
 _haze_connection_create_handle_repos (TpBaseConnection *base,
-        TpHandleRepoIface *repos[TP_NUM_HANDLE_TYPES])
+        TpHandleRepoIface *repos[TP_NUM_ENTITY_TYPES])
 {
-    repos[TP_HANDLE_TYPE_CONTACT] =
-        tp_dynamic_handle_repo_new (TP_HANDLE_TYPE_CONTACT, _contact_normalize,
+    repos[TP_ENTITY_TYPE_CONTACT] =
+        tp_dynamic_handle_repo_new (TP_ENTITY_TYPE_CONTACT, _contact_normalize,
                                     base);
-    /* repos[TP_HANDLE_TYPE_ROOM] = XXX MUC */
+    /* repos[TP_ENTITY_TYPE_ROOM] = XXX MUC */
 }
 
 static GPtrArray *
@@ -981,7 +981,7 @@ haze_get_connection_ui_ops ()
 
 const gchar *
 haze_connection_handle_inspect (HazeConnection *conn,
-                                TpHandleType handle_type,
+                                TpEntityType handle_type,
                                 TpHandle handle)
 {
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);

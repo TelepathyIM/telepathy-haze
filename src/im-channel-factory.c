@@ -424,7 +424,7 @@ haze_create_conversation (PurpleConversation *conv)
         ACCOUNT_GET_HAZE_CONNECTION (account)->im_factory;
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (im_factory->priv->conn);
     TpHandleRepoIface *contact_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+        tp_base_connection_get_handles (base_conn, TP_ENTITY_TYPE_CONTACT);
 
     const gchar *who = purple_conversation_get_name (conv);
 
@@ -504,7 +504,7 @@ haze_get_conv_ui_ops(void)
 
 static const gchar * const fixed_properties[] = {
     TP_IFACE_CHANNEL ".ChannelType",
-    TP_IFACE_CHANNEL ".TargetHandleType",
+    TP_IFACE_CHANNEL ".TargetEntityType",
     NULL
 };
 static const gchar * const allowed_properties[] = {
@@ -527,8 +527,8 @@ haze_im_channel_factory_foreach_channel_class (TpChannelManager *manager,
     g_hash_table_insert (table, TP_IFACE_CHANNEL ".ChannelType", value);
 
     value = tp_g_value_slice_new (G_TYPE_UINT);
-    g_value_set_uint (value, TP_HANDLE_TYPE_CONTACT);
-    g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetHandleType", value);
+    g_value_set_uint (value, TP_ENTITY_TYPE_CONTACT);
+    g_hash_table_insert (table, TP_IFACE_CHANNEL ".TargetEntityType", value);
 
     func (manager, table, allowed_properties, user_data);
 
@@ -555,7 +555,7 @@ haze_im_channel_factory_request (HazeImChannelFactory *self,
     }
 
     if (tp_asv_get_uint32 (request_properties,
-        TP_IFACE_CHANNEL ".TargetHandleType", NULL) != TP_HANDLE_TYPE_CONTACT)
+        TP_IFACE_CHANNEL ".TargetEntityType", NULL) != TP_ENTITY_TYPE_CONTACT)
     {
         return FALSE;
     }

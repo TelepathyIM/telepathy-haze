@@ -99,7 +99,7 @@ get_alias (HazeConnection *self,
 {
     TpBaseConnection *base = TP_BASE_CONNECTION (self);
     TpHandleRepoIface *contact_handles =
-        tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+        tp_base_connection_get_handles (base, TP_ENTITY_TYPE_CONTACT);
     const gchar *bname = tp_handle_inspect (contact_handles, handle);
     const gchar *alias;
 
@@ -139,7 +139,7 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing1 *self,
     HazeConnection *conn = HAZE_CONNECTION (self);
     TpBaseConnection *base = TP_BASE_CONNECTION (conn);
     TpHandleRepoIface *contact_handles =
-        tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+        tp_base_connection_get_handles (base, TP_ENTITY_TYPE_CONTACT);
     guint i;
     GError *error = NULL;
     const gchar **aliases;
@@ -274,7 +274,7 @@ haze_connection_set_aliases (TpSvcConnectionInterfaceAliasing1 *self,
     GError *error = NULL;
     struct _g_hash_table_foreach_all_in_my_brain data = { conn, NULL, &error };
     data.contact_handles =
-        tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+        tp_base_connection_get_handles (base, TP_ENTITY_TYPE_CONTACT);
 
     if (!can_alias (conn))
     {
@@ -330,7 +330,7 @@ blist_node_aliased_cb (PurpleBlistNode *node,
     buddy = (PurpleBuddy *)node;
     base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (buddy->account);
     contact_handles =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+        tp_base_connection_get_handles (base_conn, TP_ENTITY_TYPE_CONTACT);
     handle = tp_handle_ensure (contact_handles, buddy->name, NULL, NULL);
 
     aliases = g_hash_table_new (NULL, NULL);

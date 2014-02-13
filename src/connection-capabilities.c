@@ -52,7 +52,7 @@ haze_connection_get_handle_contact_capabilities (HazeConnection *self,
   GValue monster = {0, };
   GHashTable *fixed_properties;
   GValue *channel_type_value;
-  GValue *target_handle_type_value;
+  GValue *target_entity_type_value;
   const gchar * const text_allowed_properties[] = {
     TP_PROP_CHANNEL_TARGET_HANDLE, NULL };
 
@@ -77,10 +77,10 @@ haze_connection_get_handle_contact_capabilities (HazeConnection *self,
   g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".ChannelType",
       channel_type_value);
 
-  target_handle_type_value = tp_g_value_slice_new (G_TYPE_UINT);
-  g_value_set_uint (target_handle_type_value, TP_HANDLE_TYPE_CONTACT);
-  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".TargetHandleType",
-      target_handle_type_value);
+  target_entity_type_value = tp_g_value_slice_new (G_TYPE_UINT);
+  g_value_set_uint (target_entity_type_value, TP_ENTITY_TYPE_CONTACT);
+  g_hash_table_insert (fixed_properties, TP_IFACE_CHANNEL ".TargetEntityType",
+      target_entity_type_value);
 
   dbus_g_type_struct_set (&monster,
       0, fixed_properties,

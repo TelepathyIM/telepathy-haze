@@ -33,8 +33,8 @@ def test(q, bus, conn, stream):
     channel_props = text_chan.GetAll(cs.CHANNEL,
             dbus_interface=dbus.PROPERTIES_IFACE)
     assertEquals(foo_at_bar_dot_com_handle, channel_props.get('TargetHandle'))
-    assert channel_props.get('TargetHandleType') == 1,\
-            channel_props.get('TargetHandleType')
+    assert channel_props.get('TargetEntityType') == 1,\
+            channel_props.get('TargetEntityType')
     assertEquals(cs.CHANNEL_TYPE_TEXT, channel_props.get('ChannelType'))
     assertContains(cs.CHANNEL_IFACE_CHAT_STATE,
             channel_props.get('Interfaces', ()))

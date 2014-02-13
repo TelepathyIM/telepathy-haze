@@ -124,7 +124,7 @@ haze_contact_list_constructor (GType type, guint n_props,
     /* not reffed, for the moment */
 
     contact_repo = tp_base_connection_get_handles (
-        (TpBaseConnection *) self->priv->conn, TP_HANDLE_TYPE_CONTACT);
+        (TpBaseConnection *) self->priv->conn, TP_ENTITY_TYPE_CONTACT);
 
     self->priv->publishing_to = tp_handle_set_new (contact_repo);
     self->priv->not_publishing_to = tp_handle_set_new (contact_repo);
@@ -175,7 +175,7 @@ haze_contact_list_dup_contacts (TpBaseContactList *cl)
   HazeContactList *self = HAZE_CONTACT_LIST (cl);
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->conn);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
   /* The list initially contains anyone we're definitely publishing to.
    * Because libpurple, that's only people whose request we accepted during
    * this session :-( */
@@ -217,7 +217,7 @@ haze_contact_list_dup_states (TpBaseContactList *cl,
 {
   HazeContactList *self = HAZE_CONTACT_LIST (cl);
   const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
-      TP_HANDLE_TYPE_CONTACT, contact);
+      TP_ENTITY_TYPE_CONTACT, contact);
   PurpleBuddy *buddy = purple_find_buddy (self->priv->conn->account, bname);
   TpSubscriptionState pub, sub;
   PublishRequestData *pub_req = g_hash_table_lookup (
@@ -296,7 +296,7 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
     HazeContactList *contact_list = conn->contact_list;
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
     TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (
-        base_conn, TP_HANDLE_TYPE_CONTACT);
+        base_conn, TP_ENTITY_TYPE_CONTACT);
     const gchar *name = purple_buddy_get_name (buddy);
     TpHandle handle = tp_handle_ensure (contact_repo, name, NULL, NULL);
     const char *group_name;
@@ -330,7 +330,7 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
 
     contact_list = conn->contact_list;
     contact_repo = tp_base_connection_get_handles (base_conn,
-        TP_HANDLE_TYPE_CONTACT);
+        TP_ENTITY_TYPE_CONTACT);
 
     buddy_name = purple_buddy_get_name (buddy);
     handle = tp_handle_ensure (contact_repo, buddy_name, NULL, NULL);
@@ -393,7 +393,7 @@ haze_contact_list_accept_publish_request (HazeContactList *self,
   PublishRequestData *request_data = g_hash_table_lookup (
       self->priv->pending_publish_requests, key);
   const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
-      TP_HANDLE_TYPE_CONTACT, handle);
+      TP_ENTITY_TYPE_CONTACT, handle);
 
   if (request_data == NULL)
     return;
@@ -435,7 +435,7 @@ haze_contact_list_reject_publish_request (HazeContactList *self,
   PublishRequestData *request_data = g_hash_table_lookup (
       self->priv->pending_publish_requests, key);
   const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
-      TP_HANDLE_TYPE_CONTACT, handle);
+      TP_ENTITY_TYPE_CONTACT, handle);
 
   if (request_data == NULL)
     return;
@@ -465,7 +465,7 @@ haze_request_authorize (PurpleAccount *account,
     HazeConnection *conn = account->ui_data;
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
     TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
-        TP_HANDLE_TYPE_CONTACT);
+        TP_ENTITY_TYPE_CONTACT);
     HazeContactList *self = conn->contact_list;
     TpHandle remote_handle;
     PublishRequestData *request_data = publish_request_data_new ();
@@ -526,7 +526,7 @@ haze_contact_list_request_subscription (HazeContactList *self,
 {
   PurpleAccount *account = self->priv->conn->account;
   const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
-      TP_HANDLE_TYPE_CONTACT, handle);
+      TP_ENTITY_TYPE_CONTACT, handle);
   PurpleBuddy *buddy;
 
   /* If the buddy already exists, then it should already be on the
@@ -580,7 +580,7 @@ haze_contact_list_remove_contact (HazeContactList *self,
 {
   PurpleAccount *account = self->priv->conn->account;
   const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
-      TP_HANDLE_TYPE_CONTACT, handle);
+      TP_ENTITY_TYPE_CONTACT, handle);
   GSList *buddies, *l;
 
   buddies = purple_find_buddies (account, bname);
@@ -630,7 +630,7 @@ haze_contact_list_add_to_group (HazeContactList *self,
 {
     HazeConnection *conn = self->priv->conn;
     const gchar *bname =
-        haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT, handle);
+        haze_connection_handle_inspect (conn, TP_ENTITY_TYPE_CONTACT, handle);
     PurpleBuddy *buddy;
     /* This actually has "ensure" semantics, and doesn't return a ref */
     PurpleGroup *group = purple_group_new (group_name);
@@ -665,7 +665,7 @@ haze_contact_list_prep_remove_from_group (HazeContactList *self,
   HazeConnection *conn = self->priv->conn;
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
   PurpleAccount *account = conn->account;
   PurpleGroup *group = purple_find_group (group_name);
   TpIntsetFastIter iter;
@@ -687,7 +687,7 @@ haze_contact_list_prep_remove_from_group (HazeContactList *self,
       GSList *buddies;
       GSList *l;
       const gchar *bname =
-          haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT,
+          haze_connection_handle_inspect (conn, TP_ENTITY_TYPE_CONTACT,
               handle);
 
       g_assert (bname != NULL);
@@ -736,7 +736,7 @@ haze_contact_list_prep_remove_from_group (HazeContactList *self,
       while (tp_intset_fast_iter_next (&iter, &handle))
         {
           const gchar *bname =
-              haze_connection_handle_inspect (conn, TP_HANDLE_TYPE_CONTACT,
+              haze_connection_handle_inspect (conn, TP_ENTITY_TYPE_CONTACT,
                   handle);
 
           PurpleBuddy *copy = purple_buddy_new (conn->account, bname, NULL);
@@ -769,7 +769,7 @@ haze_contact_list_remove_many_from_group (HazeContactList *self,
       GSList *buddies;
       GSList *l;
       const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
-          TP_HANDLE_TYPE_CONTACT, handle);
+          TP_ENTITY_TYPE_CONTACT, handle);
 
       buddies = purple_find_buddies (account, bname);
 
@@ -796,7 +796,7 @@ haze_contact_list_remove_from_group (HazeContactList *self,
 {
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->conn);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
   gboolean ok;
   TpHandleSet *contacts = tp_handle_set_new_containing (contact_repo, handle);
 
@@ -863,7 +863,7 @@ haze_contact_list_dup_contact_groups (TpBaseContactList *cl,
 {
   HazeContactList *self = HAZE_CONTACT_LIST (cl);
   const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
-      TP_HANDLE_TYPE_CONTACT, contact);
+      TP_ENTITY_TYPE_CONTACT, contact);
   GSList *buddies, *sl_iter;
   GPtrArray *arr;
 
@@ -892,7 +892,7 @@ haze_contact_list_dup_group_members (TpBaseContactList *cl,
   HazeContactList *self = HAZE_CONTACT_LIST (cl);
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->conn);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
   PurpleGroup *group = purple_find_group (group_name);
   PurpleBlistNode *contact, *buddy;
   TpHandleSet *members = tp_handle_set_new (contact_repo);
@@ -994,7 +994,7 @@ haze_contact_list_set_contact_groups_async (TpBaseContactList *cl,
   PurpleAccount *account = self->priv->conn->account;
   const gchar *fallback_group;
   const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
-      TP_HANDLE_TYPE_CONTACT, contact);
+      TP_ENTITY_TYPE_CONTACT, contact);
   gsize i;
   GSList *buddies, *l;
 
@@ -1221,7 +1221,7 @@ is_blocked (TpBaseContactList *cl,
   PurpleAccount *account = self->priv->conn->account;
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->conn);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
   GSList *l;
 
   for (l = account->deny; l != NULL; l = l->next)
@@ -1242,7 +1242,7 @@ dup_blocked_contacts (TpBaseContactList *cl)
   PurpleAccount *account = self->priv->conn->account;
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (self->priv->conn);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
   TpHandleSet *blocked = tp_handle_set_new (contact_repo);
   GSList *l;
 
@@ -1271,7 +1271,7 @@ set_contacts_privacy (TpBaseContactList *cl,
   while (tp_intset_fast_iter_next (&iter, &handle))
     {
       const gchar *bname = haze_connection_handle_inspect (self->priv->conn,
-          TP_HANDLE_TYPE_CONTACT, handle);
+          TP_ENTITY_TYPE_CONTACT, handle);
 
       if (block)
         purple_privacy_deny (account, bname, FALSE, FALSE);
@@ -1333,7 +1333,7 @@ haze_contact_list_deny_changed (
   HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
   TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
   TpHandleRepoIface *contact_repo = tp_base_connection_get_handles (base_conn,
-      TP_HANDLE_TYPE_CONTACT);
+      TP_ENTITY_TYPE_CONTACT);
   GError *error = NULL;
   TpHandle handle = tp_handle_ensure (contact_repo, name, NULL, &error);
   TpHandleSet *set;

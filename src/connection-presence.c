@@ -169,7 +169,7 @@ _get_contact_status (GObject *obj,
     HazeConnection *conn = HAZE_CONNECTION (obj);
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (obj);
     TpHandleRepoIface *handle_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+        tp_base_connection_get_handles (base_conn, TP_ENTITY_TYPE_CONTACT);
     PurpleStatus *p_status;
 
     g_assert (tp_handle_is_valid (handle_repo, handle, NULL));
@@ -232,7 +232,7 @@ update_status (PurpleBuddy *buddy,
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
     TpHandleRepoIface *handle_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+        tp_base_connection_get_handles (base_conn, TP_ENTITY_TYPE_CONTACT);
 
     const gchar *bname = purple_buddy_get_name (buddy);
     TpHandle handle = tp_handle_ensure (handle_repo, bname, NULL, NULL);

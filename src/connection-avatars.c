@@ -197,7 +197,7 @@ get_avatar (HazeConnection *conn,
     GArray *avatar = NULL;
     TpBaseConnection *base = TP_BASE_CONNECTION (conn);
     TpHandleRepoIface *contact_handles =
-        tp_base_connection_get_handles (base, TP_HANDLE_TYPE_CONTACT);
+        tp_base_connection_get_handles (base, TP_ENTITY_TYPE_CONTACT);
     gconstpointer icon_data = NULL;
     size_t icon_size = 0;
 
@@ -294,7 +294,7 @@ haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars1 *self,
     GError *err = NULL;
 
     TpHandleRepoIface *contact_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+        tp_base_connection_get_handles (base_conn, TP_ENTITY_TYPE_CONTACT);
 
     if (!tp_handles_are_valid (contact_repo, contacts, FALSE, &err))
     {
@@ -490,7 +490,7 @@ buddy_icon_changed_cb (PurpleBuddy *buddy,
     HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (buddy->account);
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
     TpHandleRepoIface *contact_repo =
-        tp_base_connection_get_handles (base_conn, TP_HANDLE_TYPE_CONTACT);
+        tp_base_connection_get_handles (base_conn, TP_ENTITY_TYPE_CONTACT);
 
     const char* bname = purple_buddy_get_name (buddy);
     TpHandle contact = tp_handle_ensure (contact_repo, bname, NULL, NULL);
