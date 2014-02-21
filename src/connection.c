@@ -335,7 +335,7 @@ haze_report_disconnect_reason (PurpleConnection *gc,
   HazeConnection *conn = ACCOUNT_GET_HAZE_CONNECTION (account);
   HazeConnectionPrivate *priv = conn->priv;
   TpBaseConnection *base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
-  GHashTable *details;
+  GVariant *details;
   TpConnectionStatusReason tp_reason;
   const gchar *tp_error_name;
 
@@ -348,10 +348,11 @@ haze_report_disconnect_reason (PurpleConnection *gc,
       (tp_base_connection_get_status (base_conn) ==
          TP_CONNECTION_STATUS_CONNECTING),
       &tp_reason, &tp_error_name);
-  details = tp_asv_new ("debug-message", G_TYPE_STRING, text, NULL);
+
+  details = g_variant_new_parsed ("{ 'debug-message': <%s> }", text);
+
   tp_base_connection_disconnect_with_dbus_error (base_conn, tp_error_name,
       details, tp_reason);
-  g_hash_table_unref (details);
 }
 
 static gboolean
