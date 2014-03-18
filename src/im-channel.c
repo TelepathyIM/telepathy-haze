@@ -264,7 +264,7 @@ haze_im_channel_send (GObject *obj,
                       TpMessageSendingFlags send_flags)
 {
   HazeIMChannel *self = HAZE_IM_CHANNEL (obj);
-  const GHashTable *header, *body;
+  GVariant *header = NULL, *body = NULL;
   const gchar *content_type, *text;
   guint type = 0;
   PurpleMessageFlags flags = 0;
@@ -278,12 +278,14 @@ haze_im_channel_send (GObject *obj,
       goto err;
     }
 
-  header = tp_message_peek (message, 0);
-  body = tp_message_peek (message, 1);
+  header = tp_message_dup_part (message, 0);
+  body = tp_message_dup_part (message, 1);
 
-  type = tp_asv_get_uint32 (header, "message-type", NULL);
-  content_type = tp_asv_get_string (body, "content-type");
-  text = tp_asv_get_string (body, "content");
+  type = tp_vardict_get_uint32 (header, "message-type", NULL);
+  g_variant_unref (header);
+
+  content_type = tp_vardict_get_string (body, "content-type");
+  text = tp_vardict_get_string (body, "content");
 
   if (tp_strdiff (content_type, "text/plain"))
     {
@@ -338,6 +340,7 @@ haze_im_channel_send (GObject *obj,
   g_free (reapostrophised);
   g_free (line_broken);
   g_free (escaped);
+  g_variant_unref (body);
 
   tp_message_mixin_sent (obj, message, 0, "", NULL);
   return;
@@ -346,6 +349,8 @@ err:
   g_assert (error != NULL);
   tp_message_mixin_sent (obj, message, 0, NULL, error);
   g_error_free (error);
+  if (body != NULL)
+    g_variant_unref (body);
 }
 
 static void
