@@ -146,7 +146,7 @@ haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing1 *self,
 
     if (!tp_handles_are_valid (contact_handles, contacts, FALSE, &error))
     {
-        dbus_g_method_return_error (context, error);
+        g_dbus_method_invocation_return_gerror (context, error);
         g_error_free (error);
         return;
     }
@@ -280,7 +280,7 @@ haze_connection_set_aliases (TpSvcConnectionInterfaceAliasing1 *self,
     {
         g_set_error (&error, TP_ERROR, TP_ERROR_NOT_AVAILABLE,
             "You can't set aliases on this protocol");
-        dbus_g_method_return_error (context, error);
+        g_dbus_method_invocation_return_gerror (context, error);
         g_error_free (error);
         return;
     }
@@ -289,7 +289,7 @@ haze_connection_set_aliases (TpSvcConnectionInterfaceAliasing1 *self,
 
     if (error)
     {
-        dbus_g_method_return_error (context, error);
+        g_dbus_method_invocation_return_gerror (context, error);
         g_error_free (error);
     }
     else

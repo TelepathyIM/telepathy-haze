@@ -48,7 +48,7 @@ haze_connection_mail_request_inbox_url (
 {
     GError e = {TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
         "LibPurple does not provide Inbox URL"};
-    dbus_g_method_return_error (context, &e);
+    g_dbus_method_invocation_return_gerror (context, &e);
 }
 
 
@@ -65,7 +65,7 @@ haze_connection_mail_request_mail_url (
         {
              GError e = {TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
                  "Wrong type for url-data"};
-             dbus_g_method_return_error (context, &e);
+             g_dbus_method_invocation_return_gerror (context, &e);
              return;
         }
 

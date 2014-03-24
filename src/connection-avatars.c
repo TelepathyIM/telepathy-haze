@@ -298,7 +298,7 @@ haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars1 *self,
 
     if (!tp_handles_are_valid (contact_repo, contacts, FALSE, &err))
     {
-        dbus_g_method_return_error (context, err);
+        g_dbus_method_invocation_return_gerror (context, err);
         g_error_free (err);
         return;
     }
@@ -417,7 +417,7 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars1 *self,
                      "but the limit is %" G_GSIZE_FORMAT "B",
                      icon_len, max_filesize);
 
-        dbus_g_method_return_error (context, error);
+        g_dbus_method_invocation_return_gerror (context, error);
 
         g_error_free (error);
         return;
@@ -444,7 +444,7 @@ haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars1 *self,
         g_set_error (&error, TP_ERROR, TP_ERROR_INVALID_ARGUMENT,
             "'%s' is not a supported MIME type", mime_type);
 
-        dbus_g_method_return_error (context, error);
+        g_dbus_method_invocation_return_gerror (context, error);
 
         g_error_free (error);
 

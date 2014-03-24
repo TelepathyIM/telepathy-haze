@@ -221,7 +221,7 @@ haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState1 *self,
 
     if (error)
     {
-          dbus_g_method_return_error (context, error);
+          g_dbus_method_invocation_return_gerror (context, error);
           g_error_free (error);
           return;
     }
