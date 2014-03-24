@@ -115,7 +115,7 @@ haze_im_channel_get_interfaces (TpBaseChannel *base)
  */
 static void
 haze_im_channel_destroy (TpSvcChannelInterfaceDestroyable1 *iface,
-                         DBusGMethodInvocation *context)
+                         GDBusMethodInvocation *context)
 {
     HazeIMChannel *self = HAZE_IM_CHANNEL (iface);
 
@@ -174,7 +174,7 @@ resend_typing_cb (gpointer data)
 static void
 haze_im_channel_set_chat_state (TpSvcChannelInterfaceChatState1 *self,
                                 guint state,
-                                DBusGMethodInvocation *context)
+                                GDBusMethodInvocation *context)
 {
     HazeIMChannel *chan = HAZE_IM_CHANNEL (self);
 

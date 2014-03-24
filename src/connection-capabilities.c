@@ -33,7 +33,7 @@
 static void
 haze_connection_update_capabilities (TpSvcConnectionInterfaceContactCapabilities1 *iface,
                                      const GPtrArray *clients,
-                                     DBusGMethodInvocation *context)
+                                     GDBusMethodInvocation *context)
 {
   HazeConnection *self = HAZE_CONNECTION (iface);
   TpBaseConnection *base = (TpBaseConnection *) self;

@@ -285,7 +285,7 @@ get_handle_token (HazeConnection *conn,
 static void
 haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars1 *self,
                                          const GArray *contacts,
-                                         DBusGMethodInvocation *context)
+                                         GDBusMethodInvocation *context)
 {
     HazeConnection *conn = HAZE_CONNECTION (self);
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
@@ -348,7 +348,7 @@ haze_connection_get_known_avatar_tokens (TpSvcConnectionInterfaceAvatars1 *self,
 static void
 haze_connection_request_avatars (TpSvcConnectionInterfaceAvatars1 *self,
                                  const GArray *contacts,
-                                 DBusGMethodInvocation *context)
+                                 GDBusMethodInvocation *context)
 {
     HazeConnection *conn = HAZE_CONNECTION (self);
     TpBaseConnection *base = TP_BASE_CONNECTION (conn);
@@ -375,7 +375,7 @@ haze_connection_request_avatars (TpSvcConnectionInterfaceAvatars1 *self,
 
 static void
 haze_connection_clear_avatar (TpSvcConnectionInterfaceAvatars1 *self,
-                              DBusGMethodInvocation *context)
+                              GDBusMethodInvocation *context)
 {
     HazeConnection *conn = HAZE_CONNECTION (self);
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);
@@ -392,7 +392,7 @@ static void
 haze_connection_set_avatar (TpSvcConnectionInterfaceAvatars1 *self,
                             const GArray *avatar,
                             const gchar *mime_type,
-                            DBusGMethodInvocation *context)
+                            GDBusMethodInvocation *context)
 {
     HazeConnection *conn = HAZE_CONNECTION (self);
     TpBaseConnection *base_conn = TP_BASE_CONNECTION (conn);

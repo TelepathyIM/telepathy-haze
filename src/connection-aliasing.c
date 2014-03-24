@@ -134,7 +134,7 @@ get_alias (HazeConnection *self,
 static void
 haze_connection_request_aliases (TpSvcConnectionInterfaceAliasing1 *self,
                                  const GArray *contacts,
-                                 DBusGMethodInvocation *context)
+                                 GDBusMethodInvocation *context)
 {
     HazeConnection *conn = HAZE_CONNECTION (self);
     TpBaseConnection *base = TP_BASE_CONNECTION (conn);
@@ -267,7 +267,7 @@ set_aliases_foreach (gpointer key,
 static void
 haze_connection_set_aliases (TpSvcConnectionInterfaceAliasing1 *self,
                              GHashTable *aliases,
-                             DBusGMethodInvocation *context)
+                             GDBusMethodInvocation *context)
 {
     HazeConnection *conn = HAZE_CONNECTION (self);
     TpBaseConnection *base = TP_BASE_CONNECTION (conn);

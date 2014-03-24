@@ -44,7 +44,7 @@ static GPtrArray empty_array = { 0 };
 static void
 haze_connection_mail_request_inbox_url (
         TpSvcConnectionInterfaceMailNotification1 *iface,
-        DBusGMethodInvocation *context)
+        GDBusMethodInvocation *context)
 {
     GError e = {TP_ERROR, TP_ERROR_NOT_IMPLEMENTED,
         "LibPurple does not provide Inbox URL"};
@@ -57,7 +57,7 @@ haze_connection_mail_request_mail_url (
         TpSvcConnectionInterfaceMailNotification1 *iface,
         const gchar *in_id,
         const GValue *in_url_data,
-        DBusGMethodInvocation *context)
+        GDBusMethodInvocation *context)
 {
     GValueArray *result;
 
