@@ -37,7 +37,6 @@
 #include "connection-aliasing.h"
 #include "connection-avatars.h"
 #include "connection-mail.h"
-#include "extensions/extensions.h"
 #include "request.h"
 
 #include "connection-capabilities.h"

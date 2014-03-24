@@ -42,8 +42,6 @@ telepathy_haze_1_SOURCES = main.c \
                          util.h \
                          $(NULL)
 
-telepathy_haze_1_LDADD = $(top_builddir)/extensions/libhaze-extensions.la
-
 AM_CFLAGS = \
 	-I$(top_srcdir) \
 	-I$(top_builddir) \
