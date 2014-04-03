@@ -1,22 +1,15 @@
-telepathy-haze 0.99.2 (2013-09-27)
-==================================
+telepathy-haze 0.99.10 (2014-04-03)
+===================================
 
-Changes:
-
-• Initial snapshot for the Telepathy 1.0 branch
+The “you and whose army?” release.
 
 Dependencies:
 
-• telepathy-glib-1 ≥ 0.99.2 is required
+• telepathy-glib-1 ≥ 0.99.10 is required
 
-telepathy-haze 0.9.0 (UNRELEASED)
-=================================
+Incompatible changes:
 
-Dependencies:
-
-• telepathy-glib ≥ 0.21.0 is required
-
-Features removed:
+• Switch to Telepathy 1 D-Bus API
 
 • StreamedMedia channels are no longer supported. We'd potentially
   accept patches to bring back audio/video support, but only via the
