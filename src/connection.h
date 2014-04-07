@@ -70,7 +70,7 @@ PurpleConnectionUiOps *haze_get_connection_ui_ops (void);
 
 const gchar *
 haze_connection_handle_inspect (HazeConnection *conn,
-                                TpEntityType handle_type,
+                                TpEntityType entity_type,
                                 TpHandle handle);
 
 gboolean haze_connection_create_account (HazeConnection *self, GError **error);

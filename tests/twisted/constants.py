@@ -63,6 +63,8 @@ CHANNEL_TYPE_SERVER_TLS_CONNECTION = \
     CHANNEL + ".Type.ServerTLSConnection1"
 
 CHANNEL_TYPE = CHANNEL + '.ChannelType'
+TARGET_ENTITY_TYPE = CHANNEL + '.TargetEntityType'
+# let's leave this as a synonym to reduce tests' diff churn in CMs
 TARGET_HANDLE_TYPE = CHANNEL + '.TargetEntityType'
 TARGET_HANDLE = CHANNEL + '.TargetHandle'
 TARGET_ID = CHANNEL + '.TargetID'
@@ -590,3 +592,9 @@ TEST_DBUS_ACCOUNT_SERVICE_IFACE = TEST_DBUS_ACCOUNT_SERVICE
 
 TEST_DBUS_ACCOUNT_PLUGIN_PATH = TESTSLASH + "DBusAccountPlugin"
 TEST_DBUS_ACCOUNT_PLUGIN_IFACE = TESTDOT + "DBusAccountPlugin"
+
+class StorageRestrictionFlags(object):
+    CANNOT_SET_PARAMETERS = 1
+    CANNOT_SET_ENABLED = 2
+    CANNOT_SET_PRESENCE = 4
+    CANNOT_SET_SERVICE = 8
