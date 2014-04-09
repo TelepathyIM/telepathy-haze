@@ -27,11 +27,6 @@
 #include <telepathy-glib/telepathy-glib.h>
 #include <telepathy-glib/telepathy-glib-dbus.h>
 
-static const TpPresenceStatusOptionalArgumentSpec arg_specs[] = {
-    { "message", "s" },
-    { NULL, NULL }
-};
-
 typedef enum {
     HAZE_STATUS_AVAILABLE = 0,
     HAZE_STATUS_BUSY,
@@ -46,18 +41,14 @@ typedef enum {
 
 /* Indexed by HazeStatusIndex */
 static const TpPresenceStatusSpec statuses[] = {
-    { "available", TP_CONNECTION_PRESENCE_TYPE_AVAILABLE, TRUE,
-        arg_specs, NULL, NULL },
-    { "busy", TP_CONNECTION_PRESENCE_TYPE_BUSY, TRUE,
-        arg_specs, NULL, NULL },
-    { "away", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE,
-        arg_specs, NULL, NULL },
-    { "xa", TP_CONNECTION_PRESENCE_TYPE_EXTENDED_AWAY, TRUE,
-        arg_specs, NULL, NULL },
-    { "hidden", TP_CONNECTION_PRESENCE_TYPE_HIDDEN, TRUE, NULL, NULL, NULL },
-    { "offline", TP_CONNECTION_PRESENCE_TYPE_OFFLINE, FALSE, NULL, NULL, NULL },
-    { "unknown", TP_CONNECTION_PRESENCE_TYPE_UNKNOWN, FALSE, NULL, NULL, NULL },
-    { NULL, TP_CONNECTION_PRESENCE_TYPE_UNSET, FALSE, NULL, NULL, NULL }
+    { "available", TP_CONNECTION_PRESENCE_TYPE_AVAILABLE, TRUE, TRUE },
+    { "busy", TP_CONNECTION_PRESENCE_TYPE_BUSY, TRUE, TRUE },
+    { "away", TP_CONNECTION_PRESENCE_TYPE_AWAY, TRUE, TRUE },
+    { "xa", TP_CONNECTION_PRESENCE_TYPE_EXTENDED_AWAY, TRUE, TRUE },
+    { "hidden", TP_CONNECTION_PRESENCE_TYPE_HIDDEN, TRUE, FALSE },
+    { "offline", TP_CONNECTION_PRESENCE_TYPE_OFFLINE, FALSE, FALSE },
+    { "unknown", TP_CONNECTION_PRESENCE_TYPE_UNKNOWN, FALSE, FALSE },
+    { NULL }
 };
 
 /* Indexed by HazeStatusIndex */
@@ -86,11 +77,9 @@ _get_tp_status (PurpleStatus *p_status)
 {
     PurpleStatusType *type;
     PurpleStatusPrimitive prim;
-    GHashTable *arguments = g_hash_table_new_full (g_str_hash, g_str_equal,
-        NULL, (GDestroyNotify) tp_g_value_slice_free);
     guint status_ix = -1;
     const gchar *xhtml_message;
-    gchar *message;
+    gchar *message = NULL;
     TpPresenceStatus *tp_status;
 
     if (p_status == NULL)
@@ -115,18 +104,12 @@ _get_tp_status (PurpleStatus *p_status)
         xhtml_message = purple_status_get_attr_string (p_status, "message");
         if (xhtml_message)
         {
-            GValue *message_v = g_slice_new0 (GValue);
-
             message = purple_markup_strip_html (xhtml_message);
-            g_value_init (message_v, G_TYPE_STRING);
-            g_value_set_string (message_v, message);
-            g_hash_table_insert (arguments, "message", message_v);
-            g_free (message);
         }
     }
 
-    tp_status = tp_presence_status_new (status_ix, arguments);
-    g_hash_table_destroy (arguments);
+    tp_status = tp_presence_status_new (status_ix, message);
+    g_free (message);
     return tp_status;
 }
 
@@ -281,9 +264,7 @@ _set_own_status (GObject *obj,
     if (status != NULL)
       {
         status_id = _get_purple_status_id (self, status->index);
-
-        if (status->optional_arguments != NULL)
-          message = tp_asv_get_string (status->optional_arguments, "message");
+        message = status->message;
       }
 
     if (status_id == NULL)
