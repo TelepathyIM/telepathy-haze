@@ -69,12 +69,6 @@ G_DEFINE_TYPE_WITH_CODE(HazeConnection,
         haze_connection_avatars_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1,
         haze_connection_contact_capabilities_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_LIST1,
-        tp_base_contact_list_mixin_list_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_GROUPS1,
-        tp_base_contact_list_mixin_groups_iface_init);
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_BLOCKING1,
-        tp_base_contact_list_mixin_blocking_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION1,
         haze_connection_mail_iface_init);
     );
@@ -900,8 +894,6 @@ haze_connection_class_init (HazeConnectionClass *klass)
     tp_dbus_properties_mixin_implement_interface (object_class,
         TP_IFACE_QUARK_CONNECTION_INTERFACE_MAIL_NOTIFICATION1,
         haze_connection_mail_properties_getter, NULL, mail_props);
-
-    tp_base_contact_list_mixin_class_init (base_class);
 
     haze_connection_presence_class_init (object_class);
     haze_connection_aliasing_class_init (object_class);
