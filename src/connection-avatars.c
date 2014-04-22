@@ -89,9 +89,8 @@ static TpDBusPropertiesMixinPropImpl props[] = {
       { "SupportedAvatarMIMETypes", GINT_TO_POINTER (DP_TYPES), NULL },
       { NULL }
 };
-TpDBusPropertiesMixinPropImpl *haze_connection_avatars_properties = props;
 
-void
+static void
 haze_connection_avatars_properties_getter (GObject *object,
                                            GQuark interface,
                                            GQuark name,
@@ -511,6 +510,11 @@ haze_connection_avatars_class_init (GObjectClass *object_class)
 
     purple_signal_connect (blist_handle, "buddy-icon-changed", object_class,
         PURPLE_CALLBACK (buddy_icon_changed_cb), NULL);
+
+    tp_dbus_properties_mixin_implement_interface (object_class,
+        TP_IFACE_QUARK_CONNECTION_INTERFACE_AVATARS1,
+        haze_connection_avatars_properties_getter, NULL,
+        props);
 }
 
 gboolean

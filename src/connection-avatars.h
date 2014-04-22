@@ -32,10 +32,6 @@
 void haze_connection_avatars_iface_init (gpointer g_iface, gpointer iface_data);
 void haze_connection_avatars_class_init (GObjectClass *object_class);
 
-extern TpDBusPropertiesMixinPropImpl *haze_connection_avatars_properties;
-void haze_connection_avatars_properties_getter (GObject *object,
-    GQuark interface, GQuark name, GValue *value, gpointer getter_data);
-
 void haze_connection_get_icon_spec_requirements (PurpleBuddyIconSpec *icon_spec,
     GStrv *mime_types,
     guint *min_height,

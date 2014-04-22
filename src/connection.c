@@ -848,22 +848,6 @@ haze_connection_class_init (HazeConnectionClass *klass)
         { "MailAddress", NULL, NULL },
         { NULL }
     };
-    static TpDBusPropertiesMixinIfaceImpl prop_interfaces[] = {
-        { TP_IFACE_CONNECTION_INTERFACE_ALIASING1,
-            haze_connection_aliasing_properties_getter,
-            NULL,
-            NULL },     /* initialized a bit later */
-        { TP_IFACE_CONNECTION_INTERFACE_AVATARS1,
-            haze_connection_avatars_properties_getter,
-            NULL,
-            NULL },     /* initialized a bit later */
-        { TP_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION1,
-            haze_connection_mail_properties_getter,
-            NULL,
-            mail_props,
-        },
-        { NULL }
-    };
 
     DEBUG ("Initializing (HazeConnectionClass *)%p", klass);
 
@@ -912,11 +896,11 @@ haze_connection_class_init (HazeConnectionClass *klass)
         G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property (object_class, PROP_PRPL_INFO, param_spec);
 
-    prop_interfaces[0].props = haze_connection_aliasing_properties;
-    prop_interfaces[1].props = haze_connection_avatars_properties;
-    klass->properties_class.interfaces = prop_interfaces;
-    tp_dbus_properties_mixin_class_init (object_class,
-        G_STRUCT_OFFSET (HazeConnectionClass, properties_class));
+
+    tp_dbus_properties_mixin_class_init (object_class, 0);
+    tp_dbus_properties_mixin_implement_interface (object_class,
+        TP_IFACE_QUARK_CONNECTION_INTERFACE_MAIL_NOTIFICATION1,
+        haze_connection_mail_properties_getter, NULL, mail_props);
 
     tp_base_contact_list_mixin_class_init (base_class);
 

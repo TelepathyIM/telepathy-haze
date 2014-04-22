@@ -48,9 +48,8 @@ static TpDBusPropertiesMixinPropImpl props[] = {
       { "AliasFlags", GINT_TO_POINTER (DP_FLAGS), NULL },
       { NULL }
 };
-TpDBusPropertiesMixinPropImpl *haze_connection_aliasing_properties = props;
 
-void
+static void
 haze_connection_aliasing_properties_getter (GObject *object,
     GQuark interface,
     GQuark name,
@@ -351,6 +350,11 @@ haze_connection_aliasing_class_init (GObjectClass *object_class)
 
     purple_signal_connect (blist_handle, "blist-node-aliased", object_class,
         PURPLE_CALLBACK (blist_node_aliased_cb), NULL);
+
+    tp_dbus_properties_mixin_implement_interface (object_class,
+        TP_IFACE_QUARK_CONNECTION_INTERFACE_ALIASING1,
+        haze_connection_aliasing_properties_getter, NULL,
+        props);
 }
 
 gboolean
