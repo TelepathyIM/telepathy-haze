@@ -1309,7 +1309,8 @@ can_block (TpBaseContactList *cl)
 {
   HazeContactList *self = HAZE_CONTACT_LIST (cl);
 
-  return (self->priv->conn->account->gc != NULL &&
+  return (self->priv->conn->account != NULL &&
+      self->priv->conn->account->gc != NULL &&
       HAZE_CONNECTION_GET_PRPL_INFO (self->priv->conn)->add_deny != NULL);
 }
 
