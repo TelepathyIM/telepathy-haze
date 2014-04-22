@@ -529,6 +529,7 @@ haze_connection_avatars_fill_contact_attributes (HazeConnection *self,
 
         tp_contact_attribute_map_take_sliced_gvalue (attributes, handle,
             TP_TOKEN_CONNECTION_INTERFACE_AVATARS1_TOKEN, value);
+        g_free (token);
         return TRUE;
     }
 
