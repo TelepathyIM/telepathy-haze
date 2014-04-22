@@ -806,7 +806,7 @@ static void
 haze_connection_fill_contact_attributes (TpBaseConnection *base,
     const gchar *dbus_interface,
     TpHandle handle,
-    TpContactAttributeMap *attributes)
+    GVariantDict *attributes)
 {
   HazeConnection *self = HAZE_CONNECTION (base);
 

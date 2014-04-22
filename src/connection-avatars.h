@@ -46,6 +46,6 @@ gboolean haze_connection_avatars_fill_contact_attributes (
     HazeConnection *self,
     const gchar *dbus_interface,
     TpHandle handle,
-    TpContactAttributeMap *attributes);
+    GVariantDict *attributes);
 
 #endif

@@ -521,18 +521,16 @@ gboolean
 haze_connection_avatars_fill_contact_attributes (HazeConnection *self,
     const gchar *dbus_interface,
     TpHandle handle,
-    TpContactAttributeMap *attributes)
+    GVariantDict *attributes)
 {
     if (!tp_strdiff (dbus_interface, TP_IFACE_CONNECTION_INTERFACE_AVATARS1))
     {
         gchar *token = get_handle_token (self, handle);
-        GValue *value = tp_g_value_slice_new (G_TYPE_STRING);
 
         g_assert (token != NULL);
-        g_value_set_string (value, token);
-
-        tp_contact_attribute_map_take_sliced_gvalue (attributes, handle,
-            TP_TOKEN_CONNECTION_INTERFACE_AVATARS1_TOKEN, value);
+        g_variant_dict_insert_value (attributes,
+            TP_TOKEN_CONNECTION_INTERFACE_AVATARS1_TOKEN,
+            g_variant_new_string (token));
         g_free (token);
         return TRUE;
     }

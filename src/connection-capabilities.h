@@ -34,6 +34,6 @@ gboolean haze_connection_contact_capabilities_fill_contact_attributes (
     HazeConnection *self,
     const gchar *dbus_interface,
     TpHandle handle,
-    TpContactAttributeMap *attributes);
+    GVariantDict *attributes);
 
 #endif
