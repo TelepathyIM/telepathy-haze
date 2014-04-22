@@ -24,14 +24,16 @@ def test(q, bus, conn, stream):
         protocol_iface = dbus.Interface(protocol, cs.PROTOCOL)
         protocol_props = dbus.Interface(protocol, cs.PROPERTIES_IFACE)
         flat_props = protocol_props.GetAll(cs.PROTOCOL)
-        protocol_avatar_props = protocol_props.GetAll(cs.PROTOCOL_IFACE_AVATARS)
 
         # Protocol is supposed to implement Interface.Avatars iff the
         # connection implements Avatars as well.
         if cs.CONN_IFACE_AVATARS in flat_props['ConnectionInterfaces']:
             assertContains(cs.PROTOCOL_IFACE_AVATARS, props[cs.PROTOCOL + '.Interfaces'])
+            protocol_avatar_props = (
+                protocol_props.GetAll(cs.PROTOCOL_IFACE_AVATARS))
         else:
             assertDoesNotContain(cs.PROTOCOL_IFACE_AVATARS, props[cs.PROTOCOL + '.Interfaces'])
+            protocol_avatar_props = None
 
         parameters = props[cs.PROTOCOL + '.Parameters']
         assertEquals(parameters, flat_props['Parameters'])
@@ -104,14 +106,7 @@ def test(q, bus, conn, stream):
             assertDoesNotContain(cs.CONN_IFACE_MAIL_NOTIFICATION, flat_props['ConnectionInterfaces'])
 
             # Avatar not supported
-            assertEquals(0, protocol_avatar_props['MaximumAvatarBytes'])
-            assertEquals(0, protocol_avatar_props['MaximumAvatarHeight'])
-            assertEquals(0, protocol_avatar_props['MaximumAvatarWidth'])
-            assertEquals(0, protocol_avatar_props['MinimumAvatarHeight'])
-            assertEquals(0, protocol_avatar_props['MinimumAvatarWidth'])
-            assertEquals(0, protocol_avatar_props['RecommendedAvatarHeight'])
-            assertEquals(0, protocol_avatar_props['RecommendedAvatarWidth'])
-            assertEquals([], protocol_avatar_props['SupportedAvatarMIMETypes'])
+            assertEquals(None, protocol_avatar_props)
         elif name == 'myspace':
             assertEquals('x-myspace', flat_props['VCardField'])
             assertEquals('im-myspace', flat_props['Icon'])
