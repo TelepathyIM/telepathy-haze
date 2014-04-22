@@ -36,8 +36,6 @@ typedef struct _HazeIMChannelClass HazeIMChannelClass;
 
 struct _HazeIMChannelClass {
     TpBaseChannelClass parent_class;
-
-    TpDBusPropertiesMixinClass properties_class;
 };
 
 struct _HazeIMChannel {
