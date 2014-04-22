@@ -105,21 +105,9 @@ add_always_present_connection_interfaces (GPtrArray *interfaces)
     g_ptr_array_add (interfaces, (gchar *) *iter);
 }
 
-static GPtrArray *
-haze_connection_get_interfaces_always_present (TpBaseConnection *base)
-{
-  GPtrArray *interfaces;
-
-  interfaces = TP_BASE_CONNECTION_CLASS (
-      haze_connection_parent_class)->get_interfaces_always_present (base);
-
-  add_always_present_connection_interfaces (interfaces);
-
-  return interfaces;
-}
-
 static void add_optional_connection_interfaces (GPtrArray *ifaces,
-        PurplePluginProtocolInfo *prpl_info);
+    GDBusObjectSkeleton *skel,
+    PurplePluginProtocolInfo *prpl_info);
 
 /* Returns a (transfer container) not NULL terminated of (const gchar *)
  * interface names. */
@@ -130,7 +118,7 @@ haze_connection_dup_implemented_interfaces (PurplePluginProtocolInfo *prpl_info)
 
     ifaces = g_ptr_array_new ();
     add_always_present_connection_interfaces (ifaces);
-    add_optional_connection_interfaces (ifaces, prpl_info);
+    add_optional_connection_interfaces (ifaces, NULL, prpl_info);
 
     return ifaces;
 }
@@ -181,37 +169,67 @@ protocol_info_supports_mail_notification (PurplePluginProtocolInfo *prpl_info)
 }
 
 static void
+object_skeleton_take_interface (GDBusObjectSkeleton *skel,
+    GDBusInterfaceSkeleton *iface)
+{
+  g_dbus_object_skeleton_add_interface (skel, iface);
+  g_object_unref (iface);
+}
+
+static void
+object_skeleton_take_svc_interface (GDBusObjectSkeleton *skel,
+    GType type)
+{
+  object_skeleton_take_interface (skel,
+      tp_svc_interface_skeleton_new (skel, type));
+}
+
+static void
 add_optional_connection_interfaces (GPtrArray *ifaces,
-        PurplePluginProtocolInfo *prpl_info)
+    GDBusObjectSkeleton *skel,
+    PurplePluginProtocolInfo *prpl_info)
 {
     if (haze_connection_protocol_info_supports_avatar (prpl_info))
-        g_ptr_array_add (ifaces,
-                TP_IFACE_CONNECTION_INTERFACE_AVATARS1);
+    {
+        if (ifaces != NULL)
+            g_ptr_array_add (ifaces, TP_IFACE_CONNECTION_INTERFACE_AVATARS1);
+
+        if (skel != NULL)
+            object_skeleton_take_svc_interface (skel,
+                TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS1);
+    }
 
     if (protocol_info_supports_blocking (prpl_info))
-        g_ptr_array_add (ifaces,
+    {
+        if (ifaces != NULL)
+            g_ptr_array_add (ifaces,
                 TP_IFACE_CONNECTION_INTERFACE_CONTACT_BLOCKING1);
 
+        /* TpBaseContactList deals with exporting the interface so don't
+         * try to duplicate that here */
+    }
+
     if (protocol_info_supports_mail_notification (prpl_info))
-        g_ptr_array_add (ifaces,
+    {
+        if (ifaces != NULL)
+            g_ptr_array_add (ifaces,
                 TP_IFACE_CONNECTION_INTERFACE_MAIL_NOTIFICATION1);
+
+        if (skel != NULL)
+            object_skeleton_take_svc_interface (skel,
+                TP_TYPE_SVC_CONNECTION_INTERFACE_MAIL_NOTIFICATION1);
+    }
 }
 
 static void
 connected_cb (PurpleConnection *pc)
 {
     TpBaseConnection *base_conn = PC_GET_BASE_CONN (pc);
+    GDBusObjectSkeleton *skel = G_DBUS_OBJECT_SKELETON (base_conn);
     HazeConnection *conn = HAZE_CONNECTION (base_conn);
     PurplePluginProtocolInfo *prpl_info = HAZE_CONNECTION_GET_PRPL_INFO (conn);
-    GPtrArray *ifaces;
 
-    ifaces = g_ptr_array_new ();
-    add_optional_connection_interfaces (ifaces, prpl_info);
-    g_ptr_array_add (ifaces, NULL);
-
-    tp_base_connection_add_interfaces (base_conn,
-            (const gchar **) ifaces->pdata);
-    g_ptr_array_unref (ifaces);
+    add_optional_connection_interfaces (NULL, skel, prpl_info);
 
     tp_base_contact_list_set_list_received (
         (TpBaseContactList *) conn->contact_list);
@@ -758,6 +776,24 @@ haze_connection_constructor (GType type,
 }
 
 static void
+haze_connection_constructed (GObject *object)
+{
+  GDBusObjectSkeleton *skel = G_DBUS_OBJECT_SKELETON (object);
+
+  G_OBJECT_CLASS (haze_connection_parent_class)->constructed (object);
+
+  /* TODO: This is a lie.  Not all protocols supported by libpurple
+   *       actually have the concept of a user-settable alias, but
+   *       there's no way for the UI to know (yet).
+   */
+  object_skeleton_take_svc_interface (skel,
+      TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING1);
+
+  object_skeleton_take_svc_interface (skel,
+      TP_TYPE_SVC_CONNECTION_INTERFACE_CONTACT_CAPABILITIES1);
+}
+
+static void
 haze_connection_dispose (GObject *object)
 {
     HazeConnection *self = HAZE_CONNECTION(object);
@@ -848,6 +884,7 @@ haze_connection_class_init (HazeConnectionClass *klass)
     object_class->get_property = haze_connection_get_property;
     object_class->set_property = haze_connection_set_property;
     object_class->constructor = haze_connection_constructor;
+    object_class->constructed = haze_connection_constructed;
     object_class->dispose = haze_connection_dispose;
     object_class->finalize = haze_connection_finalize;
 
@@ -858,8 +895,6 @@ haze_connection_class_init (HazeConnectionClass *klass)
         haze_connection_get_unique_connection_name;
     base_class->start_connecting = _haze_connection_start_connecting;
     base_class->shut_down = _haze_connection_shut_down;
-    base_class->get_interfaces_always_present =
-      haze_connection_get_interfaces_always_present;
     base_class->fill_contact_attributes =
       haze_connection_fill_contact_attributes;
 
