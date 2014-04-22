@@ -61,8 +61,8 @@ enum
 G_DEFINE_TYPE_WITH_CODE(HazeConnection,
     haze_connection,
     TP_TYPE_BASE_CONNECTION,
-    G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_PRESENCE1,
-        tp_presence_mixin_iface_init);
+    G_IMPLEMENT_INTERFACE (TP_TYPE_PRESENCE_MIXIN,
+      haze_connection_presence_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_ALIASING1,
         haze_connection_aliasing_iface_init);
     G_IMPLEMENT_INTERFACE (TP_TYPE_SVC_CONNECTION_INTERFACE_AVATARS1,
@@ -756,7 +756,7 @@ haze_connection_constructor (GType type,
     self->contact_list = HAZE_CONTACT_LIST (
         g_object_new (HAZE_TYPE_CONTACT_LIST, "connection", self, NULL));
 
-    haze_connection_presence_init (object);
+    tp_presence_mixin_init (TP_PRESENCE_MIXIN (self));
     haze_connection_mail_init (object);
 
     return (GObject *)self;
@@ -786,8 +786,6 @@ haze_connection_finalize (GObject *object)
 {
     HazeConnection *self = HAZE_CONNECTION (object);
     HazeConnectionPrivate *priv = self->priv;
-
-    tp_presence_mixin_finalize (object);
 
     g_strfreev (self->acceptable_avatar_mime_types);
     g_free (priv->username);
@@ -827,7 +825,7 @@ haze_connection_fill_contact_attributes (TpBaseConnection *base,
         dbus_interface, handle, attributes))
     return;
 
-  if (tp_presence_mixin_fill_contact_attributes ((GObject *) self,
+  if (tp_presence_mixin_fill_contact_attributes (TP_PRESENCE_MIXIN (self),
         dbus_interface, handle, attributes))
     return;
 

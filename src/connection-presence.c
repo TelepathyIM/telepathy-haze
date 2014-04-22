@@ -135,10 +135,10 @@ _get_purple_status_id (HazeConnection *self,
 }
 
 static gboolean
-_status_available (GObject *obj,
+_status_available (TpPresenceMixin *mixin,
                    guint index)
 {
-    HazeConnection *self = HAZE_CONNECTION (obj);
+    HazeConnection *self = HAZE_CONNECTION (mixin);
     /* FIXME: (a) should we be able to set offline on ourselves;
      *        (b) deal with some protocols not having status messages.
      */
@@ -147,11 +147,11 @@ _status_available (GObject *obj,
 
 
 static TpPresenceStatus *
-_get_contact_status (GObject *obj,
+_get_contact_status (TpPresenceMixin *mixin,
     TpHandle handle)
 {
-    HazeConnection *conn = HAZE_CONNECTION (obj);
-    TpBaseConnection *base_conn = TP_BASE_CONNECTION (obj);
+    HazeConnection *conn = HAZE_CONNECTION (mixin);
+    TpBaseConnection *base_conn = TP_BASE_CONNECTION (mixin);
     TpHandleRepoIface *handle_repo =
         tp_base_connection_get_handles (base_conn, TP_ENTITY_TYPE_CONTACT);
     PurpleStatus *p_status;
@@ -203,7 +203,8 @@ haze_connection_presence_account_status_changed (PurpleAccount *account,
         base_conn = ACCOUNT_GET_TP_BASE_CONNECTION (account);
         tp_status = _get_tp_status (status);
 
-        tp_presence_mixin_emit_one_presence_update (G_OBJECT (base_conn),
+        tp_presence_mixin_emit_one_presence_update (
+            TP_PRESENCE_MIXIN (base_conn),
             tp_base_connection_get_self_handle (base_conn), tp_status);
     }
 }
@@ -227,8 +228,8 @@ update_status (PurpleBuddy *buddy,
 
     tp_status = _get_tp_status (status);
 
-    tp_presence_mixin_emit_one_presence_update (G_OBJECT (conn), handle,
-        tp_status);
+    tp_presence_mixin_emit_one_presence_update (TP_PRESENCE_MIXIN (conn),
+        handle, tp_status);
 }
 
 static void
@@ -252,11 +253,11 @@ signed_on_off_cb (PurpleBuddy *buddy,
 }
 
 static gboolean
-_set_own_status (GObject *obj,
+_set_own_status (TpPresenceMixin *mixin,
                  const TpPresenceStatus *status,
                  GError **error)
 {
-    HazeConnection *self = HAZE_CONNECTION (obj);
+    HazeConnection *self = HAZE_CONNECTION (mixin);
     const char *status_id = NULL;
     const gchar *message = NULL;
     GList *attrs = NULL;
@@ -298,17 +299,13 @@ haze_connection_presence_class_init (GObjectClass *object_class)
         PURPLE_CALLBACK (signed_on_off_cb), GINT_TO_POINTER (TRUE));
     purple_signal_connect (blist_handle, "buddy-signed-off", object_class,
         PURPLE_CALLBACK (signed_on_off_cb), GINT_TO_POINTER (FALSE));
-
-    tp_presence_mixin_class_init (object_class,
-        G_STRUCT_OFFSET (HazeConnectionClass, presence_class),
-        _status_available, _get_contact_status, _set_own_status, statuses);
-
-    tp_presence_mixin_init_dbus_properties (object_class);
 }
 
 void
-haze_connection_presence_init (GObject *object)
+haze_connection_presence_iface_init (TpPresenceMixinInterface *iface)
 {
-    tp_presence_mixin_init (object, G_STRUCT_OFFSET (HazeConnection,
-        presence));
+  iface->status_available = _status_available;
+  iface->get_contact_status = _get_contact_status;
+  iface->set_own_status = _set_own_status;
+  iface->statuses = statuses;
 }
