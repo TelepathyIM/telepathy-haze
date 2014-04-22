@@ -232,11 +232,9 @@ static void
 im_channel_closed_cb (HazeIMChannel *chan, gpointer user_data)
 {
     HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (user_data);
+    TpBaseChannel *base = TP_BASE_CHANNEL (chan);
     TpHandle contact_handle;
     guint really_destroyed;
-
-    tp_channel_manager_emit_channel_closed_for_object (
-        TP_CHANNEL_MANAGER (self), TP_EXPORTABLE_CHANNEL (chan));
 
     if (self->priv->channels)
     {
@@ -250,13 +248,17 @@ im_channel_closed_cb (HazeIMChannel *chan, gpointer user_data)
             DEBUG ("removing channel with handle %u", contact_handle);
             g_hash_table_remove (self->priv->channels,
                 GUINT_TO_POINTER (contact_handle));
+            tp_channel_manager_emit_channel_closed_for_object (
+                TP_CHANNEL_MANAGER (self), base);
         }
         else
         {
             DEBUG ("reopening channel with handle %u due to pending messages",
                 contact_handle);
+            tp_channel_manager_emit_channel_closed_for_object (
+                TP_CHANNEL_MANAGER (self), base);
             tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (self),
-                (TpExportableChannel *) chan, NULL);
+                base, NULL);
         }
     }
 }
@@ -296,7 +298,7 @@ new_im_channel (HazeImChannelFactory *self,
         requests = g_slist_prepend (requests, request_token);
 
     tp_channel_manager_emit_new_channel (TP_CHANNEL_MANAGER (self),
-        TP_EXPORTABLE_CHANNEL (chan), requests);
+        TP_BASE_CHANNEL (chan), requests);
     g_slist_free (requests);
 
     return chan;
@@ -351,7 +353,7 @@ close_all (HazeImChannelFactory *self)
 
 struct _ForeachData
 {
-    TpExportableChannelFunc foreach;
+    TpBaseChannelFunc foreach;
     gpointer user_data;
 };
 
@@ -359,14 +361,14 @@ static void
 _foreach_slave (gpointer key, gpointer value, gpointer user_data)
 {
     struct _ForeachData *data = (struct _ForeachData *) user_data;
-    TpExportableChannel *chan = TP_EXPORTABLE_CHANNEL (value);
+    TpBaseChannel *chan = TP_BASE_CHANNEL (value);
 
     data->foreach (chan, data->user_data);
 }
 
 static void
 haze_im_channel_factory_foreach (TpChannelManager *iface,
-                                 TpExportableChannelFunc foreach,
+                                 TpBaseChannelFunc foreach,
                                  gpointer user_data)
 {
     HazeImChannelFactory *self = HAZE_IM_CHANNEL_FACTORY (iface);
@@ -587,7 +589,7 @@ haze_im_channel_factory_request (HazeImChannelFactory *self,
         {
             tp_channel_manager_emit_request_already_satisfied (
                 TP_CHANNEL_MANAGER (self), request,
-                TP_EXPORTABLE_CHANNEL (chan));
+                TP_BASE_CHANNEL (chan));
         }
     }
 
