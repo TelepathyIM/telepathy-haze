@@ -1,27 +1,34 @@
-from servicetest import call_async, EventPattern
+from dbus import (DBusException)
+
+from servicetest import (call_async, EventPattern, assertContains)
 from hazetest import exec_test
 import constants as cs
 
 def test(q, bus, conn, stream):
-    props = conn.GetAll(cs.CONN_IFACE_AVATARS,
+    try:
+        props = conn.GetAll(cs.CONN_IFACE_AVATARS,
             dbus_interface=cs.PROPERTIES_IFACE)
-    types = props['SupportedAvatarMIMETypes']
-    minw = props['MinimumAvatarWidth']
-    minh = props['MinimumAvatarHeight']
-    maxw = props['MaximumAvatarWidth']
-    maxh = props['MaximumAvatarHeight']
-    maxb = props['MaximumAvatarBytes']
-    rech = props['RecommendedAvatarHeight']
-    recw = props['RecommendedAvatarWidth']
+    except DBusException, e:
+        assertContains(e.get_dbus_name(),
+                ['org.freedesktop.DBus.Error.InvalidArgs'])
+    else:
+        types = props['SupportedAvatarMIMETypes']
+        minw = props['MinimumAvatarWidth']
+        minh = props['MinimumAvatarHeight']
+        maxw = props['MaximumAvatarWidth']
+        maxh = props['MaximumAvatarHeight']
+        maxb = props['MaximumAvatarBytes']
+        rech = props['RecommendedAvatarHeight']
+        recw = props['RecommendedAvatarWidth']
 
-    assert types == [], types
-    assert minw == 0, minw
-    assert minh == 0, minh
-    assert maxw == 0, maxw
-    assert maxh == 0, maxh
-    assert maxb == 0, maxb
-    assert recw == 0, recw
-    assert rech == 0, rech
+        assert types == [], types
+        assert minw == 0, minw
+        assert minh == 0, minh
+        assert maxw == 0, maxw
+        assert maxh == 0, maxh
+        assert maxb == 0, maxb
+        assert recw == 0, recw
+        assert rech == 0, rech
 
     conn.Connect()
     q.expect('dbus-signal', signal='StatusChanged',
