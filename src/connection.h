@@ -101,6 +101,9 @@ void haze_connection_request_password (PurpleAccount *account,
                                        gpointer user_data);
 void haze_connection_cancel_password_request (PurpleAccount *account);
 
+gboolean haze_connection_protocol_info_supports_avatar (
+    PurplePluginProtocolInfo *prpl_info);
+
 G_END_DECLS
 
 #endif /* #ifndef __HAZE_CONNECTION_H__*/

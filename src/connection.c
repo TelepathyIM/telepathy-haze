@@ -167,8 +167,9 @@ struct _HazeConnectionPrivate
 #define PC_GET_BASE_CONN(pc) \
     (ACCOUNT_GET_TP_BASE_CONNECTION (purple_connection_get_account (pc)))
 
-static gboolean
-protocol_info_supports_avatar (PurplePluginProtocolInfo *prpl_info)
+gboolean
+haze_connection_protocol_info_supports_avatar (
+    PurplePluginProtocolInfo *prpl_info)
 {
     return (prpl_info->icon_spec.format != NULL);
 }
@@ -189,7 +190,7 @@ static void
 add_optional_connection_interfaces (GPtrArray *ifaces,
         PurplePluginProtocolInfo *prpl_info)
 {
-    if (protocol_info_supports_avatar (prpl_info))
+    if (haze_connection_protocol_info_supports_avatar (prpl_info))
         g_ptr_array_add (ifaces,
                 TP_IFACE_CONNECTION_INTERFACE_AVATARS1);
 

@@ -633,6 +633,23 @@ haze_protocol_init (HazeProtocol *self)
       HazeProtocolPrivate);
 }
 
+static void
+haze_protocol_constructed (GObject *object)
+{
+  void (*constructed) (GObject *) =
+    G_OBJECT_CLASS (haze_protocol_parent_class)->constructed;
+  HazeProtocol *self = HAZE_PROTOCOL (object);
+
+  if (constructed != NULL)
+    constructed (object);
+
+  /* Knock out the Avatars1 interface if we shouldn't support it. */
+  if (!haze_connection_protocol_info_supports_avatar (self->priv->prpl_info))
+    g_dbus_object_skeleton_remove_interface_by_name (
+        G_DBUS_OBJECT_SKELETON (self),
+        TP_IFACE_CONNECTION_INTERFACE_AVATARS1);
+}
+
 static gchar *
 haze_protocol_get_username (GHashTable *params,
     PurplePluginProtocolInfo *prpl_info,
@@ -901,34 +918,6 @@ haze_protocol_identify_account (TpBaseProtocol *base,
   return ret;
 }
 
-static GPtrArray *
-haze_protocol_get_interfaces_array (TpBaseProtocol *base)
-{
-  HazeProtocol *self = HAZE_PROTOCOL (base);
-  GPtrArray *interfaces;
-  GPtrArray *tmp;
-  guint i;
-
-  interfaces = TP_BASE_PROTOCOL_CLASS (
-      haze_protocol_parent_class)->get_interfaces_array (base);
-
-  /* Claim to implement Avatars only if we support avatars for this
-   * protocol. */
-  tmp = haze_connection_dup_implemented_interfaces (self->priv->prpl_info);
-  for (i = 0; i < tmp->len; i++)
-    {
-      if (!tp_strdiff (g_ptr_array_index (tmp, i),
-            TP_IFACE_CONNECTION_INTERFACE_AVATARS1))
-        {
-          g_ptr_array_add (interfaces, TP_IFACE_PROTOCOL_INTERFACE_AVATARS1);
-          break;
-        }
-    }
-  g_ptr_array_unref (tmp);
-
-  return interfaces;
-}
-
 static void
 haze_protocol_get_connection_details (TpBaseProtocol *base,
     GStrv *connection_interfaces,
@@ -1059,7 +1048,6 @@ haze_protocol_class_init (HazeProtocolClass *cls)
   base_class->new_connection = haze_protocol_new_connection;
   base_class->normalize_contact = haze_protocol_normalize_contact;
   base_class->identify_account = haze_protocol_identify_account;
-  base_class->get_interfaces_array = haze_protocol_get_interfaces_array;
   base_class->get_connection_details = haze_protocol_get_connection_details;
   base_class->dup_authentication_types =
     haze_protocol_dup_authentication_types;
@@ -1068,6 +1056,7 @@ haze_protocol_class_init (HazeProtocolClass *cls)
   g_type_class_add_private (cls, sizeof (HazeProtocolPrivate));
   object_class->get_property = haze_protocol_get_property;
   object_class->set_property = haze_protocol_set_property;
+  object_class->constructed = haze_protocol_constructed;
   object_class->finalize = haze_protocol_finalize;
 
   param_spec = g_param_spec_pointer ("plugin", "PurplePlugin",
