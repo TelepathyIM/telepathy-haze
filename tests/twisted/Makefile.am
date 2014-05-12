@@ -39,7 +39,7 @@ check-twisted: $(BUILT_SOURCES)
 	CHECK_TWISTED_UNINSTALLED=1 \
 	  HAZE_ABS_TOP_SRCDIR=@abs_top_srcdir@ \
 	  HAZE_ABS_TOP_BUILDDIR=@abs_top_builddir@ \
-	  HAZE_TEST_SLEEP=$$haze_test_sleep \
+	  CHECK_TWISTED_SLEEP=$$haze_test_sleep \
 	  ./run-test.sh "$(TWISTED_TESTS)"
 
 dist_test_data = \
