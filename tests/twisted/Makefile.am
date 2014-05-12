@@ -23,8 +23,9 @@ TWISTED_TESTS = \
 	text/test-text-no-body.py \
 	text/test-text.py
 
-
+if WANT_TWISTED_TESTS
 check-local: check-twisted
+endif
 
 CHECK_TWISTED_SLEEP=0
 
@@ -41,30 +42,49 @@ check-twisted: $(BUILT_SOURCES)
 	  HAZE_TEST_SLEEP=$$haze_test_sleep \
 	  ./run-test.sh "$(TWISTED_TESTS)"
 
-EXTRA_DIST = \
+dist_test_data = \
 	$(TWISTED_TESTS) \
 	constants.py \
 	gabbletest.py \
 	hazetest.py \
-	run-test.sh.in \
 	sasl/saslutil.py \
 	servicetest.py \
-	ns.py
+	ns.py \
+	$(NULL)
+
+EXTRA_DIST = \
+	$(dist_test_data) \
+	run-test.sh.in \
+	$(NULL)
 
 haze-twisted-tests.list: Makefile
 	$(AM_V_GEN)echo $(TWISTED_TESTS) > $@
 
-BUILT_SOURCES = \
-       haze-twisted-tests.list \
-       run-test.sh \
-       $(NULL)
+built_test_data = \
+	haze-twisted-tests.list \
+	$(NULL)
 
-# We don't really use hazetestsdir yet - we only support uninstalled testing
-# so far - but I'm substituting it to keep the script more similar to Gabble's.
-# ${pkglibexecdir}/tests is what GNOME's InstalledTests goal recommends.
+built_test_scripts = \
+		run-test.sh \
+		$(NULL)
+
+BUILT_SOURCES = \
+	$(built_test_data) \
+	$(built_test_scripts) \
+	$(NULL)
+
+testsdir = ${datadir}/telepathy-haze-1-tests
+twistedtestsdir = ${testsdir}/twisted
+
+if ENABLE_INSTALLED_TESTS
+nobase_dist_twistedtests_DATA = $(dist_test_data)
+twistedtests_DATA = $(built_test_data)
+twistedtests_SCRIPTS = $(built_test_scripts)
+endif
+
 run-test.sh: run-test.sh.in Makefile
 	$(AM_V_GEN)sed \
-			-e 's![@]hazetestsdir[@]!${pkglibexecdir}/tests!' \
+			-e 's![@]hazetestsdir[@]!${testsdir}!' \
 			-e 's![@]TEST_PYTHON[@]!$(TEST_PYTHON)!' \
 			< $< > $@.tmp && \
 		chmod +x $@.tmp && \
