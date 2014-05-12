@@ -57,11 +57,11 @@ EXTRA_DIST = \
 	run-test.sh.in \
 	$(NULL)
 
-haze-twisted-tests.list: Makefile
+twisted-tests.list: Makefile
 	$(AM_V_GEN)echo $(TWISTED_TESTS) > $@
 
 built_test_data = \
-	haze-twisted-tests.list \
+	twisted-tests.list \
 	$(NULL)
 
 built_test_scripts = \
