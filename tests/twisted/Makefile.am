@@ -84,7 +84,7 @@ endif
 
 run-test.sh: run-test.sh.in Makefile
 	$(AM_V_GEN)sed \
-			-e 's![@]hazetestsdir[@]!${testsdir}!' \
+			-e 's![@]twistedtestsdir[@]!${twistedtestsdir}!' \
 			-e 's![@]TEST_PYTHON[@]!$(TEST_PYTHON)!' \
 			< $< > $@.tmp && \
 		chmod +x $@.tmp && \
