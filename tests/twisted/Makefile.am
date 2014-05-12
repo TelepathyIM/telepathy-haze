@@ -37,8 +37,8 @@ check-twisted: $(BUILT_SOURCES)
 		haze_test_sleep=--sleep=$(CHECK_TWISTED_SLEEP); \
 	fi; \
 	CHECK_TWISTED_UNINSTALLED=1 \
-	  HAZE_ABS_TOP_SRCDIR=@abs_top_srcdir@ \
-	  HAZE_ABS_TOP_BUILDDIR=@abs_top_builddir@ \
+	  G_TEST_SRCDIR=@abs_srcdir@ \
+	  G_TEST_BUILDDIR=@abs_builddir@ \
 	  CHECK_TWISTED_SLEEP=$$haze_test_sleep \
 	  ./run-test.sh "$(TWISTED_TESTS)"
 
