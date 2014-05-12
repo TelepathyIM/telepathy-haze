@@ -36,7 +36,7 @@ check-twisted: $(BUILT_SOURCES)
 	else \
 		haze_test_sleep=--sleep=$(CHECK_TWISTED_SLEEP); \
 	fi; \
-	HAZE_TEST_UNINSTALLED=1 \
+	CHECK_TWISTED_UNINSTALLED=1 \
 	  HAZE_ABS_TOP_SRCDIR=@abs_top_srcdir@ \
 	  HAZE_ABS_TOP_BUILDDIR=@abs_top_builddir@ \
 	  HAZE_TEST_SLEEP=$$haze_test_sleep \
