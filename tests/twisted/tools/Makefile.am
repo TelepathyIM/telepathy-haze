@@ -4,6 +4,7 @@
 servicedir = $(datadir)/dbus-1/services
 
 installed/%.conf: %.conf.in Makefile
+	@$(MKDIR_P) installed
 	$(AM_V_GEN)sed -e "s|[@]servicedir[@]|$(servicedir)|g" $< > $@
 
 # We don't use the full filename for the .in because > 99 character filenames
