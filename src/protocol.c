@@ -1002,7 +1002,7 @@ haze_protocol_dup_authentication_types (TpBaseProtocol *base)
   return g_strdupv ((GStrv) types);
 }
 
-static void
+static gboolean
 haze_protocol_get_avatar_details (TpBaseProtocol *base,
     GStrv *supported_mime_types,
     guint *min_height,
@@ -1029,12 +1029,14 @@ haze_protocol_get_avatar_details (TpBaseProtocol *base,
       *max_height = 0;
       *max_width = 0;
       *max_bytes = 0;
-      return;
+      return FALSE;
     }
 
   haze_connection_get_icon_spec_requirements (icon_spec, supported_mime_types,
       min_height, min_width, rec_height, rec_width, max_height, max_width,
       max_bytes);
+
+  return TRUE;
 }
 
 static void
