@@ -925,7 +925,6 @@ haze_connection_class_init (HazeConnectionClass *klass)
     g_object_class_install_property (object_class, PROP_PRPL_INFO, param_spec);
 
 
-    tp_dbus_properties_mixin_class_init (object_class, 0);
     tp_dbus_properties_mixin_implement_interface (object_class,
         TP_IFACE_QUARK_CONNECTION_INTERFACE_MAIL_NOTIFICATION1,
         haze_connection_mail_properties_getter, NULL, mail_props);
