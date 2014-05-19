@@ -1219,7 +1219,7 @@ haze_contact_list_mutable_groups_init (
 }
 
 static gboolean
-is_blocked (TpBaseContactList *cl,
+is_blocked (TpBlockableContactList *cl,
     TpHandle contact)
 {
   HazeContactList *self = HAZE_CONTACT_LIST (cl);
@@ -1241,7 +1241,7 @@ is_blocked (TpBaseContactList *cl,
 }
 
 static TpHandleSet *
-dup_blocked_contacts (TpBaseContactList *cl)
+dup_blocked_contacts (TpBlockableContactList *cl)
 {
   HazeContactList *self = HAZE_CONTACT_LIST (cl);
   PurpleAccount *account = self->priv->conn->account;
@@ -1286,31 +1286,31 @@ set_contacts_privacy (TpBaseContactList *cl,
 }
 
 static void
-block_contacts_async(TpBaseContactList *cl,
+block_contacts_async(TpBlockableContactList *cl,
     TpHandleSet *contacts,
     GAsyncReadyCallback callback,
     gpointer user_data)
 {
-  set_contacts_privacy (cl, contacts, TRUE);
+  set_contacts_privacy (TP_BASE_CONTACT_LIST (cl), contacts, TRUE);
 
   tp_simple_async_report_success_in_idle ((GObject *) cl, callback,
       user_data, block_contacts_async);
 }
 
 static void
-unblock_contacts_async(TpBaseContactList *cl,
+unblock_contacts_async(TpBlockableContactList *cl,
     TpHandleSet *contacts,
     GAsyncReadyCallback callback,
     gpointer user_data)
 {
-  set_contacts_privacy (cl, contacts, FALSE);
+  set_contacts_privacy (TP_BASE_CONTACT_LIST (cl), contacts, FALSE);
 
   tp_simple_async_report_success_in_idle ((GObject *) cl, callback,
       user_data, unblock_contacts_async);
 }
 
 static gboolean
-can_block (TpBaseContactList *cl)
+can_block (TpBlockableContactList *cl)
 {
   HazeContactList *self = HAZE_CONTACT_LIST (cl);
 
@@ -1352,8 +1352,8 @@ haze_contact_list_deny_changed (
     }
 
   set = tp_handle_set_new_containing (contact_repo, handle);
-  tp_base_contact_list_contact_blocking_changed (
-      TP_BASE_CONTACT_LIST (conn->contact_list),
+  tp_blockable_contact_list_contact_blocking_changed (
+      TP_BLOCKABLE_CONTACT_LIST (conn->contact_list),
       set);
   g_object_unref (set);
 }
