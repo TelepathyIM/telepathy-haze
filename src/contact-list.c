@@ -305,8 +305,8 @@ buddy_added_cb (PurpleBuddy *buddy, gpointer unused)
         (TpBaseContactList *) contact_list, handle);
 
     group_name = purple_group_get_name (purple_buddy_get_group (buddy));
-    tp_base_contact_list_one_contact_groups_changed (
-        (TpBaseContactList *) contact_list, handle, &group_name, 1, NULL, 0);
+    tp_contact_group_list_one_contact_groups_changed (
+        (TpContactGroupList *) contact_list, handle, &group_name, 1, NULL, 0);
 }
 
 static void
@@ -336,8 +336,8 @@ buddy_removed_cb (PurpleBuddy *buddy, gpointer unused)
     handle = tp_handle_ensure (contact_repo, buddy_name, NULL, NULL);
     group_name = purple_group_get_name (purple_buddy_get_group (buddy));
 
-    tp_base_contact_list_one_contact_groups_changed (
-        (TpBaseContactList *) contact_list, handle, NULL, 0, &group_name, 1);
+    tp_contact_group_list_one_contact_groups_changed (
+        (TpContactGroupList *) contact_list, handle, NULL, 0, &group_name, 1);
 
     buddies = purple_find_buddies (conn->account, buddy_name);
 
@@ -637,7 +637,7 @@ haze_contact_list_add_to_group (HazeContactList *self,
 
     /* We have to reassure the TpBaseContactList that the group exists,
      * because libpurple doesn't have a group-added signal */
-    tp_base_contact_list_groups_created ((TpBaseContactList *) self,
+    tp_contact_group_list_groups_created ((TpContactGroupList *) self,
         &group_name, 1);
 
     g_return_if_fail (group != NULL);
@@ -720,7 +720,7 @@ haze_contact_list_prep_remove_from_group (HazeContactList *self,
 
       /* We might have just created that group; libpurple doesn't have
        * a group-added signal, so tell TpBaseContactList about it */
-      tp_base_contact_list_groups_created ((TpBaseContactList *) self,
+      tp_contact_group_list_groups_created ((TpContactGroupList *) self,
           &def_name, 1);
 
       if (default_group == group)
@@ -828,7 +828,7 @@ haze_contact_list_mutable_init (TpMutableContactListInterface *vtable)
 }
 
 static GStrv
-haze_contact_list_dup_groups (TpBaseContactList *cl G_GNUC_UNUSED)
+haze_contact_list_dup_groups (TpContactGroupList *cl G_GNUC_UNUSED)
 {
   PurpleBlistNode *node;
   /* borrowed group name => NULL */
@@ -858,7 +858,7 @@ haze_contact_list_dup_groups (TpBaseContactList *cl G_GNUC_UNUSED)
 }
 
 static GStrv
-haze_contact_list_dup_contact_groups (TpBaseContactList *cl,
+haze_contact_list_dup_contact_groups (TpContactGroupList *cl,
     TpHandle contact)
 {
   HazeContactList *self = HAZE_CONTACT_LIST (cl);
@@ -886,7 +886,7 @@ haze_contact_list_dup_contact_groups (TpBaseContactList *cl,
 }
 
 static TpHandleSet *
-haze_contact_list_dup_group_members (TpBaseContactList *cl,
+haze_contact_list_dup_group_members (TpContactGroupList *cl,
     const gchar *group_name)
 {
   HazeContactList *self = HAZE_CONTACT_LIST (cl);
@@ -939,7 +939,7 @@ haze_contact_list_dup_group_members (TpBaseContactList *cl,
 }
 
 static gchar *
-haze_contact_list_normalize_group (TpBaseContactList *cl G_GNUC_UNUSED,
+haze_contact_list_normalize_group (TpContactGroupList *cl G_GNUC_UNUSED,
     const gchar *s)
 {
   /* By inspection of blist.c: group names are normalized by stripping
@@ -1057,7 +1057,7 @@ haze_contact_list_add_to_group_async (TpBaseContactList *cl,
   /* We have to reassure the TpBaseContactList that the group exists,
    * because libpurple doesn't have a group-added signal */
   g_assert (group != NULL);
-  tp_base_contact_list_groups_created ((TpBaseContactList *) self,
+  tp_contact_group_list_groups_created ((TpContactGroupList *) self,
       &group_name, 1);
 
   tp_intset_fast_iter_init (&iter, tp_handle_set_peek (contacts));
@@ -1100,7 +1100,9 @@ haze_contact_list_remove_group_async (TpBaseContactList *cl,
     GAsyncReadyCallback callback,
     gpointer user_data)
 {
-  TpHandleSet *members = haze_contact_list_dup_group_members (cl, group_name);
+  TpContactGroupList *contact_group = TP_CONTACT_GROUP_LIST (cl);
+  TpHandleSet *members = haze_contact_list_dup_group_members (
+      contact_group, group_name);
   GError *error = NULL;
 
   if (haze_contact_list_prep_remove_from_group (HAZE_CONTACT_LIST (cl),
@@ -1111,7 +1113,7 @@ haze_contact_list_remove_group_async (TpBaseContactList *cl,
       if (group != NULL)
         purple_blist_remove_group (group);
 
-      tp_base_contact_list_groups_removed (cl, &group_name, 1);
+      tp_contact_group_list_groups_removed (contact_group, &group_name, 1);
 
       tp_simple_async_report_success_in_idle ((GObject *) cl, callback,
           user_data, haze_contact_list_remove_group_async);
@@ -1134,7 +1136,9 @@ haze_contact_list_set_group_members_async (TpBaseContactList *cl,
     gpointer user_data)
 {
   HazeContactList *self = HAZE_CONTACT_LIST (cl);
-  TpHandleSet *outcasts = haze_contact_list_dup_group_members (cl, group_name);
+  TpContactGroupList *contact_group = TP_CONTACT_GROUP_LIST (cl);
+  TpHandleSet *outcasts = haze_contact_list_dup_group_members (contact_group,
+      group_name);
   GError *error = NULL;
   /* This actually has "ensure" semantics, and doesn't return a ref.
    * We do this even if there are no contacts, to create the group as a
@@ -1144,7 +1148,7 @@ haze_contact_list_set_group_members_async (TpBaseContactList *cl,
   /* We have to reassure the TpBaseContactList that the group exists,
    * because libpurple doesn't have a group-added signal */
   g_assert (group != NULL);
-  tp_base_contact_list_groups_created ((TpBaseContactList *) self,
+  tp_contact_group_list_groups_created ((TpContactGroupList *) self,
       &group_name, 1);
 
   tp_intset_destroy (tp_handle_set_difference_update (outcasts,
@@ -1192,7 +1196,8 @@ haze_contact_list_rename_group_async (TpBaseContactList *cl,
     }
 
   purple_blist_rename_group (group, new_name);
-  tp_base_contact_list_group_renamed (cl, old_name, new_name);
+  tp_contact_group_list_group_renamed (TP_CONTACT_GROUP_LIST (cl), old_name,
+      new_name);
 
   tp_simple_async_report_success_in_idle ((GObject *) cl, callback,
       user_data, haze_contact_list_rename_group_async);
