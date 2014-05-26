@@ -983,7 +983,7 @@ haze_contact_list_groups_init (TpContactGroupListInterface *vtable)
 }
 
 static void
-haze_contact_list_set_contact_groups_async (TpBaseContactList *cl,
+haze_contact_list_set_contact_groups_async (TpMutableContactGroupList *cl,
     TpHandle contact,
     const gchar * const *names,
     gsize n_names,
@@ -1042,7 +1042,7 @@ haze_contact_list_set_contact_groups_async (TpBaseContactList *cl,
 }
 
 static void
-haze_contact_list_add_to_group_async (TpBaseContactList *cl,
+haze_contact_list_add_to_group_async (TpMutableContactGroupList *cl,
     const gchar *group_name,
     TpHandleSet *contacts,
     GAsyncReadyCallback callback,
@@ -1070,7 +1070,7 @@ haze_contact_list_add_to_group_async (TpBaseContactList *cl,
 }
 
 static void
-haze_contact_list_remove_from_group_async (TpBaseContactList *cl,
+haze_contact_list_remove_from_group_async (TpMutableContactGroupList *cl,
     const gchar *group_name,
     TpHandleSet *contacts,
     GAsyncReadyCallback callback,
@@ -1095,7 +1095,7 @@ haze_contact_list_remove_from_group_async (TpBaseContactList *cl,
 }
 
 static void
-haze_contact_list_remove_group_async (TpBaseContactList *cl,
+haze_contact_list_remove_group_async (TpMutableContactGroupList *cl,
     const gchar *group_name,
     GAsyncReadyCallback callback,
     gpointer user_data)
@@ -1129,7 +1129,7 @@ haze_contact_list_remove_group_async (TpBaseContactList *cl,
 }
 
 static void
-haze_contact_list_set_group_members_async (TpBaseContactList *cl,
+haze_contact_list_set_group_members_async (TpMutableContactGroupList *cl,
     const gchar *group_name,
     TpHandleSet *contacts,
     GAsyncReadyCallback callback,
@@ -1170,7 +1170,7 @@ haze_contact_list_set_group_members_async (TpBaseContactList *cl,
 }
 
 static void
-haze_contact_list_rename_group_async (TpBaseContactList *cl,
+haze_contact_list_rename_group_async (TpMutableContactGroupList *cl,
     const gchar *old_name,
     const gchar *new_name,
     GAsyncReadyCallback callback,
