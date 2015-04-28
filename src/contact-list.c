@@ -532,7 +532,8 @@ haze_contact_list_request_subscription (HazeContactList *self,
   /* If the buddy already exists, then it should already be on the
    * subscribe list.
    */
-  g_assert (purple_find_buddy (account, bname) == NULL);
+  if (purple_find_buddy (account, bname) != NULL)
+    return;
 
   buddy = purple_buddy_new (account, bname, NULL);
 
