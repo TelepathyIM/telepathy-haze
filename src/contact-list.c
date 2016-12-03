@@ -409,7 +409,7 @@ haze_contact_list_accept_publish_request (HazeContactList *self,
 }
 
 static void
-haze_contact_list_authorize_publication_async (TpBaseContactList *cl,
+haze_contact_list_authorize_publication_async (TpMutableContactList *cl,
     TpHandleSet *contacts,
     GAsyncReadyCallback callback,
     gpointer user_data)
@@ -545,7 +545,7 @@ haze_contact_list_request_subscription (HazeContactList *self,
 }
 
 static void
-haze_contact_list_request_subscription_async (TpBaseContactList *cl,
+haze_contact_list_request_subscription_async (TpMutableContactList *cl,
     TpHandleSet *contacts,
     const gchar *message,
     GAsyncReadyCallback callback,
@@ -565,7 +565,7 @@ haze_contact_list_request_subscription_async (TpBaseContactList *cl,
 }
 
 static void
-haze_contact_list_store_contacts_async (TpBaseContactList *cl,
+haze_contact_list_store_contacts_async (TpMutableContactList *cl,
     TpHandleSet *contacts,
     GAsyncReadyCallback callback,
     gpointer user_data)
@@ -605,7 +605,7 @@ haze_contact_list_remove_contact (HazeContactList *self,
 }
 
 static void
-haze_contact_list_remove_contacts_async (TpBaseContactList *cl,
+haze_contact_list_remove_contacts_async (TpMutableContactList *cl,
     TpHandleSet *contacts,
     GAsyncReadyCallback callback,
     gpointer user_data)
