@@ -90,23 +90,6 @@ _chat_state_available (HazeIMChannel *chan)
     return (prpl_info->send_typing != NULL);
 }
 
-static GPtrArray *
-haze_im_channel_get_interfaces (TpBaseChannel *base)
-{
-  HazeIMChannel *self = HAZE_IM_CHANNEL (base);
-  GPtrArray *interfaces;
-
-  interfaces = TP_BASE_CHANNEL_CLASS (
-      haze_im_channel_parent_class)->get_interfaces (base);
-
-  if (_chat_state_available (self))
-    g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_CHAT_STATE1);
-
-  g_ptr_array_add (interfaces, TP_IFACE_CHANNEL_INTERFACE_DESTROYABLE1);
-
-  return interfaces;
-}
-
 /**
  * haze_im_channel_destroy
  *
@@ -391,11 +374,14 @@ haze_im_channel_constructor (GType type, guint n_props,
     HazeIMChannelPrivate *priv;
     TpBaseChannel *base;
     TpBaseConnection *conn;
+    GDBusObjectSkeleton *skel;
+    GDBusInterfaceSkeleton *iface;
 
     obj = G_OBJECT_CLASS (haze_im_channel_parent_class)->
         constructor (type, n_props, props);
     chan = HAZE_IM_CHANNEL (obj);
     base = TP_BASE_CHANNEL (obj);
+    skel = G_DBUS_OBJECT_SKELETON (obj);
     priv = chan->priv;
     conn = tp_base_channel_get_connection (base);
 
@@ -405,6 +391,24 @@ haze_im_channel_constructor (GType type, guint n_props,
         supported_message_types, 0, 0, supported_content_types);
 
     priv->dispose_has_run = FALSE;
+
+    iface = tp_svc_interface_skeleton_new (skel,
+        TP_TYPE_SVC_CHANNEL_TYPE_TEXT);
+    g_dbus_object_skeleton_add_interface (skel, iface);
+    g_object_unref (iface);
+
+    if (_chat_state_available (chan))
+      {
+        iface = tp_svc_interface_skeleton_new (skel,
+            TP_TYPE_SVC_CHANNEL_INTERFACE_CHAT_STATE1);
+        g_dbus_object_skeleton_add_interface (skel, iface);
+        g_object_unref (iface);
+      }
+
+    iface = tp_svc_interface_skeleton_new (skel,
+        TP_TYPE_SVC_CHANNEL_INTERFACE_DESTROYABLE1);
+    g_dbus_object_skeleton_add_interface (skel, iface);
+    g_object_unref (iface);
 
     return obj;
 }
@@ -445,7 +449,6 @@ haze_im_channel_class_init (HazeIMChannelClass *klass)
     object_class->dispose = haze_im_channel_dispose;
 
     base_class->channel_type = TP_IFACE_CHANNEL_TYPE_TEXT;
-    base_class->get_interfaces = haze_im_channel_get_interfaces;
     base_class->target_entity_type = TP_ENTITY_TYPE_CONTACT;
     base_class->close = haze_im_channel_close;
     base_class->fill_immutable_properties =
