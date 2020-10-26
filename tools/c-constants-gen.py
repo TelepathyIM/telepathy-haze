@@ -17,7 +17,7 @@ class Generator(object):
         self.do_footer()
 
     def write(self, code):
-        stdout.write(code.encode('utf-8'))
+        stdout.write(code)
 
     # Header
     def do_header(self):

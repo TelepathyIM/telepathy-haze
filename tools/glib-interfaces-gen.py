@@ -14,10 +14,10 @@ class Generator(object):
         self.spec = get_by_path(dom, "spec")[0]
 
     def h(self, code):
-        self.decls.write(code.encode('utf-8'))
+        self.decls.write(code)
 
     def c(self, code):
-        self.impls.write(code.encode('utf-8'))
+        self.impls.write(code)
 
     def __call__(self):
         for f in self.h, self.c:

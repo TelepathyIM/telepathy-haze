@@ -65,10 +65,10 @@ class GTypesGenerator(object):
         self.need_other_arrays = {}
 
     def h(self, code):
-        self.header.write(code.encode("utf-8"))
+        self.header.write(code)
 
     def c(self, code):
-        self.body.write(code.encode("utf-8"))
+        self.body.write(code)
 
     def do_mapping_header(self, mapping):
         members = mapping.getElementsByTagNameNS(NS_TP, 'member')

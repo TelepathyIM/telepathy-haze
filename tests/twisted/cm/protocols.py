@@ -18,7 +18,7 @@ def test(q, bus, conn, stream):
 
     protocols = cm_props.Get(cs.CM, 'Protocols')
     protocol_names = cm_iface.ListProtocols()
-    assertEquals(set(protocols.iterkeys()), set(protocol_names))
+    assertEquals(set(protocols.keys()), set(protocol_names))
 
     for name in protocol_names:
         props = protocols[name]
