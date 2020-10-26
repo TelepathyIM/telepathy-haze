@@ -28,7 +28,7 @@ def test(q, bus, conn, stream):
     # You might think that this is the test...
     try:
         cm_iface.RequestConnection('jabber', params)
-    except dbus.DBusException, e:
+    except dbus.DBusException as e:
         assertEquals(cs.NOT_AVAILABLE, e.get_dbus_name())
 
     # but you'd be wrong: we now test that Haze is still alive.

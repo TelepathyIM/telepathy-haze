@@ -137,8 +137,8 @@ def test(q, bus, conn, stream):
             EventPattern('dbus-return', method='AddMembers'),
             )
     assertEquals('duncan@scotland.lit', iq.stanza.query.item['jid'])
-    groups = set([str(x) for x in xpath.queryForNodes('/iq/query/item/group',
-        iq.stanza)])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq.stanza)}
     assertLength(2, groups)
     assertContains(default_group_name, groups)
     assertContains('Scots', groups)
@@ -154,10 +154,38 @@ def test(q, bus, conn, stream):
             EventPattern('dbus-return', method='RemoveMembers'),
             )
     assertEquals('duncan@scotland.lit', iq.stanza.query.item['jid'])
-    groups = set([str(x) for x in xpath.queryForNodes('/iq/query/item/group',
-        iq.stanza)])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq.stanza)}
     assertLength(1, groups)
     assertContains('Scots', groups)
+
+    # Test SetContactGroups, which didn't previously have proper coverage
+    call_async(q, conn.ContactGroups, 'SetContactGroups', duncan,
+            ['Scottish former kings'])
+    iq, _, _, _ = q.expect_many(
+            EventPattern('stream-iq', iq_type='set', query_name='query',
+                query_ns=ns.ROSTER),
+            EventPattern('dbus-signal', signal='GroupsChanged',
+                args=[[duncan], ['Scottish former kings'], []]),
+            EventPattern('dbus-signal', signal='GroupsChanged',
+                args=[[duncan], [], ['Scots']]),
+            EventPattern('dbus-return', method='SetContactGroups'),
+            )
+    assertEquals('duncan@scotland.lit', iq.stanza.query.item['jid'])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq.stanza)}
+    assertLength(2, groups)
+    assertContains('Scots', groups)
+    assertContains('Scottish former kings', groups)
+    iq, = q.expect_many(
+            EventPattern('stream-iq', iq_type='set', query_name='query',
+                query_ns=ns.ROSTER),
+            )
+    assertEquals('duncan@scotland.lit', iq.stanza.query.item['jid'])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq.stanza)}
+    assertLength(1, groups)
+    assertContains('Scottish former kings', groups)
 
     # Romeo dies. If he drops off the roster as a result, that would be
     # fd.o #21294. However, to fix that bug, Haze now puts him in the
@@ -178,15 +206,15 @@ def test(q, bus, conn, stream):
             )
 
     assertEquals('romeo@montague.lit', iq1.stanza.query.item['jid'])
-    groups = set([str(x) for x in xpath.queryForNodes('/iq/query/item/group',
-        iq1.stanza)])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq1.stanza)}
     assertLength(2, groups)
     assertContains('Still alive', groups)
     assertContains(default_group_name, groups)
 
     assertEquals('romeo@montague.lit', iq2.stanza.query.item['jid'])
-    groups = set([str(x) for x in xpath.queryForNodes('/iq/query/item/group',
-        iq2.stanza)])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq2.stanza)}
     assertLength(1, groups)
     assertContains(default_group_name, groups)
 
@@ -202,8 +230,8 @@ def test(q, bus, conn, stream):
             EventPattern('dbus-return', method='RemoveMembers'),
             )
     assertEquals('juliet@capulet.lit', iq.stanza.query.item['jid'])
-    groups = set([str(x) for x in xpath.queryForNodes('/iq/query/item/group',
-        iq.stanza)])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq.stanza)}
     assertLength(1, groups)
     assertContains('Capulets', groups)
 
