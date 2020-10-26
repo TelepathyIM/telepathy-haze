@@ -104,8 +104,8 @@ def test(q, bus, conn, stream):
             EventPattern('dbus-return', method='AddToGroup'),
             )
     assertEquals('duncan@scotland.lit', iq.stanza.query.item['jid'])
-    groups = set([str(x) for x in xpath.queryForNodes('/iq/query/item/group',
-        iq.stanza)])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq.stanza)}
     assertLength(2, groups)
     assertContains(default_group, groups)
     assertContains('Scots', groups)
@@ -121,8 +121,8 @@ def test(q, bus, conn, stream):
             EventPattern('dbus-return', method='RemoveFromGroup'),
             )
     assertEquals('duncan@scotland.lit', iq.stanza.query.item['jid'])
-    groups = set([str(x) for x in xpath.queryForNodes('/iq/query/item/group',
-        iq.stanza)])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq.stanza)}
     assertLength(1, groups)
     assertContains('Scots', groups)
 
@@ -139,8 +139,8 @@ def test(q, bus, conn, stream):
             EventPattern('dbus-return', method='SetContactGroups'),
             )
     assertEquals('duncan@scotland.lit', iq.stanza.query.item['jid'])
-    groups = set([str(x) for x in xpath.queryForNodes('/iq/query/item/group',
-        iq.stanza)])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq.stanza)}
     assertLength(2, groups)
     assertContains('Scots', groups)
     assertContains('Scottish former kings', groups)
@@ -149,8 +149,8 @@ def test(q, bus, conn, stream):
                 query_ns=ns.ROSTER),
             )
     assertEquals('duncan@scotland.lit', iq.stanza.query.item['jid'])
-    groups = set([str(x) for x in xpath.queryForNodes('/iq/query/item/group',
-        iq.stanza)])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq.stanza)}
     assertLength(1, groups)
     assertContains('Scottish former kings', groups)
 
@@ -172,15 +172,15 @@ def test(q, bus, conn, stream):
             )
 
     assertEquals('romeo@montague.lit', iq1.stanza.query.item['jid'])
-    groups = set([str(x) for x in xpath.queryForNodes('/iq/query/item/group',
-        iq1.stanza)])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq1.stanza)}
     assertLength(2, groups)
     assertContains('Still alive', groups)
     assertContains(default_group, groups)
 
     assertEquals('romeo@montague.lit', iq2.stanza.query.item['jid'])
-    groups = set([str(x) for x in xpath.queryForNodes('/iq/query/item/group',
-        iq2.stanza)])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq2.stanza)}
     assertLength(1, groups)
     assertContains(default_group, groups)
 
@@ -195,8 +195,8 @@ def test(q, bus, conn, stream):
             EventPattern('dbus-return', method='SetGroupMembers'),
             )
     assertEquals('juliet@capulet.lit', iq.stanza.query.item['jid'])
-    groups = set([str(x) for x in xpath.queryForNodes('/iq/query/item/group',
-        iq.stanza)])
+    groups = {str(x) for x in xpath.queryForNodes('/iq/query/item/group',
+        iq.stanza)}
     assertLength(1, groups)
     assertContains('Capulets', groups)
 

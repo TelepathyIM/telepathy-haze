@@ -75,7 +75,7 @@ def make_muc_presence(affiliation, role, muc_jid, alias, jid=None, photo=None):
     if photo is not None:
         presence.addChild(
             elem(ns.VCARD_TEMP_UPDATE, 'x')(
-              elem('photo')(unicode(photo))
+              elem('photo')(str(photo))
             ))
 
     return presence
@@ -129,7 +129,7 @@ class JabberAuthenticator(GabbleAuthenticator):
 
     def streamStarted(self, root=None):
         if root:
-            self.xmlstream.sid = '%x' % random.randint(1, sys.maxint)
+            self.xmlstream.sid = '%x' % random.randint(1, sys.maxsize)
             self.xmlstream.domain = root.getAttribute('to')
 
         self.xmlstream.sendHeader()
@@ -165,11 +165,11 @@ class JabberAuthenticator(GabbleAuthenticator):
 
     def respondToSecondIq(self, iq):
         username = xpath.queryForNodes('/iq/query/username', iq)
-        assert map(str, username) == [self.username]
+        assert list(map(str, username)) == [self.username]
 
         digest = xpath.queryForNodes('/iq/query/digest', iq)
         expect = hashlib.sha1(self.xmlstream.sid + self.password).hexdigest()
-        assert map(str, digest) == [expect]
+        assert list(map(str, digest)) == [expect]
 
         resource = xpath.queryForNodes('/iq/query/resource', iq)
         assertLength(1, resource)
@@ -197,7 +197,7 @@ class XmppAuthenticator(GabbleAuthenticator):
             self.xmlstream.domain = root.getAttribute('to')
 
         if self.xmlstream.sid is None:
-            self.xmlstream.sid = '%x' % random.randint(1, sys.maxint)
+            self.xmlstream.sid = '%x' % random.randint(1, sys.maxsize)
 
         self.xmlstream.sendHeader()
 
@@ -232,8 +232,8 @@ class XmppAuthenticator(GabbleAuthenticator):
             self.streamSASL()
 
     def auth(self, auth):
-        assert (base64.b64decode(str(auth)) ==
-            '\x00%s\x00%s' % (self.username, self.password))
+        assert (base64.b64decode(bytes(auth)) ==
+            b'\x00%s\x00%s' % (self.username, self.password))
 
         success = domish.Element((ns.NS_XMPP_SASL, 'success'))
         self.xmlstream.send(success)
@@ -304,8 +304,7 @@ class StreamFactory(twisted.internet.protocol.Factory):
         self.streams = streams
         self.jids = jids
         self.presences = {}
-        self.mappings = dict(map (lambda jid, stream: (jid, stream),
-                                  jids, streams))
+        self.mappings = dict(zip(jids, streams))
 
         # Make a copy of the streams
         self.factory_streams = list(streams)
@@ -347,7 +346,7 @@ class StreamFactory(twisted.internet.protocol.Factory):
                 stream.send(presence)
 
     def lost_presence(self, stream, jid):
-        if self.presences.has_key(jid):
+        if jid in self.presences:
             del self.presences[jid]
             for dest_jid  in self.presences.keys():
                 presence = domish.Element(('jabber:client', 'presence'))
@@ -568,7 +567,7 @@ def expect_connected(queue):
         args=[cs.CONN_STATUS_CONNECTING, cs.CSR_REQUESTED])
     queue.expect('stream-authenticated')
     queue.expect('dbus-signal', signal='PresencesChanged',
-        args=[{1L: (cs.PRESENCE_AVAILABLE, u'available', '')}])
+        args=[{1: (cs.PRESENCE_AVAILABLE, u'available', '')}])
     queue.expect('dbus-signal', signal='StatusChanged',
         args=[cs.CONN_STATUS_CONNECTED, cs.CSR_REQUESTED])
 
@@ -587,7 +586,7 @@ def exec_test_deferred(fun, params, protocol=None, timeout=None,
     try:
         bus = dbus.SessionBus()
     except dbus.exceptions.DBusException as e:
-        print e
+        print(e)
         os._exit(1)
 
     queue = servicetest.IteratingEventQueue(timeout)
@@ -607,11 +606,11 @@ def exec_test_deferred(fun, params, protocol=None, timeout=None,
 
         try:
             (conn, jid) = make_connection_func(bus, queue.append, params, suffix)
-        except Exception, e:
+        except Exception as e:
             # Crap. This is normally because the connection's still kicking
             # around on the bus. Let's bin any connections we *did* manage to
             # get going and then bail out unceremoniously.
-            print e
+            print(e)
 
             for conn in conns:
                 conn.Disconnect()
@@ -640,7 +639,7 @@ def exec_test_deferred(fun, params, protocol=None, timeout=None,
                         break
         queue.append(Event('dbus-signal',
                            path=unwrap(kw['path']),
-                           signal=kw['member'], args=map(unwrap, args),
+                           signal=kw['member'], args=list(map(unwrap, args)),
                            interface=kw['interface']))
 
     match_all_signals = bus.add_signal_receiver(
@@ -666,7 +665,7 @@ def exec_test_deferred(fun, params, protocol=None, timeout=None,
             fun(queue, bus, conns[0], streams[0])
         else:
             fun(queue, bus, conns, streams)
-    except Exception, e:
+    except Exception as e:
         traceback.print_exc()
         error = e
         queue.verbose = False
@@ -688,9 +687,9 @@ def exec_test_deferred(fun, params, protocol=None, timeout=None,
             else:
                 # Connection is not connected, call Disconnect() to destroy it
                 conn.Disconnect()
-        except dbus.DBusException, e:
+        except dbus.DBusException as e:
             pass
-        except Exception, e:
+        except Exception as e:
             traceback.print_exc()
             error = e
 
@@ -698,9 +697,9 @@ def exec_test_deferred(fun, params, protocol=None, timeout=None,
             conn.Disconnect()
             raise AssertionError("Connection didn't disappear; "
                 "all subsequent tests will probably fail")
-        except dbus.DBusException, e:
+        except dbus.DBusException as e:
             pass
-        except Exception, e:
+        except Exception as e:
             traceback.print_exc()
             error = e
 
@@ -756,7 +755,7 @@ def _elem_add(elem, *children):
     for child in children:
         if isinstance(child, domish.Element):
             elem.addChild(child)
-        elif isinstance(child, unicode):
+        elif isinstance(child, str):
             elem.addContent(child)
         else:
             raise ValueError(
@@ -797,14 +796,14 @@ def elem(a, b=None, attrs={}, **kw):
 
     # First, let's pull namespaces out
     realattrs = {}
-    for k, v in allattrs.iteritems():
+    for k, v in allattrs.items():
         if k.startswith('xmlns:'):
             abbr = k[len('xmlns:'):]
             elem.localPrefixes[abbr] = v
         else:
             realattrs[k] = v
 
-    for k, v in realattrs.iteritems():
+    for k, v in realattrs.items():
         if k == 'from_':
             elem['from'] = v
         else:
@@ -820,7 +819,7 @@ def elem_iq(server, type, **kw):
 
     iq = _iq(server, type)
 
-    for k, v in kw.iteritems():
+    for k, v in kw.items():
         if k == 'from_':
             iq['from'] = v
         else:
