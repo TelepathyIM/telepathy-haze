@@ -17,8 +17,10 @@ def test(q, bus, conn, stream):
     cm_props = dbus.Interface(cm, cs.PROPERTIES_IFACE)
 
     protocols = cm_props.Get(cs.CM, 'Protocols')
+    protocol_names = cm_iface.ListProtocols()
+    assertEquals(set(protocols.keys()), set(protocol_names))
 
-    for name, props in protocols.iteritems():
+    for name, props in protocols.items():
         protocol = bus.get_object(cm.bus_name,
             cm.object_path + '/' + name.replace('-', '_'))
         protocol_iface = dbus.Interface(protocol, cs.PROTOCOL)
