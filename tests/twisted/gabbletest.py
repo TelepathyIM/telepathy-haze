@@ -233,7 +233,7 @@ class XmppAuthenticator(GabbleAuthenticator):
 
     def auth(self, auth):
         assert (base64.b64decode(bytes(auth)) ==
-            b'\x00%s\x00%s' % (self.username, self.password))
+            b'\x00%s\x00%s' % (self.username.encode(), self.password.encode()))
 
         success = domish.Element((ns.NS_XMPP_SASL, 'success'))
         self.xmlstream.send(success)
@@ -555,7 +555,7 @@ def disconnect_conn(q, conn, stream, expected_before=[], expected_after=[]):
     return before_events[:-2], after_events[:-1]
 
 def element_repr(element):
-    """__repr__ cannot safely return non-ASCII: see
+    r"""__repr__ cannot safely return non-ASCII: see
     <http://bugs.python.org/issue5876>. So we print non-ASCII characters as
     \uXXXX escapes in debug output
 
