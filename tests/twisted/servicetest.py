@@ -4,9 +4,9 @@ Infrastructure code for testing connection managers.
 """
 from __future__ import print_function
 
-from twisted.internet import glib2reactor
+from twisted.internet import gireactor
 from twisted.internet.protocol import Protocol, Factory, ClientFactory
-glib2reactor.install()
+gireactor.install()
 import sys
 import time
 import os
