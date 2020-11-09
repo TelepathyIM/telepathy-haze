@@ -1076,7 +1076,7 @@ haze_media_stream_new_native_candidate (TpSvcMediaStreamHandler *iface,
       if (proto == TP_MEDIA_STREAM_BASE_PROTO_UDP)
         protocol = PURPLE_MEDIA_NETWORK_PROTOCOL_UDP;
       else if (proto == TP_MEDIA_STREAM_BASE_PROTO_TCP)
-        protocol = PURPLE_MEDIA_NETWORK_PROTOCOL_TCP;
+        protocol = PURPLE_MEDIA_NETWORK_PROTOCOL_TCP_PASSIVE;
       else
         DEBUG ("Unknown network protocol");
 
