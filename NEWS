@@ -1,7 +1,19 @@
-telepathy-haze 0.8.1 (UNRELEASED)
+telepathy-haze 0.8.1 (2020-11-11)
 =================================
 
-…
+Dependencies:
+• libpurple ≥ 2.10.12 is now required
+
+Enhancements:
+
+• Port tests to Python 3 (Arusekk)
+
+Fixes:
+
+• Fix the build with libpurple 2.10.12 (Koop Mast from FreeBSD.org)
+
+• Fix a crash if a requested contact is already in contact-list
+  (fd.0 #47005 Debarshi Ray)
 
 telepathy-haze 0.8.0 (2013-10-02)
 =================================
